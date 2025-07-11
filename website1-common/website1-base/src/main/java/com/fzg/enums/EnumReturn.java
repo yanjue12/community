@@ -26,10 +26,15 @@ public enum EnumReturn {
         USERNAME_PASSWORD_EMPTY(2005, "账号或密码不能为空"),
 
         EMAIL_ALREADY_REGISTERED(2010,"邮箱已被注册"),
+        REGISTER_FAIL(2011, "注册失败"),
 
         USER_DISABLED(2033, "账号已被禁用"),
 
+
         VERIFICATION_CODE_FREQUENT(2041, "验证码发送频繁，请稍后再试"),
+        VERIFICATION_CODE_ERROR(2042, "验证码错误"),
+
+        PASSWORD_ERROR(2051, "密码错误"),
 
         // 4000 权限相关
         UN_AUTHORIZATION(401,"未授权"),

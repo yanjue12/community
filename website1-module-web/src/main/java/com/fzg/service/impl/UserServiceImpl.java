@@ -1,5 +1,8 @@
 package com.fzg.service.impl;
 
+import cn.dev33.satoken.session.SaSession;
+import cn.dev33.satoken.stp.SaTokenInfo;
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -11,14 +14,16 @@ import com.fzg.model.Result;
 import com.fzg.model.User;
 import com.fzg.service.UserService;
 import com.fzg.mapper.UserMapper;
+import com.fzg.util.UserUtil;
 import com.fzg.vo.RegisterVO;
 import com.fzg.vo.UserLoginVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,11 +32,14 @@ import java.util.concurrent.TimeUnit;
 * @createDate 2025-07-09 17:09:29
 */
 @Service
+@Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     implements UserService{
 
     @Resource
     private RedisTemplate redisTemplate;
+    @Resource
+    private JavaMailSender javaMailSender;
 
     @Override
     public Result accountLogin(UserLoginVO userLoginVO) {
@@ -39,7 +47,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return Result.fail(EnumReturn.USERNAME_PASSWORD_EMPTY);
         }
 
-
+        User user = null;
 
         String username = userLoginVO.getUsername();
         String password = userLoginVO.getPassword();
@@ -47,8 +55,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(StrUtil.isNotEmpty(username)){
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("username",username);
-            User one = this.getOne(queryWrapper);
-            if(null == one){
+            user = this.getOne(queryWrapper);
+            if(null == user){
                 return Result.fail(EnumReturn.USERNAME_NOT_EXISTS);
             }
         }
@@ -56,7 +64,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(StrUtil.isNotEmpty(userLoginVO.getAccount())){
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("account",userLoginVO.getAccount());
-            if(null == this.getOne(queryWrapper)){
+            user = this.getOne(queryWrapper);
+            if(null == user){
                 return Result.fail(EnumReturn.ACCOUNT_NOT_EXISTS);
             }
         }
@@ -65,19 +74,44 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(StrUtil.isNotEmpty(userLoginVO.getEmail())){
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("email",userLoginVO.getEmail());
-            if(null == this.getOne(queryWrapper)){
+            user = this.getOne(queryWrapper);
+            if(null == user){
                 return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);}
         }
 
         //判断用户状态
-        if(userLoginVO.getStatus() == 1){
+        if(user.getStates() == 2){
             return Result.fail(EnumReturn.USER_DISABLED);
         }
+        log.info("################## user:{}",user);
 
 
         //TODO 判断密码
+        String encryptPwd = UserUtil.getUserEncryptPassword(user.getAccount(), userLoginVO.getPassword());
+        if(!user.getPassword().equals(encryptPwd)){
+            return Result.fail(EnumReturn.PASSWORD_ERROR);
+        }
 
-        return Result.success(400);
+
+
+
+        log.info("################## user:{}",user);
+
+        //登录成功，记录token
+        StpUtil.login(user.getId());
+        SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+        String tokenValue = tokenInfo.getTokenValue();
+
+        tokenInfo.setTokenTimeout(3600);
+        SaSession session = StpUtil.getSession();
+        session.set("USER_NAME",user.getUsername());
+        session.set("USER_ID",user.getId());
+
+
+        log.info("################## tokenValue:{}",tokenValue);
+        log.info("################## tokenInfo:{}",tokenInfo);
+
+        return Result.success(tokenInfo);
 
     }
 
@@ -93,10 +127,49 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return Result.fail(EnumReturn.USERNAME_PASSWORD_EMPTY);
         }
 
+        String email = registerVO.getEmail();
+        if(StrUtil.isEmpty(email)){
+            return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);
+        }
+
+        //从redis中获取验证码
+        String verificationCode = (String) redisTemplate.opsForValue()
+                .get(RedisVerificationKey.getVerificationCodeKey(email));
+
+        if(verificationCode == null || !verificationCode.equals(registerVO.getVerificationCode())){
+            return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+        }
+
+        //生成账号
+        String r = RandomUtil.randomString(6);
+        String timestampLastSix = String.valueOf(System.currentTimeMillis()).substring(6);
+        String account = r+timestampLastSix;
+        log.info("account:{}####################",account);
 
 
+        //密码加密
+        String encryptPwd = UserUtil.getUserEncryptPassword(account, registerVO.getPassword());
+        log.info("encryptPwd:{}####################",encryptPwd);
 
-        return null;
+        //TODO 设置默认头像
+
+
+        //保存用户
+        User user = new User();
+        user.setEmail(email);
+        user.setUsername(email);
+        user.setPassword(encryptPwd);
+        user.setAccount(account);
+        user.setStates((short) 1);
+
+        if(this.save(user)){
+            StpUtil.login(user.getId());
+            String tokenValue = StpUtil.getTokenValue();
+            return Result.success("注册成功");
+        }else{
+            return Result.fail(EnumReturn.REGISTER_FAIL);
+        }
+
     }
 
 
@@ -124,14 +197,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         redisTemplate.opsForValue().set(vCodeKey ,verificationCode,5, TimeUnit.MINUTES);
 
 
+
         //发送邮件
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(email);
-        message.setSubject(verificationCode);
-        message.setTo("您的验证码是："+ verificationCode + "，有效期为5分钟");
+        message.setFrom("yanjue2024@163.com");
+        message.setSubject("验证码");
+        message.setTo(email);
+        message.setText("验证码："+verificationCode+"有效期5分钟");
 
+        log.info("################## 验证码：{}",verificationCode);
 
-        return Result.success("邮件成功发送");
+        try {
+            javaMailSender.send(message);
+            return Result.success("邮件成功发送");
+        } catch (Exception e) {
+            log.error("################## 邮件发送失败：{},邮箱：{}",e.getMessage(),email);
+            return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+        }
+
 
     }
 
