@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.6.3</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>org.fzg</groupId>
+    <artifactId>website1</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>website1</name>
+    <description>website1</description>
+
+
+    <modules>
+        <module>website1-module-web</module>
+        <module>website1-common</module>
+    </modules>
+
+
+    <!--<properties>
+        <java.version>17</java.version>
+        <fastjson.version>2.0.39</fastjson.version>
+        <mysql-connector-j.version>8.0.31</mysql-connector-j.version>
+        <lombok.version>1.18.28</lombok.version>
+        <mybatis-plus-boot-starter.version>3.5.3</mybatis-plus-boot-starter.version>
+        <mybatis-plus-generator.version>3.5.3</mybatis-plus-generator.version>
+    </properties>-->
+
+
+    <distributionManagement>
+
+
+        <repository>
+            <id>rdc-releases</id>
+            <url>https://repo.rdc.aliyun.com/repository/139516-release-CioPiJ/</url>
+        </repository>
+
+        <snapshotRepository>
+            <id>rdc-snapshots</id>
+            <url>https://repo.rdc.aliyun.com/repository/139516-snapshot-Zlh7EE/</url>
+        </snapshotRepository>
+
+
+    </distributionManagement>
+
+
+
+
+    <repositories>
+        <repository>
+            <id>aliyun</id>
+            <name>aliyun Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <mysql.version>8.0.32</mysql.version>
+        <spring-cloud.version>2021.0.1</spring-cloud.version>
+        <spring-cloud-alibaba.version>2021.0.1.0</spring-cloud-alibaba.version>
+        <mybatis-plus.version>3.5.5</mybatis-plus.version>
+        <druid.version>1.2.18</druid.version>
+        <hutool-all.version>5.8.20</hutool-all.version>
+        <springfox.version>3.0.0</springfox.version>
+        <website1-base.version>0.0.1-SNAPSHOT</website1-base.version>
+        <fastjson.version>2.0.0</fastjson.version>
+        <website1-core.version>0.0.1-SNAPSHOT</website1-core.version>
+        <aliyun-sdk-oss.version>3.17.4</aliyun-sdk-oss.version>
+
+
+    </properties>
+
+    <dependencies>
+        <!--专门读取bootstrap.yml配置文件-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        </dependency>
+    </dependencies>
+
+
+
+    <dependencyManagement>
+        <dependencies>
+            <!--spring-cloud依赖-->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!--spring cloud alibaba依赖-->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!--mybatis plus依赖-->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <!--mybatis plus常用注解依赖-->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-annotation</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <!--mysql8驱动-->
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>${mysql.version}</version>
+            </dependency>
+            <!--druid数据库连接池依赖-->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid-spring-boot-starter</artifactId>
+                <version>${druid.version}</version>
+            </dependency>
+            <!--第三方工具类库hutool-->
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool-all.version}</version>
+            </dependency>
+            <!--swagger依赖-->
+            <!--<dependency>
+                <groupId>io.springfox</groupId>
+                <artifactId>springfox-boot-starter</artifactId>
+                <version>${springfox.version}</version>
+            </dependency>-->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-ui</artifactId>
+                <version>1.6.14</version>
+            </dependency>
+
+            <!--common-base公共基础模块依赖-->
+            <dependency>
+                <groupId>org.fzg</groupId>
+                <artifactId>website1-base</artifactId>
+                <version>${website1-base.version}</version>
+            </dependency>
+            <!--fastjson-->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>${fastjson.version}</version>
+            </dependency>
+            <!--公共核心-->
+            <dependency>
+                <groupId>org.fzg</groupId>
+                <artifactId>website1-core</artifactId>
+                <version>${website1-core.version}</version>
+            </dependency>
+            <!--阿里云OSS-->
+            <dependency>
+                <groupId>com.aliyun.oss</groupId>
+                <artifactId>aliyun-sdk-oss</artifactId>
+                <version>${aliyun-sdk-oss.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <!--<dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            &lt;!&ndash;            <scope>test</scope>&ndash;&gt;
+        </dependency>
+        &lt;!&ndash; Lombok &ndash;&gt;
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+        </dependency>
+        &lt;!&ndash; json &ndash;&gt;
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>${fastjson.version}</version>
+        </dependency>
+    </dependencies>-->
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+
+
+
+
+    <!-- 环境 -->
+    <!--<profiles>
+        &lt;!&ndash; 开发 &ndash;&gt;
+        <profile>
+            <id>dev</id>
+            <activation>
+                &lt;!&ndash;默认激活配置&ndash;&gt;
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                &lt;!&ndash;当前环境&ndash;&gt;
+                <profileActive>dev</profileActive>
+                &lt;!&ndash;配置文件前缀&ndash;&gt;
+                <prefix.name>ande</prefix.name>
+                &lt;!&ndash;Nacos配置中心地址&ndash;&gt;
+                <config.server-addr>192.168.18.9:8848</config.server-addr>
+                &lt;!&ndash;Nacos配置中心命名空间,用于支持多环境.这里必须使用ID，不能使用名称,默认为空&ndash;&gt;
+                <config.namespace></config.namespace>
+                &lt;!&ndash;Nacos配置分组名称&ndash;&gt;
+                <config.group>DEFAULT_GROUP</config.group>
+                &lt;!&ndash;Nacos服务发现地址&ndash;&gt;
+                <discovery.server-addr>192.168.18.9:8858</discovery.server-addr>
+            </properties>
+        </profile>
+        &lt;!&ndash; 测试 &ndash;&gt;
+        <profile>
+            <id>test</id>
+            <properties>
+                &lt;!&ndash;当前环境&ndash;&gt;
+                <profileActive>test</profileActive>
+                &lt;!&ndash;配置文件前缀&ndash;&gt;
+                <prefix.name>ande</prefix.name>
+                &lt;!&ndash;Nacos配置中心地址&ndash;&gt;
+                <config.server-addr>47.95.6.66:8858</config.server-addr>
+                &lt;!&ndash;Nacos配置中心命名空间,用于支持多环境.这里必须使用ID，不能使用名称,默认为空&ndash;&gt;
+                <config.namespace></config.namespace>
+                &lt;!&ndash;Nacos配置分组名称&ndash;&gt;
+                <config.group>DEFAULT_GROUP</config.group>
+                &lt;!&ndash;Nacos服务发现地址&ndash;&gt;
+                <discovery.server-addr>47.95.6.66:8858</discovery.server-addr>
+            </properties>
+        </profile>
+        &lt;!&ndash; 生产 &ndash;&gt;
+        <profile>
+            <id>prod</id>
+
+            <properties>
+                &lt;!&ndash;当前环境,生产环境为空&ndash;&gt;
+                <profileActive>prod</profileActive>
+                &lt;!&ndash;配置文件前缀&ndash;&gt;
+                <prefix.name>ande</prefix.name>
+                &lt;!&ndash;Nacos配置中心地址&ndash;&gt;
+                <config.server-addr>47.95.6.66:8858</config.server-addr>
+                &lt;!&ndash;Nacos配置中心命名空间,用于支持多环境.这里必须使用ID，不能使用名称,默认为空&ndash;&gt;
+                <config.namespace></config.namespace>
+                &lt;!&ndash;Nacos配置分组名称&ndash;&gt;
+                <config.group>DEFAULT_GROUP</config.group>
+                &lt;!&ndash;Nacos服务发现地址&ndash;&gt;
+                <discovery.server-addr>47.95.6.66:8858</discovery.server-addr>
+            </properties>
+        </profile>
+    </profiles>-->
+
+
+</project>

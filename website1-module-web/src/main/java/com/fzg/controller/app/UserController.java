@@ -1,0 +1,58 @@
+package com.fzg.controller.app;
+
+
+import com.fzg.model.Result;
+import com.fzg.service.UserService;
+import com.fzg.vo.RegisterVO;
+import com.fzg.vo.UserLoginVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/app/user")
+@RequiredArgsConstructor
+@Schema(name = "用户模块", description = "用户模块")
+@Slf4j
+public class UserController {
+
+    private final UserService userService;
+
+
+    @Operation(summary = "用户注册接口")
+    @PostMapping("/register")
+    public Result register(@Validated (RegisterVO.RegisterVOValidated.class) @RequestBody RegisterVO registerVO) {
+        log.info("registerVO:{}=========",registerVO);
+
+        return userService.register(registerVO);
+    }
+
+    @Operation(summary = "用户发送验证码接口")
+    @PostMapping("/sendVerificationCode")
+    public Result sendVerificationCode(@Validated (RegisterVO.RegisterVOValidated.class) @RequestBody RegisterVO registerVO) {
+        log.info("registerVO:{}=========",registerVO);
+
+        return userService.sendVerificationCode(registerVO);
+    }
+
+
+
+    /**
+     * 用户名密码登录
+     * @return
+     */
+   // @ApiOperation("用户登录接口")
+    @PostMapping("/login")
+    public Result login(@RequestBody UserLoginVO userLoginVO) {
+
+        log.info("loginVO:{}=========",userLoginVO);
+
+        return userService.accountLogin(userLoginVO);
+
+    }
+
+
+}
