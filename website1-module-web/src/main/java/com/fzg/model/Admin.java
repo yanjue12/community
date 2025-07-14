@@ -6,11 +6,14 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serializable;
 
 @Data
 @TableName("admin")
 @Schema(name = "Admin", description = "管理员表")
-public class Admin {
+public class Admin implements Serializable {
 
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键ID")

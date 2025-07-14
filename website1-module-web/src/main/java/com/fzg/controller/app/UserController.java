@@ -1,6 +1,7 @@
 package com.fzg.controller.app;
 
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.fzg.model.Result;
 import com.fzg.service.UserService;
 import com.fzg.vo.RegisterVO;
@@ -53,6 +54,27 @@ public class UserController {
         return userService.accountLogin(userLoginVO);
 
     }
+
+
+    @PostMapping("/logout")
+    public Result logout(@RequestBody UserLoginVO userLoginVO) {
+        StpUtil.logout();
+        return Result.success("退出成功");
+    }
+
+    //修改用户名
+
+
+    //修改密码
+
+
+
+    //忘记密码
+
+
+
+
+
 
 
 }

@@ -44,7 +44,7 @@ spring:
       max-request-size: 10MB
   mail:
     host: smtp.163.com
-   # port: 587 # TSL端口
+   # port: 587 # TSL端口 不懂为什么出现未知错误。
     port: 25
     username: yanjue2024@163.com
     password: LYe8Gh5fsF8ksLTH
@@ -123,8 +123,8 @@ mybatis-plus:
 
 
 #ande专用配置
-minidao:
-  base-package: org.ande.modules.jmreport.*
+#minidao:
+#  base-package: org.ande.modules.jmreport.*
 ande:
   # 签名密钥串(前后端要一致，正式发布请自行修改)
   signatureSecret: ffsdsadasd215215216bb215a25211

@@ -87,6 +87,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
 
         //TODO 判断密码
+        log.info("################## password:{}",password);
         String encryptPwd = UserUtil.getUserEncryptPassword(user.getAccount(), userLoginVO.getPassword());
         if(!user.getPassword().equals(encryptPwd)){
             return Result.fail(EnumReturn.PASSWORD_ERROR);
