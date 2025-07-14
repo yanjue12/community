@@ -29,7 +29,7 @@ public class Subtitles {
     private Short states;
 
     @Schema(description = "排序")
-    private Integer sort;
+    private Integer sortOrder;
 
     @Schema(description = "创建时间")
     private Date createdAt;
