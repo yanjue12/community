@@ -28,6 +28,7 @@ public class ContactUs {
     /**
      * 
      */
+    @Schema(description = "姓名")
     private String name;
 
     /**
@@ -40,21 +41,25 @@ public class ContactUs {
     /**
      * 
      */
+    @Schema(description = "公司")
     private String company;
 
     /**
      * 
      */
+    @Schema(description = "手机号码")
     private String phone;
 
     /**
      * 
      */
+    @Schema(description = "留言内容")
     private String message;
 
     /**
      * 
      */
+    @Schema(description = "创建时间")
     private Date createdAt;
 
 
