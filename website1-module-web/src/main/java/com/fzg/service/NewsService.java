@@ -2,6 +2,10 @@ package com.fzg.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fzg.model.News;
+import com.fzg.model.Result;
+import com.fzg.vo.NewsVO;
+
+import java.util.List;
 
 /**
 * @author yanju
@@ -10,4 +14,5 @@ import com.fzg.model.News;
 */
 public interface NewsService extends IService<News> {
 
+    Result<List<NewsVO>> myList();
 }

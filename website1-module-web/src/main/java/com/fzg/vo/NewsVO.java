@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
+import java.time.LocalDateTime;
 
 @Data
 public class NewsVO {
@@ -11,6 +12,10 @@ public class NewsVO {
     public interface NewsVOValidated{
 
     }
+
+    @Schema(description = "主键ID")
+    @NotBlank(groups = {NewsVO.NewsVOValidated.class},message = "新闻ID不能为空")
+    private Integer id;
 
     @Schema(description = "标题")
     @NotBlank(groups = {NewsVO.NewsVOValidated.class},message = "新闻标题不能为空")
@@ -24,5 +29,9 @@ public class NewsVO {
     @NotBlank(groups = {NewsVO.NewsVOValidated.class},message = "新闻标签不能为空")
     private Short label;
 
-    private Stirng
+    @Schema(description = "新闻发布时间")
+    private LocalDateTime publishDate;
+
+
+
 }
