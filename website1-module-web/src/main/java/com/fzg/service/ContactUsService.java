@@ -2,6 +2,7 @@ package com.fzg.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fzg.model.ContactUs;
+import com.fzg.model.Result;
 
 /**
 * @author yanju
@@ -10,4 +11,5 @@ import com.fzg.model.ContactUs;
 */
 public interface ContactUsService extends IService<ContactUs> {
 
+    Result mySave(ContactUs contactUs);
 }
