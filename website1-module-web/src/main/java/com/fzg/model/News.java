@@ -10,7 +10,6 @@ import lombok.Data;
 
 /**
  * 新闻表
- * @TableName news
  */
 @TableName(value ="news")
 @Data
@@ -19,7 +18,7 @@ public class News {
      * 
      */
     @TableId(type = IdType.AUTO)
-    private Long id;
+    private Integer id;
 
     /**
      * 新闻标题
@@ -32,6 +31,13 @@ public class News {
      */
     @Schema(description = "描述")
     private String summary;
+
+    @Schema(description = "新闻类型")
+    private String label;
+
+    @Schema(description = "新闻状态 0:下架 1:已发布")
+    private String states;
+
 
     @Schema(description = "新闻url")
     private String url;
