@@ -25,16 +25,25 @@ public enum EnumReturn {
         USERNAME_PASSWORD_ERROR(2004, "账号或密码错误"),
         USERNAME_PASSWORD_EMPTY(2005, "账号或密码不能为空"),
 
-        EMAIL_ALREADY_REGISTERED(2010,"邮箱已被注册"),
-        REGISTER_FAIL(2011, "注册失败"),
+        PASSWORD_ERROR(2006, "密码错误"),
 
-        USER_DISABLED(2033, "账号已被禁用"),
+        EMAIL_ALREADY_REGISTERED(2007,"邮箱已被注册"),
+        REGISTER_FAIL(2008, "注册失败"),
+
+        USER_DISABLED(2009, "账号已被禁用"),
 
 
-        VERIFICATION_CODE_FREQUENT(2041, "验证码发送频繁，请稍后再试"),
-        VERIFICATION_CODE_ERROR(2042, "验证码错误"),
+        VERIFICATION_CODE_FREQUENT(2011, "验证码发送频繁，请稍后再试"),
+        VERIFICATION_CODE_ERROR(2012, "验证码错误"),
 
-        PASSWORD_ERROR(2051, "密码错误"),
+        NEWS_NOT_EXIST(2021, "新闻不存在"),
+        NEWS_DETAIL_NOT_FOUND(2022, "新闻详情不存在"),
+
+
+        CONTENT_NOT_EXISTS(2061, "内容不能为空"),
+        NAME_NOT_EXISTS(2062, "姓名不能为空"),
+
+        OPERATION_SUCCESS(2999,"操作成功"),
 
         // 4000 权限相关
         UN_AUTHORIZATION(401,"未授权"),
