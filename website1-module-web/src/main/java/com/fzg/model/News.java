@@ -34,7 +34,7 @@ public class News {
     @Schema(description = "描述")
     private String summary;
 
-    @Schema(description = "新闻类型")
+    @Schema(description = "新闻标签")
     private String label;
 
     @Schema(description = "新闻状态 0:下架 1:已发布")

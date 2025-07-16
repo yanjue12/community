@@ -27,7 +27,7 @@ public class NewsVO {
 
     @Schema(description = "新闻标签")
     @NotBlank(groups = {NewsVO.NewsVOValidated.class},message = "新闻标签不能为空")
-    private Short label;
+    private String label;
 
     @Schema(description = "新闻发布时间")
     private LocalDateTime publishDate;

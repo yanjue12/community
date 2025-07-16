@@ -41,8 +41,8 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         LambdaQueryWrapper<Solutions> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Solutions::getStates, 1);
         List<Solutions> solutionsList = this.list(queryWrapper);
-        log.info("===== 查询到状态为 1 的解决方案列表，数量: {} =====", solutionsList.size());
-        log.debug("解决方案信息列表:{}",solutionsList);
+       // log.info("===== 查询到状态为 1 的解决方案列表，数量: {} =====", solutionsList.size());
+       // log.debug("解决方案信息列表:{}",solutionsList);
 
         List<SolutionsVO> solutionsVOList = new ArrayList<>();
 
@@ -52,16 +52,16 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
 
             solutionsVO.setUrl(solutions.getImageUrl());
             solutionsVO.setTitle(solutions.getTitle());
-            log.info("----- 开始处理解决方案: {} -----", solutions.getTitle());
-            log.debug("解决方案 VO 初始信息 :{}", solutionsVO);
+        //    log.info("----- 开始处理解决方案: {} -----", solutions.getTitle());
+        //    log.debug("解决方案 VO 初始信息 :{}", solutionsVO);
 
             LambdaQueryWrapper<Subtitles> queryWrapper1 = new LambdaQueryWrapper<>();
             queryWrapper1
                     .eq(Subtitles::getSolutionId, solutions.getId())
                     .eq(Subtitles::getStates, 1);
             List<Subtitles> subtitlesList = subtitlesMapper.selectList(queryWrapper1);
-            log.info("该解决方案下状态为 1 的子标题数量: {}", subtitlesList.size());
-            log.debug("子标题列表信息:{}",subtitlesList);
+         //   log.info("该解决方案下状态为 1 的子标题数量: {}", subtitlesList.size());
+         //   log.debug("子标题列表信息:{}",subtitlesList);
 
             //封装子标题到解决方案VO中
             List<SubtitleVO> subtitlesVOList = new ArrayList<>();
@@ -76,11 +76,11 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             solutionsVOList.add(solutionsVO);
 
 
-            log.debug("解决方案 VO 最终信息: {}", solutionsVO);
-            log.info("----- 解决方案: {} 处理完成 -----", solutions.getTitle());
+         //   log.debug("解决方案 VO 最终信息: {}", solutionsVO);
+         //   log.info("----- 解决方案: {} 处理完成 -----", solutions.getTitle());
 
 
-            log.info("solutionsVOList:{}", solutionsVOList);
+         //   log.info("solutionsVOList:{}", solutionsVOList);
 
         }
         return  solutionsVOList;

@@ -38,6 +38,7 @@ public enum EnumReturn {
 
         NEWS_NOT_EXIST(2021, "新闻不存在"),
         NEWS_DETAIL_NOT_FOUND(2022, "新闻详情不存在"),
+        NEWS_CREATE_ERROR(2023, "创建新闻失败"),
 
 
         CONTENT_NOT_EXISTS(2061, "内容不能为空"),

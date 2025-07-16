@@ -7,6 +7,8 @@ import com.fzg.model.Result;
 import com.fzg.service.ContactUsService;
 import com.fzg.mapper.ContactUsMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ContactUsServiceImpl extends ServiceImpl<ContactUsMapper, ContactUs>
     implements ContactUsService{
 
@@ -34,6 +37,7 @@ public class ContactUsServiceImpl extends ServiceImpl<ContactUsMapper, ContactUs
         if(contactUs.getName()==null) {
             return Result.fail(EnumReturn.NAME_NOT_EXISTS);
         }
+
 
         if(contactUsMapper.insert(contactUs) == 0) {
             return Result.fail(EnumReturn.OPERATION_FAIL);

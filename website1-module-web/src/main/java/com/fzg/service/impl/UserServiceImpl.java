@@ -101,7 +101,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //登录成功，记录token
         StpUtil.login(user.getId());
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-        String tokenValue = tokenInfo.getTokenValue();
 
         tokenInfo.setTokenTimeout(3600);
         SaSession session = StpUtil.getSession();
@@ -109,7 +108,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         session.set("USER_ID",user.getId());
 
 
-        log.info("################## tokenValue:{}",tokenValue);
         log.info("################## tokenInfo:{}",tokenInfo);
 
         return Result.success(tokenInfo);
@@ -129,6 +127,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         String email = registerVO.getEmail();
+        log.info("################## email:{}",email);
         if(StrUtil.isEmpty(email)){
             return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);
         }
@@ -164,9 +163,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setStates((short) 1);
 
         if(this.save(user)){
-            StpUtil.login(user.getId());
-            String tokenValue = StpUtil.getTokenValue();
-            return Result.success("注册成功");
+            SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+
+            tokenInfo.setTokenTimeout(3600);
+            SaSession session = StpUtil.getSession();
+            session.set("USER_NAME",user.getUsername());
+            session.set("USER_ID",user.getId());
+            return Result.success(tokenInfo);
         }else{
             return Result.fail(EnumReturn.REGISTER_FAIL);
         }
@@ -181,7 +184,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(User::getEmail,email);
         if(null != this.getOne(queryWrapper)){
-            return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);
+            return Result.fail(EnumReturn.EMAIL_ALREADY_REGISTERED);
         }
 
         String verificationCode = RandomUtil.randomNumbers(6);

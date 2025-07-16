@@ -1,19 +1,15 @@
 package com.fzg.controller.app;
 
-import com.fzg.enums.EnumReturn;
-import com.fzg.model.News;
 import com.fzg.model.Result;
 import com.fzg.service.NewsService;
 import com.fzg.vo.NewsVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -29,7 +25,7 @@ public class NewsController {
     @GetMapping("/list")
     public Result<List<NewsVO>> list(){
 
-        return newsService.myList();
+        return newsService.newsList();
 
 
        // return Result.success(newsVOList);

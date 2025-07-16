@@ -125,6 +125,7 @@ minio:
   access-key: root
   secret-key: fzg450902
   bucket-name: website
+  temp-bucket-name: temp-image
 
 #ande专用配置
 #minidao:
