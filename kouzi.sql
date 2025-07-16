@@ -42,26 +42,25 @@ create table if not exists admin(
 
 
  -- 创建新闻类型表
-CREATE TABLE if not exists news_type (
+/*CREATE TABLE if not exists news_type (
     id tinyint PRIMARY KEY AUTO_INCREMENT,        -- 新闻类型ID
     name VARCHAR(100) NOT NULL comment '新闻类型：如：Product ，Event，Partnership',                 -- 新闻类型名称（如：Product, Event, Partnership, Corporate）
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 更新时间
 )ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT '新闻类型表';
-
+*/
 -- 企业新闻表
 CREATE TABLE if not exists news (
     id int PRIMARY KEY AUTO_INCREMENT,        -- 新闻ID
     title VARCHAR(255) NOT NULL comment '新闻标题',                 -- 新闻标题
     summary varchar(255) comment '简介',
-    label tinyint not null comment '新闻类型',
+    label String not null comment '新闻类型',
     states tinyint default 1 comment '状态：1-正常 0-下架',
     url varchar(255) null comment '封面图片url',
     publish_date datetime DEFAULT current_timestamp comment '发布时间 默认为创建当天',                  -- 发布时间
     author varchar(50) not null comment '发布人',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 更新时间
-    FOREIGN KEY (label) REFERENCES news_type(id)  -- 外键约束
 )ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin  COMMENT '新闻表';
 
 

@@ -1,6 +1,7 @@
 package com.fzg.controller.app;
 
 import io.minio.*;
+import io.minio.http.Method;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,12 +27,11 @@ public class MinioController {
     /**
      * 文件上传
      * @param file 上传的文件
-     * @param objectName 对象名称
      * @return 文件访问路径
      * @throws  Exception 异常
      */
     @PostMapping("/upload")
-    public String uploadFile(@RequestParam MultipartFile file,@RequestParam String objectName){
+    public String uploadFile(@RequestParam MultipartFile file){
 
         //唯一文件名
         String originalFilename = file.getOriginalFilename();
@@ -61,7 +61,11 @@ public class MinioController {
 
             // 返回文件的访问 URL
             //String.format("%s/%s%s",minioClient.getEndpoint, bucketName, objectName);
-            return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder().bucket(
+            return minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs
+                            .builder()
+                            .method(Method.POST)
+                            .bucket(
                     bucketName).object(uniqueObjectName).build()
             );
         } catch (Exception e) {
