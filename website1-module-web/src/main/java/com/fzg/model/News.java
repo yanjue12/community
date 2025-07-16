@@ -3,6 +3,8 @@ package com.fzg.model; // 修改包名为正确路径
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -47,7 +49,7 @@ public class News {
      * 发布时间
      */
     @Schema(description = "发布时间")
-    private Date publishDate;
+    private LocalDateTime publishDate;
 
     /**
      * 发布人
@@ -61,13 +63,13 @@ public class News {
      * 
      */
     @Schema(description = "创建时间")
-    private Date createdAt;
+    private LocalDateTime createdAt;
 
     /**
      * 
      */
     @Schema(description = "更新时间")
-    private Date updatedAt;
+    private LocalDateTime updatedAt;
 
 
 }

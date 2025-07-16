@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -50,12 +52,12 @@ public class Solutions {
     /**
      * 
      */
-    private Date createdAt;
+    private LocalDateTime createdAt;
 
     /**
      * 
      */
-    private Date updatedAt;
+    private LocalDateTime updatedAt;
 
 
 }

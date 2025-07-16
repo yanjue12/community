@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @TableName(value ="operation_log")
@@ -35,6 +36,6 @@ public class OperationLog {
     private String ipAddress;
 
     @Schema(description = "操作时间")
-    private Date createAt;
+    private LocalDateTime createAt;
 
 }

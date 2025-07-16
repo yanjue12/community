@@ -3,6 +3,8 @@ package com.fzg.model; // 修改包名为正确路径
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -60,7 +62,7 @@ public class ContactUs {
      * 
      */
     @Schema(description = "创建时间")
-    private Date createdAt;
+    private LocalDateTime createdAt;
 
 
 }
