@@ -28,7 +28,7 @@ import java.util.List;
 @Service
 @Slf4j
 public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions>
-    implements SolutionsService{
+    implements SolutionsService {
 
 
     @Resource
@@ -43,8 +43,6 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         LambdaQueryWrapper<Solutions> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Solutions::getStates, 1);
         List<Solutions> solutionsList = this.list(queryWrapper);
-       // log.info("===== 查询到状态为 1 的解决方案列表，数量: {} =====", solutionsList.size());
-       // log.debug("解决方案信息列表:{}",solutionsList);
 
         List<SolutionsVO> solutionsVOList = new ArrayList<>();
 
@@ -54,16 +52,13 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
 
             solutionsVO.setUrl(solutions.getImageUrl());
             solutionsVO.setTitle(solutions.getTitle());
-        //    log.info("----- 开始处理解决方案: {} -----", solutions.getTitle());
-        //    log.debug("解决方案 VO 初始信息 :{}", solutionsVO);
 
             LambdaQueryWrapper<Subtitles> queryWrapper1 = new LambdaQueryWrapper<>();
             queryWrapper1
                     .eq(Subtitles::getSolutionId, solutions.getId())
                     .eq(Subtitles::getStates, 1);
             List<Subtitles> subtitlesList = subtitlesMapper.selectList(queryWrapper1);
-         //   log.info("该解决方案下状态为 1 的子标题数量: {}", subtitlesList.size());
-         //   log.debug("子标题列表信息:{}",subtitlesList);
+
 
             //封装子标题到解决方案VO中
             List<SubtitleVO> subtitlesVOList = new ArrayList<>();
@@ -78,21 +73,16 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             solutionsVOList.add(solutionsVO);
 
 
-         //   log.debug("解决方案 VO 最终信息: {}", solutionsVO);
-         //   log.info("----- 解决方案: {} 处理完成 -----", solutions.getTitle());
-
-
-         //   log.info("solutionsVOList:{}", solutionsVOList);
-
         }
-        return  solutionsVOList;
+        return solutionsVOList;
 
     }
 
     /**
      * 添加解决方案
-     * @param solutionsVO
-     * @return
+     *
+     * @param solutionsVO solutionsVO
+     * @return result
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -108,7 +98,7 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         Solutions solutions = new Solutions();
         solutions.setTitle(solutionsVO.getTitle());
         solutions.setImageUrl(solutionsVO.getUrl());
-        solutions.setStates(1);
+        solutions.setStates(Short.valueOf("1"));
         //solutions.setIntroduction(solutionsVO.getIntroduction());
 
         boolean saveSolutionResult = this.save(solutions);
@@ -121,9 +111,11 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             List<Subtitles> subtitlesList = new ArrayList<>();
             for (SubtitleVO subtitleVO : subtitlesVOList) {
                 Subtitles subtitle = new Subtitles();
-                BeanUtils.copyProperties(subtitleVO, subtitle);
+                // BeanUtils.copyProperties(subtitleVO, subtitle);
                 // 设置子标题所属的解决方案 ID
                 subtitle.setSolutionId(solutions.getId());
+                subtitle.setSubtitle(subtitleVO.getSubtitle());
+                subtitle.setDescription(subtitleVO.getDescription());
                 log.info("解决方案的id为：{}", solutions.getId());
                 subtitlesList.add(subtitle);
             }
@@ -136,9 +128,129 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
 
 
         }
-        return null;
+        return Result.success(200);
     }
+
+    /**
+     * 修改解决方案
+     *
+     * @param solutionsVO
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result updateSolutions(Integer id, SolutionsVO solutionsVO) {
+        // 参数校验
+        if (id == null || solutionsVO == null) {
+            return Result.fail(EnumReturn.PARAMS_EMPTY);
+        }
+
+        Solutions solution = this.getById(id);
+
+        if (solution == null) {
+            return Result.fail(EnumReturn.SOLUTIONS_NOT_FOUND);
+        }
+
+        if (solutionsVO.getTitle() != null) {
+            solution.setTitle(solutionsVO.getTitle());
+        }
+        if (solutionsVO.getUrl() != null) {
+            solution.setImageUrl(solutionsVO.getUrl());
+        }
+
+        if (this.updateById(solution)) {
+            return Result.fail(EnumReturn.SOLUTIONS_UPDATE_ERROR);
+        }
+
+        //更新其他字段，如果搞简介的话
+
+        // 更新子标题
+        List<SubtitleVO> subtitlesVOList = solutionsVO.getSubtitlesVOList();
+        if (subtitlesVOList != null) {
+            // 先删除原有的子标题
+            LambdaQueryWrapper<Subtitles> deleteWrapper = new LambdaQueryWrapper<>();
+            deleteWrapper.eq(Subtitles::getSolutionId, id);
+            subtitlesMapper.delete(deleteWrapper);
+
+            // 插入新的子标题
+            List<Subtitles> subtitlesList = new ArrayList<>();
+            for (SubtitleVO subtitleVO : subtitlesVOList) {
+                Subtitles subtitle = new Subtitles();
+                //fixme 可能有bug
+                BeanUtils.copyProperties(subtitleVO, subtitle);
+                subtitle.setSolutionId(id);
+                subtitlesList.add(subtitle);
+            }
+            boolean saveSubtitlesResult = subtitlesMapper.insertBatch(subtitlesList);
+            if (!saveSubtitlesResult) {
+                throw new RuntimeException("子标题更新失败");
+            }
+        }
+
+        // 返回成功结果
+        return Result.success(EnumReturn.OPERATION_SUCCESS);
+    }
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result deleteSolutions(Integer id) {
+        if (null == id) {
+            return Result.fail(EnumReturn.PARAMS_EMPTY);
+        }
+
+        // 检查解决方案是否存在
+        Solutions solution = this.getById(id);
+        if (null == solution) {
+            return Result.fail(EnumReturn.SOLUTIONS_NOT_FOUND);
+        }
+
+        // 删除解决方案
+        boolean deleteSolutionResult = this.removeById(id);
+        if (!deleteSolutionResult) {
+            return Result.fail(EnumReturn.SOLUTIONS_DELETE_ERROR);
+        }
+
+        // 删除对应的子标题
+        LambdaQueryWrapper<Subtitles> deleteWrapper = new LambdaQueryWrapper<>();
+        deleteWrapper.eq(Subtitles::getSolutionId, id);
+        boolean deleteSubtitlesResult = subtitlesMapper.delete(deleteWrapper) > 0;
+        if (!deleteSubtitlesResult) {
+            // 可以选择抛出异常回滚事务，或者记录日志
+            log.warn("删除解决方案 {} 对应的子标题时未找到相关记录", id);
+        }
+
+        return Result.success(EnumReturn.OPERATION_SUCCESS);
+    }
+
+    /**
+     * 修改解决方案状态
+     * @param id 解决方案ID
+     * @param state 状态 1 启用 0 禁用 前端修改后给我。
+     */
+    @Override
+    public Result changeSolutionsState(Integer id, Short state) {
+        if (id == null || state == null) {
+            return Result.fail(EnumReturn.PARAMS_EMPTY);
+        }
+
+        Solutions solutions = this.getById(id);
+        if (solutions == null) {
+            return Result.fail(EnumReturn.SOLUTIONS_NOT_FOUND);
+        }
+
+        solutions.setStates(state);
+
+        if (this.updateById(solutions)) {
+            return Result.success(EnumReturn.OPERATION_SUCCESS);
+        } else {
+            return Result.fail(EnumReturn.SOLUTIONS_UPDATE_ERROR);
+        }
+    }
+
 }
+
+
 
 
 

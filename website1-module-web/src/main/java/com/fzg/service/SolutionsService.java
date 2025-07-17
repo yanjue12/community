@@ -17,4 +17,10 @@ public interface SolutionsService extends IService<Solutions> {
     List<SolutionsVO> solutionsList();
 
     Result addSolutions(SolutionsVO solutionsVO);
+
+    Result updateSolutions(Integer id, SolutionsVO solutionsVO);
+
+    Result deleteSolutions(Integer id);
+
+    Result changeSolutionsState(Integer id, Short state);
 }

@@ -5,16 +5,16 @@
 <mapper namespace="com.fzg.mapper.SubtitlesMapper">
     <insert id="insertBatch">
         INSERT INTO subtitles (
+        solution_id,
         subtitle,
-        description,
-        states,
+        description
         )
         VALUES
         <foreach collection="list" item="item" separator=",">
             (
+            #{item.solutionId},
             #{item.subtitle},
-            #{item.description},
-            #{item.states},
+            #{item.description}
             )
         </foreach>
     </insert>

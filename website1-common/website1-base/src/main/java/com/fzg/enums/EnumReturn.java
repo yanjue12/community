@@ -47,6 +47,10 @@ public enum EnumReturn {
 
         PARAMS_EMPTY(2041, "参数不能为空"),
         SOLUTIONS_SAVE_ERROR(2042, "解决方案保存失败"),
+        SOLUTIONS_NOT_FOUND(2043, "解决方案不存在"),
+        SOLUTIONS_UPDATE_ERROR(2044, "解决方案更新失败"),
+        SOLUTIONS_DELETE_ERROR(2045, "解决方案删除失败"),
+        SOLUTIONS_LIST_ERROR(2046, "解决方案列表获取失败"),
 
         OPERATION_SUCCESS(2999,"操作成功"),
 
