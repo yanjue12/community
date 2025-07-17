@@ -20,49 +20,34 @@ import javax.validation.constraints.Email;
 @Data
 @Schema(name = "ContactUs", description = "联系记录表")
 public class ContactUs {
-    /**
-     * 
-     */
+
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键ID")
     private Long id;
 
-    /**
-     * 
-     */
+
     @Schema(description = "姓名")
     private String name;
 
-    /**
-     * 
-     */
+
     @Schema(description = "邮箱")
     @Email(message = "邮箱格式不正确")
     private String email;
 
-    /**
-     * 
-     */
+
     @Schema(description = "公司")
     private String company;
 
-    /**
-     * 
-     */
+
     @Schema(description = "手机号码")
     private String phone;
 
-    /**
-     * 
-     */
     @Schema(description = "留言内容")
     private String message;
 
-    /**
-     * 
-     */
     @Schema(description = "创建时间")
     private LocalDateTime createdAt;
 
-
+    @Schema(description = "状态 0 未处理 1 已处理")
+    private Short states;
 }

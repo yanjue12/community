@@ -1,5 +1,6 @@
 package com.fzg.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.enums.EnumReturn;
@@ -14,6 +15,7 @@ import com.fzg.vo.SubtitleVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
@@ -48,10 +50,12 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
 
         //查询状态为1的解决方案的子标题
         for (Solutions solutions : solutionsList) {
+            //封装解决方案到解决方案VO中
             SolutionsVO solutionsVO = new SolutionsVO();
-
+           // BeanUtils.copyProperties(solutions, solutionsVO);
             solutionsVO.setUrl(solutions.getImageUrl());
             solutionsVO.setTitle(solutions.getTitle());
+            solutionsVO.setId(solutions.getId());
 
             LambdaQueryWrapper<Subtitles> queryWrapper1 = new LambdaQueryWrapper<>();
             queryWrapper1
@@ -246,6 +250,58 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         } else {
             return Result.fail(EnumReturn.SOLUTIONS_UPDATE_ERROR);
         }
+    }
+
+    @Override
+    public Result AdminSolutionsList() {
+        LambdaQueryWrapper<Solutions> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(Solutions::getStates).orderByAsc(Solutions::getUpdatedAt);
+        List<Solutions> solutionsList = this.list(queryWrapper);
+
+        List<SolutionsVO> solutionsVOList = new ArrayList<>();
+
+        for (Solutions solutions : solutionsList) {
+            //封装解决方案到解决方案VO中
+            SolutionsVO solutionsVO = new SolutionsVO();
+            // BeanUtils.copyProperties(solutions, solutionsVO);
+            solutionsVO.setUrl(solutions.getImageUrl());
+            solutionsVO.setTitle(solutions.getTitle());
+            solutionsVO.setId(solutions.getId());
+
+            LambdaQueryWrapper<Subtitles> queryWrapper1 = new LambdaQueryWrapper<>();
+            queryWrapper1
+                    .eq(Subtitles::getSolutionId, solutions.getId())
+                    .eq(Subtitles::getStates, 1);
+            List<Subtitles> subtitlesList = subtitlesMapper.selectList(queryWrapper1);
+
+
+            //封装子标题到解决方案VO中
+            List<SubtitleVO> subtitlesVOList = new ArrayList<>();
+            for (Subtitles subtitles : subtitlesList) {
+                SubtitleVO subtitlesVO = new SubtitleVO();
+                BeanUtils.copyProperties(subtitles, subtitlesVO);
+                subtitlesVOList.add(subtitlesVO);
+            }
+            solutionsVO.setSubtitlesVOList(subtitlesVOList);
+
+
+            solutionsVOList.add(solutionsVO);
+
+
+        }
+        return Result.success(solutionsVOList);
+    }
+
+    /**
+     * 批量删除解决方案
+     * @param ids
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class,propagation = Propagation.REQUIRED)
+    public Result batchDeleteSolutions(List<Integer> ids) {
+
+        return null;
     }
 
 }

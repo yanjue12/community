@@ -18,4 +18,8 @@ public interface NewsService extends IService<News> {
     Result<List<NewsVO>> newsList();
 
     Result createNewsWithContent(NewsCreateBO newsCreateBO);
+
+    void deleteNews(Integer id);
+
+    void updateNews(Integer id, NewsCreateBO newsCreateBO);
 }

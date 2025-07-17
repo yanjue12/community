@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 @Data
 public class NewsCreateBO {
 
+    @Schema(description = "新闻ID")
+    private Integer id;
 
     @Schema(description = "标题")
     @NotBlank(message = "新闻标题不能为空")

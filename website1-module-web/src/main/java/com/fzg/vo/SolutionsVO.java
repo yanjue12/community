@@ -9,6 +9,10 @@ import java.util.List;
 @Data
 public class SolutionsVO {
 
+    @Schema(description = "ID")
+    @NotBlank(message = "ID不能为空")
+    private Integer id;
+
     @NotBlank(message = "标题不能为空")
     private String title;
 

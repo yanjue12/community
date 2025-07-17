@@ -53,6 +53,8 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
             Pattern.compile("src=\"(.*?/temp-images/.*?)\"");
 
 
+
+
     /**
      * 获取新闻列表
      * @return
@@ -79,6 +81,8 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
         log.info("新闻列表vo数据newsVOList:{}", newsVOList);
         return Result.success(newsVOList);
     }
+
+
 
 
     /**
@@ -144,6 +148,68 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
     }
 
 
+
+    /**
+     * 删除新闻
+     * @param id 新闻id
+     */
+    @Override
+    public void deleteNews(Integer id) {
+        //不逻辑删了，直接删
+        LambdaQueryWrapper<NewsDetail> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(NewsDetail::getNewsId, id);
+        newsDetailsMapper.deleteById(id);
+        this.removeById(id);
+
+    }
+
+
+
+    /**
+     * 更新新闻
+     * @param id 新闻id
+     * @param newsCreateBO 新闻更新信息
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateNews(Integer id, NewsCreateBO newsCreateBO) {
+        // 根据新闻 ID 查询新闻
+        News news = this.getById(id);
+        if (news == null) {
+            throw new RuntimeException(EnumReturn.NEWS_NOT_EXIST.getDesc());
+        }
+
+        news.setTitle(newsCreateBO.getTitle());
+        news.setSummary(newsCreateBO.getSummary());
+        news.setLabel(newsCreateBO.getLabel());
+        news.setPublishDate(newsCreateBO.getPublishDate());
+        this.updateById(news);
+
+        //TODO 处理富文本里的图片
+
+        // 查询新闻详情
+        LambdaQueryWrapper<NewsDetail> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(NewsDetail::getNewsId, id);
+        NewsDetail newsDetail = newsDetailsMapper.selectOne(queryWrapper);
+
+        if (newsDetail == null) {
+            // 若新闻详情不存在，则创建新的新闻详情记录
+            newsDetail = new NewsDetail();
+            newsDetail.setNewsId(id);
+            newsDetail.setContent();
+            newsDetailsMapper.insert(newsDetail);
+        } else {
+            // 若新闻详情存在，则更新新闻详情内容
+            newsDetail.setContent();
+            newsDetailsMapper.updateById(newsDetail);
+        }
+
+
+    }
+
+
+
+
     /**
      * 替换富文本中所有图片src为占位符
      * @param content 富文本内容
@@ -170,6 +236,9 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
         // 返回处理后的HTML
         return doc.html();
     }
+
+
+
 
     /**
      * 处理富文本里的图片

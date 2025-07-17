@@ -45,6 +45,17 @@ public class ContactUsServiceImpl extends ServiceImpl<ContactUsMapper, ContactUs
             return Result.success(EnumReturn.OPERATION_SUCCESS);
         }
     }
+
+    @Override
+    public Result changeState(Integer id, Short state) {
+        ContactUs contactUs = this.getById(id);
+        if(contactUs == null){
+            return Result.fail(EnumReturn.CONTACTUS_NOT_EXISTS);
+        }
+        contactUs.setStates(state);
+
+        return null;
+    }
 }
 
 

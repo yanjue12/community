@@ -23,4 +23,8 @@ public interface SolutionsService extends IService<Solutions> {
     Result deleteSolutions(Integer id);
 
     Result changeSolutionsState(Integer id, Short state);
+
+    Result AdminSolutionsList();
+
+    Result batchDeleteSolutions(List<Integer> ids);
 }

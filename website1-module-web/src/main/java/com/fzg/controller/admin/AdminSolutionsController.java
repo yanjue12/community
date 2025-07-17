@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 管理员解决方案管理接口
  */
@@ -18,6 +20,12 @@ import org.springframework.web.bind.annotation.*;
 public class AdminSolutionsController {
 
     private final SolutionsService solutionsService;
+
+    //获取解决方案列表
+    @GetMapping("/list")
+    public Result listSolutions() {
+        return solutionsService.AdminSolutionsList();
+    }
 
     @PostMapping("/add")
     public Result addSolutions(@RequestBody SolutionsVO solutionsVO) {
@@ -32,7 +40,6 @@ public class AdminSolutionsController {
         return solutionsService.updateSolutions(id, solutionsVO);
     }
 
-
     /**
      *删除解决方案
      * @param id
@@ -42,6 +49,14 @@ public class AdminSolutionsController {
     public Result deleteSolutions(@PathVariable Integer id) {
         return solutionsService.deleteSolutions(id);
     }
+
+
+    //批量删除解决方案
+    @DeleteMapping("/batchDelete")
+    public Result batchDeleteSolutions(@RequestBody List<Integer> ids) {
+        return solutionsService.batchDeleteSolutions(ids);
+    }
+
 
     // 修改解决方案状态
     @PutMapping("/changeState/{id}")

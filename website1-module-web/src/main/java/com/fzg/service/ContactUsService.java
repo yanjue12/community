@@ -12,4 +12,6 @@ import com.fzg.model.Result;
 public interface ContactUsService extends IService<ContactUs> {
 
     Result mySave(ContactUs contactUs);
+
+    Result changeState(Integer id, Short state);
 }

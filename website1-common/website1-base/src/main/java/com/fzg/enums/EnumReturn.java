@@ -39,6 +39,8 @@ public enum EnumReturn {
         NEWS_NOT_EXIST(2021, "新闻不存在"),
         NEWS_DETAIL_NOT_FOUND(2022, "新闻详情不存在"),
         NEWS_CREATE_ERROR(2023, "创建新闻失败"),
+        NEWS_DELETE_ERROR(2024, "删除新闻失败"),
+        NEWS_UPDATE_ERROR(2025, "更新新闻失败"),
 
 
         CONTENT_NOT_EXISTS(2031, "内容不能为空"),
@@ -51,6 +53,7 @@ public enum EnumReturn {
         SOLUTIONS_UPDATE_ERROR(2044, "解决方案更新失败"),
         SOLUTIONS_DELETE_ERROR(2045, "解决方案删除失败"),
         SOLUTIONS_LIST_ERROR(2046, "解决方案列表获取失败"),
+        CONTACTUS_NOT_EXISTS(2047, "联系我们不存在"),
 
         OPERATION_SUCCESS(2999,"操作成功"),
 

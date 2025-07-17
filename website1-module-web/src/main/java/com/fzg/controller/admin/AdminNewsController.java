@@ -33,6 +33,43 @@ public class AdminNewsController {
     }
 
 
+    /**
+     * 删除新闻
+     * @param id 新闻ID
+     * @return 操作结果
+     */
+    @DeleteMapping("/delete/{id}")
+    public Result deleteNews(@PathVariable Integer id) {
+        try {
+            // 调用服务层方法删除新闻
+            this.newsService.deleteNews(id);
+            return Result.success(EnumReturn.OPERATION_SUCCESS);
+        } catch (Exception e) {
+            // 处理异常
+            return Result.fail(EnumReturn.NEWS_DELETE_ERROR);
+        }
+    }
+
+
+
+    /**
+     * 更新新闻
+     * @param id 新闻ID
+     * @param newsCreateBO 新闻更新信息
+     * @return 操作结果
+     */
+    @PutMapping("/update/{id}")
+    public Result updateNews(@PathVariable Integer id, @RequestBody NewsCreateBO newsCreateBO) {
+        try {
+            // 调用服务层方法更新新闻
+            newsService.updateNews(id, newsCreateBO);
+            return Result.success(EnumReturn.OPERATION_SUCCESS);
+        } catch (Exception e) {
+            // 处理异常
+            return Result.fail(EnumReturn.NEWS_UPDATE_ERROR);
+        }
+    }
+
     @GetMapping("/list")
     public Result<List<NewsVO>> listNews() {
         Result<List<NewsVO>> listResult = newsService.newsList();
