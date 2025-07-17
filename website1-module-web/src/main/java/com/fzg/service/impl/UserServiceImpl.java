@@ -24,6 +24,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -86,7 +88,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         log.info("################## user:{}",user);
 
 
-        //TODO 判断密码
+
         log.info("################## password:{}",password);
         String encryptPwd = UserUtil.getUserEncryptPassword(user.getAccount(), userLoginVO.getPassword());
         if(!user.getPassword().equals(encryptPwd)){
@@ -104,13 +106,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         tokenInfo.setTokenTimeout(3600);
         SaSession session = StpUtil.getSession();
-        session.set("USER_NAME",user.getUsername());
         session.set("USER_ID",user.getId());
+        session.set("role",user.getRole());
 
 
         log.info("################## tokenInfo:{}",tokenInfo);
 
-        return Result.success(tokenInfo);
+        Map<String,Object> response = new HashMap<>();
+        response.put("role",user.getRole());
+        response.put("tokenInfo",tokenInfo);
+
+        return Result.success(response);
 
     }
 

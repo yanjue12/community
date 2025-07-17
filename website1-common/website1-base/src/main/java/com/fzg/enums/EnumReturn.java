@@ -41,8 +41,12 @@ public enum EnumReturn {
         NEWS_CREATE_ERROR(2023, "创建新闻失败"),
 
 
-        CONTENT_NOT_EXISTS(2061, "内容不能为空"),
-        NAME_NOT_EXISTS(2062, "姓名不能为空"),
+        CONTENT_NOT_EXISTS(2031, "内容不能为空"),
+        NAME_NOT_EXISTS(2032, "姓名不能为空"),
+
+
+        PARAMS_EMPTY(2041, "参数不能为空"),
+        SOLUTIONS_SAVE_ERROR(2042, "解决方案保存失败"),
 
         OPERATION_SUCCESS(2999,"操作成功"),
 

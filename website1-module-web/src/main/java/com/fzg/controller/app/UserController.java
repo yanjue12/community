@@ -2,6 +2,7 @@ package com.fzg.controller.app;
 
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.UserService;
 import com.fzg.vo.RegisterVO;
@@ -57,9 +58,19 @@ public class UserController {
 
 
     @PostMapping("/logout")
-    public Result logout(@RequestBody UserLoginVO userLoginVO) {
+    public Result logout() {
+
         StpUtil.logout();
         return Result.success("退出成功");
+       /* if(loginId.equals(id)){
+            StpUtil.logout();
+            log.info("用户退出成功");
+            log.info("登出成功:{}",StpUtil.getTokenInfo());
+            return Result.success("退出成功");
+        }else{
+            return Result.fail(EnumReturn.EMAIL_ALREADY_REGISTERED);
+        }*/
+
     }
 
     //修改用户名
@@ -69,9 +80,12 @@ public class UserController {
 
 
 
-    //忘记密码
+    //忘记密码进行重置
+    /*@PostMapping("/forgetPassword")
+    public Result forgetPassword(@RequestBody RegisterVO registerVO) {
 
-
+        return userService.forgetPassword(userLoginVO);
+    }*/
 
 
 

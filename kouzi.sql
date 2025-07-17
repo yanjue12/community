@@ -27,7 +27,8 @@ CREATE TABLE if not exists user (
     url varchar(255) default null comment '头像url',
     states tinyint default 1 comment '1-正常 2-异常',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 更新时间
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 更新时间
+    role varchar(20) default 'user' comment '角色：user-普通用户 admin-管理员'
 )ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin comment '用户表';
 
  -- 管理员表

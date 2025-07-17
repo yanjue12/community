@@ -47,6 +47,8 @@ public class User {
     @Schema(description = "更新时间")
     private LocalDateTime updatedAt;
 
+    @Schema(description = "角色名称 默认为user 表示普通用户")
+    private String role;
 
 
 

@@ -39,7 +39,7 @@ public class MinioController {
         if (originalFilename != null && originalFilename.contains(".")) {
             fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
-        String uniqueObjectName = UUID.randomUUID().toString() + "." + fileExtension;
+        String uniqueObjectName = UUID.randomUUID().toString()  + fileExtension;
 
 
         // 确保桶存在

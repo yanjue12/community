@@ -1,6 +1,7 @@
 package com.fzg.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.fzg.model.Result;
 import com.fzg.model.Solutions;
 import com.fzg.vo.SolutionsVO;
 
@@ -14,4 +15,6 @@ import java.util.List;
 public interface SolutionsService extends IService<Solutions> {
 
     List<SolutionsVO> solutionsList();
+
+    Result addSolutions(SolutionsVO solutionsVO);
 }

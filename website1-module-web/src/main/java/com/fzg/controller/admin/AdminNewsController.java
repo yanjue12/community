@@ -4,14 +4,13 @@ import com.fzg.bo.NewsCreateBO;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.NewsService;
-import com.fzg.vo.NewsDetailsVO;
+import com.fzg.vo.NewsVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/admin/news")
@@ -31,5 +30,12 @@ public class AdminNewsController {
             // 处理异常
             return Result.fail(EnumReturn.NEWS_CREATE_ERROR);
         }
+    }
+
+
+    @GetMapping("/list")
+    public Result<List<NewsVO>> listNews() {
+        Result<List<NewsVO>> listResult = newsService.newsList();
+        return Result.success(listResult.getData());
     }
 }

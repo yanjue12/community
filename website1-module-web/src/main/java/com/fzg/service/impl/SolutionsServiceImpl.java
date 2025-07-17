@@ -2,7 +2,9 @@ package com.fzg.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.SubtitlesMapper;
+import com.fzg.model.Result;
 import com.fzg.model.Solutions;
 import com.fzg.model.Subtitles;
 import com.fzg.service.SolutionsService;
@@ -85,6 +87,56 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         }
         return  solutionsVOList;
 
+    }
+
+    /**
+     * 添加解决方案
+     * @param solutionsVO
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result addSolutions(SolutionsVO solutionsVO) {
+
+        if (solutionsVO == null) {
+            return Result.fail(EnumReturn.PARAMS_EMPTY);
+        }
+        if (solutionsVO.getTitle() == null || solutionsVO.getTitle().isEmpty()) {
+            return Result.fail(EnumReturn.PARAMS_EMPTY);
+        }
+
+        Solutions solutions = new Solutions();
+        solutions.setTitle(solutionsVO.getTitle());
+        solutions.setImageUrl(solutionsVO.getUrl());
+        solutions.setStates(1);
+        //solutions.setIntroduction(solutionsVO.getIntroduction());
+
+        boolean saveSolutionResult = this.save(solutions);
+        if (!saveSolutionResult) {
+            return Result.fail(EnumReturn.SOLUTIONS_SAVE_ERROR);
+        }
+
+        List<SubtitleVO> subtitlesVOList = solutionsVO.getSubtitlesVOList();
+        if (subtitlesVOList != null && !subtitlesVOList.isEmpty()) {
+            List<Subtitles> subtitlesList = new ArrayList<>();
+            for (SubtitleVO subtitleVO : subtitlesVOList) {
+                Subtitles subtitle = new Subtitles();
+                BeanUtils.copyProperties(subtitleVO, subtitle);
+                // 设置子标题所属的解决方案 ID
+                subtitle.setSolutionId(solutions.getId());
+                log.info("解决方案的id为：{}", solutions.getId());
+                subtitlesList.add(subtitle);
+            }
+            // 批量保存子标题
+            boolean saveSubtitlesResult = subtitlesMapper.insertBatch(subtitlesList);
+            if (!saveSubtitlesResult) {
+                // 若子标题保存失败，进行回滚
+                throw new RuntimeException("子标题保存失败");
+            }
+
+
+        }
+        return null;
     }
 }
 
