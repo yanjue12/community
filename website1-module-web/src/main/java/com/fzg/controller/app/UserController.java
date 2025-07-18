@@ -61,15 +61,8 @@ public class UserController {
     public Result logout() {
 
         StpUtil.logout();
+      //  StpUtil.getSession().logout();
         return Result.success("退出成功");
-       /* if(loginId.equals(id)){
-            StpUtil.logout();
-            log.info("用户退出成功");
-            log.info("登出成功:{}",StpUtil.getTokenInfo());
-            return Result.success("退出成功");
-        }else{
-            return Result.fail(EnumReturn.EMAIL_ALREADY_REGISTERED);
-        }*/
 
     }
 

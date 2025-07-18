@@ -8,5 +8,7 @@ import java.util.List;
 
 @Mapper
 public interface SubtitlesMapper extends BaseMapper<Subtitles> {
+    //boolean updateBatch(List<Subtitles> subtitlesList);
+
     boolean insertBatch(List<Subtitles> subtitlesList);
 }

@@ -2,6 +2,7 @@ package com.fzg.service.impl;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
+import cn.dev33.satoken.stp.StpInterface;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -100,7 +101,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //登录成功，记录token
         StpUtil.login(user.getId());
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-
         tokenInfo.setTokenTimeout(3600);
         SaSession session = StpUtil.getSession();
         session.set("USER_ID",user.getId());

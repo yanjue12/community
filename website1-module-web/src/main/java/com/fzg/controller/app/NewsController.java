@@ -1,5 +1,6 @@
 package com.fzg.controller.app;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.fzg.model.Result;
 import com.fzg.service.NewsService;
 import com.fzg.vo.NewsVO;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/app/news")

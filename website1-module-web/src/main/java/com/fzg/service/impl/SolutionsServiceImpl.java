@@ -144,6 +144,8 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result updateSolutions(Integer id, SolutionsVO solutionsVO) {
+
+        log.info("进入修改解决方案逻辑层");
         // 参数校验
         if (id == null || solutionsVO == null) {
             return Result.fail(EnumReturn.PARAMS_EMPTY);
@@ -155,7 +157,7 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             return Result.fail(EnumReturn.SOLUTIONS_NOT_FOUND);
         }
 
-        if (solutionsVO.getTitle() != null) {
+        /*if (solutionsVO.getTitle() != null) {
             solution.setTitle(solutionsVO.getTitle());
         }
         if (solutionsVO.getUrl() != null) {
@@ -164,9 +166,19 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
 
         if (this.updateById(solution)) {
             return Result.fail(EnumReturn.SOLUTIONS_UPDATE_ERROR);
+        }*/
+
+
+        solution.setTitle(solutionsVO.getTitle());
+        solution.setImageUrl(solutionsVO.getUrl());
+        //solution.setIntroduction();
+        log.info("修改后的解决方案为：{}", solution);
+
+        if(!this.updateById(solution)) {
+            return  Result.fail(EnumReturn.SOLUTIONS_UPDATE_ERROR);
         }
 
-        //更新其他字段，如果搞简介的话
+        log.info("数据库更新完了解决方案表");
 
         // 更新子标题
         List<SubtitleVO> subtitlesVOList = solutionsVO.getSubtitlesVOList();
@@ -175,6 +187,8 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             LambdaQueryWrapper<Subtitles> deleteWrapper = new LambdaQueryWrapper<>();
             deleteWrapper.eq(Subtitles::getSolutionId, id);
             subtitlesMapper.delete(deleteWrapper);
+
+            log.info("删除子标题");
 
             // 插入新的子标题
             List<Subtitles> subtitlesList = new ArrayList<>();
@@ -185,12 +199,13 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
                 subtitle.setSolutionId(id);
                 subtitlesList.add(subtitle);
             }
+            log.info("更新后的子标题为：{}", subtitlesList);
             boolean saveSubtitlesResult = subtitlesMapper.insertBatch(subtitlesList);
             if (!saveSubtitlesResult) {
                 throw new RuntimeException("子标题更新失败");
             }
         }
-
+        log.info("所有都更新完成。");
         // 返回成功结果
         return Result.success(EnumReturn.OPERATION_SUCCESS);
     }
