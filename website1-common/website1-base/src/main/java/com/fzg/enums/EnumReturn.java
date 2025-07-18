@@ -38,10 +38,13 @@ public enum EnumReturn {
 
         NEWS_NOT_EXIST(2021, "新闻不存在"),
         NEWS_DETAIL_NOT_FOUND(2022, "新闻详情不存在"),
-        NEWS_CREATE_ERROR(2023, "创建新闻失败"),
-        NEWS_DELETE_ERROR(2024, "删除新闻失败"),
-        NEWS_UPDATE_ERROR(2025, "更新新闻失败"),
+        NEWS_LIST_EMPTY(2023, "新闻列表为空"),
+        NEWS_CREATE_ERROR(2024, "创建新闻失败"),
+        NEWS_DELETE_ERROR(2025, "删除新闻失败"),
+        NEWS_UPDATE_ERROR(2026, "更新新闻失败"),
 
+
+        UN_LOGIN_OR_TOKEN_INVAID(2027, "未登录或token失效"),
 
         CONTENT_NOT_EXISTS(2031, "内容不能为空"),
         NAME_NOT_EXISTS(2032, "姓名不能为空"),
