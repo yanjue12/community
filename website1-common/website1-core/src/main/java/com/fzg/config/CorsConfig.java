@@ -2,6 +2,8 @@ package com.fzg.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -14,9 +16,9 @@ import java.io.IOException;
  * 跨域配置类，用于配置允许跨域的规则
  */
 @Configuration
-public class CorsConfig implements Filter {
-
-    /*@Bean
+public class CorsConfig {
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public CorsFilter corsFilter() {
         // 创建 CORS 配置对象
         CorsConfiguration config = new CorsConfiguration();
@@ -35,9 +37,9 @@ public class CorsConfig implements Filter {
 
         // 创建并返回 CorsFilter 实例
         return new CorsFilter(source);
-    }*/
+    }
 
-    @Override
+  /*  @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         // 设置允许跨域的域名
         HttpServletResponse res = (HttpServletResponse) response;
@@ -56,6 +58,6 @@ public class CorsConfig implements Filter {
     }
     public void destroy() {
         // 销毁操作
-    }
+    }*/
 
 }
