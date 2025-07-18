@@ -1,7 +1,7 @@
 package com.fzg.controller.app;
 
+import com.fzg.service.MinioService;
 import io.minio.*;
-import io.minio.http.Method;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
-import java.util.UUID;
 
 
 @RestController
@@ -24,6 +23,7 @@ public class MinioController {
 
     private final MinioClient minioClient;
 
+    private final MinioService minioService;
 
     @Value("${minio.bucket-name}")
     private String bucketName;
@@ -37,46 +37,11 @@ public class MinioController {
     @PostMapping("/upload")
     public String uploadFile(@RequestParam MultipartFile file){
 
-        //唯一文件名
-        String originalFilename = file.getOriginalFilename();
-        String fileExtension = "";
-        if (originalFilename != null && originalFilename.contains(".")) {
-            fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-        String uniqueObjectName = UUID.randomUUID().toString()  + fileExtension;
+        String URL = minioService.upload(file, bucketName, minioClient);
 
+        System.out.println("上传文件URL：" + URL);
 
-        // 确保桶存在
-        try {
-            if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
-                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
-            }
-
-            // 使用 try-with-resources 自动管理 InputStream 资源 直接input 网站，不用分片异步
-            try (InputStream inputStream = file.getInputStream()) {
-                minioClient.putObject(
-                        PutObjectArgs.builder()
-                                .bucket(bucketName)
-                                .object(uniqueObjectName)
-                                .stream(inputStream, file.getSize(), -1)
-                                .contentType(file.getContentType())
-                                .build());
-            }
-
-            // 返回文件的访问 URL
-            //String.format("%s/%s%s",minioClient.getEndpoint, bucketName, objectName);
-            return minioClient.getPresignedObjectUrl(
-                    GetPresignedObjectUrlArgs
-                            .builder()
-                            .method(Method.GET)
-                            .bucket(
-                    bucketName).object(uniqueObjectName).build()
-            );
-        } catch (Exception e) {
-            // 处理异常，例如记录日志或返回错误信息
-            e.printStackTrace(); // 或使用日志记录工具
-            throw new RuntimeException("文件上传失败: " + e.getMessage());
-        }
+        return URL;
 
        /* if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
@@ -95,6 +60,29 @@ public class MinioController {
 
         return minioClient.getObjectUrl(bucketName, objectName);*/
     }
+
+
+
+    /**
+     * 文件上传
+     * @return 文件访问路径
+     * @throws  Exception 异常
+     */
+    @PostMapping("/uploadByUrl")
+    public String uploadFileByUrl(@RequestParam String url){
+
+        String URL = minioService.uploadByUrl(url, bucketName, minioClient);
+
+        System.out.println(URL);
+
+        System.out.println("通过图片URL进行上传后返回的url "+ URL);
+
+        return URL;
+
+
+    }
+
+
 
     /**
      * 文件下载

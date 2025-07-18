@@ -1,19 +1,21 @@
 package com.fzg.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.stp.StpUtil;
 import com.fzg.annotation.OperationLogAnnotation;
 import com.fzg.bo.NewsCreateBO;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.NewsService;
-import com.fzg.vo.NewsVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
+@SaCheckLogin
 @RequestMapping("/admin/news")
 @Schema(description = "管理员新闻管理接口")
 @RequiredArgsConstructor
@@ -23,6 +25,7 @@ public class AdminNewsController {
     private final NewsService newsService;
 
     @PostMapping("/add")
+    @SaCheckRole("admin")
     @OperationLogAnnotation(operationType = "POST-add",operationDesc = "创建新闻")
     public Result createNews(@RequestBody NewsCreateBO newsCreateBO) {
         try {
@@ -41,6 +44,7 @@ public class AdminNewsController {
      * @return 操作结果
      */
     @DeleteMapping("/delete/{id}")
+    @SaCheckRole("admin")
     @OperationLogAnnotation(operationType = "DELETE-delete-id",operationDesc = "删除新闻")
     public Result deleteNews(@PathVariable Integer id) {
         try {
@@ -62,8 +66,11 @@ public class AdminNewsController {
      * @return 操作结果
      */
     @PutMapping("/update/{id}")
+    @SaCheckRole("admin")
     @OperationLogAnnotation(operationType = "PUT-update-id",operationDesc = "更新新闻")
     public Result updateNews(@PathVariable Integer id, @RequestBody NewsCreateBO newsCreateBO) {
+        System.out.println(StpUtil.getRoleList());
+
         try {
             // 调用服务层方法更新新闻
             newsService.updateNews(id, newsCreateBO);
@@ -74,9 +81,16 @@ public class AdminNewsController {
         }
     }
 
+    /**
+     * 获取新闻的所有信息
+     * @return 新闻列表
+     */
     @GetMapping("/list")
-    public Result<List<NewsVO>> listNews() {
-        Result<List<NewsVO>> listResult = newsService.newsList();
-        return Result.success(listResult.getData());
+    @SaCheckRole("admin")
+    public Result listNews() {
+
+        System.out.println(StpUtil.getRoleList());
+
+        return newsService.newsList();
     }
 }

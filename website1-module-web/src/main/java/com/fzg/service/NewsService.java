@@ -15,7 +15,7 @@ import java.util.List;
 */
 public interface NewsService extends IService<News> {
 
-    Result<List<NewsVO>> newsList();
+    Result newsList();
 
     Result createNewsWithContent(NewsCreateBO newsCreateBO);
 
