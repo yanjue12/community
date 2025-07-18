@@ -85,11 +85,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(user.getStates() == 2){
             return Result.fail(EnumReturn.USER_DISABLED);
         }
-        log.info("################## user:{}",user);
 
 
-
-        log.info("################## password:{}",password);
         String encryptPwd = UserUtil.getUserEncryptPassword(user.getAccount(), userLoginVO.getPassword());
         if(!user.getPassword().equals(encryptPwd)){
             return Result.fail(EnumReturn.PASSWORD_ERROR);
@@ -110,11 +107,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         session.set("role",user.getRole());
 
 
-        log.info("################## tokenInfo:{}",tokenInfo);
 
         Map<String,Object> response = new HashMap<>();
         response.put("role",user.getRole());
         response.put("tokenInfo",tokenInfo);
+
+        log.info("################## response:{}",response);
 
         return Result.success(response);
 

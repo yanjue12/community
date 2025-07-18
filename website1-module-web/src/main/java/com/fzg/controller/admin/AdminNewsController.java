@@ -1,5 +1,6 @@
 package com.fzg.controller.admin;
 
+import com.fzg.annotation.OperationLogAnnotation;
 import com.fzg.bo.NewsCreateBO;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
@@ -22,6 +23,7 @@ public class AdminNewsController {
     private final NewsService newsService;
 
     @PostMapping("/add")
+    @OperationLogAnnotation(operationType = "POST-add",operationDesc = "创建新闻")
     public Result createNews(@RequestBody NewsCreateBO newsCreateBO) {
         try {
             // 调用服务层方法创建新闻
@@ -39,6 +41,7 @@ public class AdminNewsController {
      * @return 操作结果
      */
     @DeleteMapping("/delete/{id}")
+    @OperationLogAnnotation(operationType = "DELETE-delete-id",operationDesc = "删除新闻")
     public Result deleteNews(@PathVariable Integer id) {
         try {
             // 调用服务层方法删除新闻
@@ -59,6 +62,7 @@ public class AdminNewsController {
      * @return 操作结果
      */
     @PutMapping("/update/{id}")
+    @OperationLogAnnotation(operationType = "PUT-update-id",operationDesc = "更新新闻")
     public Result updateNews(@PathVariable Integer id, @RequestBody NewsCreateBO newsCreateBO) {
         try {
             // 调用服务层方法更新新闻

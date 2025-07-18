@@ -196,11 +196,12 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
             // 若新闻详情不存在，则创建新的新闻详情记录
             newsDetail = new NewsDetail();
             newsDetail.setNewsId(id);
-            newsDetail.setContent();
+            //TODO 新闻详情的内容填充
+            //newsDetail.setContent();
             newsDetailsMapper.insert(newsDetail);
         } else {
             // 若新闻详情存在，则更新新闻详情内容
-            newsDetail.setContent();
+            //newsDetail.setContent();
             newsDetailsMapper.updateById(newsDetail);
         }
 

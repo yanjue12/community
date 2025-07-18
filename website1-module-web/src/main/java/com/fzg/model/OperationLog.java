@@ -9,25 +9,16 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.Date;
 
-@TableName(value ="operation_log")
+@TableName(value = "operation_log")
 @Data
 public class OperationLog {
 
     @TableId(type = IdType.AUTO)
+    @Schema(description = "主键")
     private Long id;
-
-    @Schema(description = "操作管理员id")
-    private Integer adminId;
 
     @Schema(description = "操作类型")
     private String operationType;
-
-
-    @Schema(description = "操作目标表")
-    private String targetTable;
-
-    @Schema(description = "操作目标id")
-    private Long targetId;
 
     @Schema(description = "操作描述")
     private String operationDetail;
@@ -36,6 +27,7 @@ public class OperationLog {
     private String ipAddress;
 
     @Schema(description = "操作时间")
-    private LocalDateTime createAt;
+    private LocalDateTime createdAt;
+
 
 }

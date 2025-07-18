@@ -5,6 +5,9 @@ import io.minio.http.Method;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +23,7 @@ import java.util.UUID;
 public class MinioController {
 
     private final MinioClient minioClient;
+
 
     @Value("${minio.bucket-name}")
     private String bucketName;
@@ -64,7 +68,7 @@ public class MinioController {
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs
                             .builder()
-                            .method(Method.POST)
+                            .method(Method.GET)
                             .bucket(
                     bucketName).object(uniqueObjectName).build()
             );
@@ -99,12 +103,20 @@ public class MinioController {
      * @throws  Exception 异常
      */
     @GetMapping("/download/{objectName}")
-    public ResponseEntity<InputStream> downloadFile(@PathVariable String objectName) throws Exception {
-        return ResponseEntity.ok(minioClient.getObject(
+    public ResponseEntity<InputStreamResource> downloadFile(@PathVariable String objectName) throws Exception {
+
+        InputStream inputStream = minioClient.getObject(
                 GetObjectArgs.builder()
                         .bucket(bucketName)
                         .object(objectName)
-                        .build()));
+                        .build());
+
+        InputStreamResource inputStreamResource = new InputStreamResource(inputStream);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM) // 或其他适当的类型
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + objectName + "\"")
+                .body(inputStreamResource);
     }
 
     /**

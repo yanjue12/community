@@ -21,8 +21,4 @@ public @interface OperationLogAnnotation {
      */
     String operationType() default "";
 
-    /**
-     * 操作目标表
-     */
-    String targetTable() default "";
 }
