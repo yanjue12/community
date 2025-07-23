@@ -7,7 +7,6 @@ import com.fzg.model.Result;
 import com.fzg.service.ContactUsService;
 import com.fzg.mapper.ContactUsMapper;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

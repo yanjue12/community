@@ -1,6 +1,6 @@
 
-create database if not exists kouzi;
-use kouzi;
+create database if not exists foreign_website;
+use foreign_website;
 
 drop table if exists user;
 drop table if exists admin;
@@ -27,9 +27,9 @@ CREATE TABLE if not exists user (
     url varchar(255) default null comment '头像url',
     states tinyint default 1 comment '1-正常 2-异常',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 更新时间
-    role varchar(20) default 'user' comment '角色：user-普通用户 admin-管理员'
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 更新时间
 )ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin comment '用户表';
+
 
  -- 管理员表
 create table if not exists admin(
@@ -48,20 +48,20 @@ create table if not exists admin(
     name VARCHAR(100) NOT NULL comment '新闻类型：如：Product ，Event，Partnership',                 -- 新闻类型名称（如：Product, Event, Partnership, Corporate）
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 更新时间
-)ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT '新闻类型表';
-*/
+)ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT '新闻类型表';*/
+
 -- 企业新闻表
 CREATE TABLE if not exists news (
     id int PRIMARY KEY AUTO_INCREMENT,        -- 新闻ID
     title VARCHAR(255) NOT NULL comment '新闻标题',                 -- 新闻标题
     summary varchar(255) comment '简介',
-    label String not null comment '新闻类型',
+    label varchar(255) not null comment '新闻标签',
     states tinyint default 1 comment '状态：1-正常 0-下架',
     url varchar(255) null comment '封面图片url',
     publish_date datetime DEFAULT current_timestamp comment '发布时间 默认为创建当天',                  -- 发布时间
-    author varchar(50) not null comment '发布人',
+    author varchar(50) null comment '发布人',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 更新时间
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 更新时间
 )ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin  COMMENT '新闻表';
 
 
@@ -75,6 +75,8 @@ create table if not exists news_detail(
     UNIQUE KEY uniq_news_id (news_id), -- 确保一对一
     foreign key (news_id) references news(id) on delete cascade
 )ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin comment '新闻详情表';
+
+ -- ALTER TABLE news_detail MODIFY content MEDIUMTEXT;
 
 -- solutions(解决方案)
  CREATE TABLE if not exists solutions (
@@ -108,8 +110,11 @@ CREATE TABLE if not exists contact_us (
     company VARCHAR(255),                          -- 公司名称
     phone VARCHAR(20),                            -- 电话
     message TEXT NOT NULL,                         -- 消息内容
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- 创建时间
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+    states tinyint default 0 comment '已读状态：0-未读 1-已读'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT '联系记录表';
+
+
 
  -- 系统配置表
 CREATE TABLE system_config (
@@ -121,8 +126,18 @@ CREATE TABLE system_config (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT '系统配置表';
 
+
 -- 操作日志表
 CREATE TABLE operation_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    operation_type VARCHAR(50) NOT NULL COMMENT '操作类型',
+    operation_detail TEXT COMMENT '操作详情',
+    ip_address VARCHAR(45) COMMENT '操作IP',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT '操作日志表';
+
+-- 操作日志表
+/*CREATE TABLE operation_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     admin_id INT NOT NULL COMMENT '操作管理员ID',
     operation_type VARCHAR(50) NOT NULL COMMENT '操作类型',
@@ -131,4 +146,4 @@ CREATE TABLE operation_log (
     operation_detail TEXT COMMENT '操作详情',
     ip_address VARCHAR(45) COMMENT '操作IP',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT '操作日志表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT '操作日志表';*/

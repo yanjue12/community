@@ -1,5 +1,10 @@
 server:
   port: 9322
+ # ssl:
+ #   key-store: classpath:keystore.p12
+ #   key-store-password: S3cur3K3y! # 你在生成证书时设置的密钥库密码
+ #   key-store-type: PKCS12
+ #   key-alias: tomcat
   tomcat:
     max-swallow-size: -1
   error:
@@ -10,6 +15,7 @@ server:
     enabled: true
     min-response-size: 1024
     mime-types: application/javascript,application/json,application/xml,text/html,text/xml,text/plain,text/css,image/*
+  http-port: 9321
 
 sa-token:
   # token 名称 (同时也是 cookie 名称)
@@ -73,13 +79,13 @@ spring:
     druid:
       password: fzg450902
       username: root
-      url: jdbc:mysql://localhost:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      url: jdbc:mysql://192.168.18.71:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
       driver-class-name: com.mysql.cj.jdbc.Driver
-
+# 8008
   #redis 配置
   redis:
     database: 0
-    host: 127.0.0.1
+    host: 192.168.18.71
     port: 6379
     lettuce:
       pool:
@@ -277,7 +283,6 @@ wx:
 #    prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
 #    timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
 #  enabled: true
-
 
 #第三方APP对接
 third-app:

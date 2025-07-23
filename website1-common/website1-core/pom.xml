@@ -54,10 +54,10 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>-->
         <!--mybatisPlus 依赖-->
-        <dependency>
+<!--        <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
-        </dependency>
+        </dependency>-->
         <!--mysql8 驱动-->
         <dependency>
             <groupId>com.mysql</groupId>
@@ -88,7 +88,6 @@
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
             <version>8.0.3</version>
-            <scope>compile</scope>
         </dependency>
 
 

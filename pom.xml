@@ -17,50 +17,11 @@
 
 
     <modules>
-        <module>website1-module-web</module>
         <module>website1-common</module>
+        <module>website1-module-web</module>
     </modules>
 
 
-    <!--<properties>
-        <java.version>17</java.version>
-        <fastjson.version>2.0.39</fastjson.version>
-        <mysql-connector-j.version>8.0.31</mysql-connector-j.version>
-        <lombok.version>1.18.28</lombok.version>
-        <mybatis-plus-boot-starter.version>3.5.3</mybatis-plus-boot-starter.version>
-        <mybatis-plus-generator.version>3.5.3</mybatis-plus-generator.version>
-    </properties>-->
-
-
-    <distributionManagement>
-
-
-        <repository>
-            <id>rdc-releases</id>
-            <url>https://repo.rdc.aliyun.com/repository/139516-release-CioPiJ/</url>
-        </repository>
-
-        <snapshotRepository>
-            <id>rdc-snapshots</id>
-            <url>https://repo.rdc.aliyun.com/repository/139516-snapshot-Zlh7EE/</url>
-        </snapshotRepository>
-
-
-    </distributionManagement>
-
-
-
-
-    <repositories>
-        <repository>
-            <id>aliyun</id>
-            <name>aliyun Repository</name>
-            <url>https://maven.aliyun.com/repository/public</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
 
 
     <properties>
@@ -209,7 +170,8 @@
         </dependency>
     </dependencies>-->
 
-    <build>
+
+  <!--  <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -217,7 +179,7 @@
             </plugin>
         </plugins>
     </build>
-
+-->
 
 
 

@@ -1,3 +1,4 @@
+/*
 package com.fzg.handler;
 
 import cn.dev33.satoken.exception.NotLoginException;
@@ -18,7 +19,7 @@ public class GlobalExceptionHandle {
 
 
 
-  /*  @ExceptionHandler(BusinessException.class)
+    @ExceptionHandler(BusinessException.class)
     public Result<String> businessException(BusinessException e){
         log.error(e.getMessage());
         return Result.fail(EnumReturn.OPERATION_FAIL.getCode(),e.getMessage());
@@ -35,6 +36,7 @@ public class GlobalExceptionHandle {
         log.error(e.getMessage());
         e.printStackTrace();
         return null;
-    }*/
+    }
 
 }
+*/
