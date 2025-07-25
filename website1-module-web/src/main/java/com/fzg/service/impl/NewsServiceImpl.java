@@ -117,12 +117,15 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
         Integer newsId = news.getId();
 
         //处理 details 字符串
+        log.info("开始处理新闻详情");
         String content = newsCreateBO.getContent();
         Document document = Jsoup.parse(content);
         Elements imgElements = document.select("src");
 
-        for(Element imgElement : imgElements){
+        //这里前端选择上传，返回给了他服务器图片地址，不需要对图片再次修改，直接存
+       /* for(Element imgElement : imgElements){
             String imgUrl = imgElement.attr("src");
+
 
             //上传获取新url
             String Url = minioService.uploadByUrl(imgUrl, minioProperties.getBucketName(), minioClient);
@@ -131,7 +134,7 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
             //替换url
             imgElement.attr("src",Url);
         }
-
+*/
         String updatedContent = document.body().html();
 
 
@@ -223,6 +226,7 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
 
 
         if(newsDetail != null && Objects.equals(oldContent, newContent)){
+            log.debug("新闻内容未改变，无需更新,此时的数据库新闻：{},前端传的新闻：{}", oldContent, newContent);
             return;
         }
 
@@ -240,10 +244,12 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
         for (Element imgElement : newImgElements) {
             String imgUrl = imgElement.attr("src");
             if (!oldImgUrls.containsKey(imgUrl)) {
+                log.debug("新闻内容图片有变化,数据库图片：{},前端传的图片：{}", oldImgUrls, imgUrl);
                 // 1.图片 URL 变化 先删除旧图片
                 minioService.removeFile(imgUrl,minioProperties.getBucketName(),minioClient);
                 //2.在上传新图
                 String newUrl = minioService.uploadByUrl(imgUrl, minioProperties.getBucketName(), minioClient);
+                log.debug("上传新图成功,新图url:{}", newUrl);
                 imgElement.attr("src", newUrl);
             }
         }

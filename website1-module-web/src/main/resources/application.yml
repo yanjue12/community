@@ -1,9 +1,9 @@
 server:
   port: 9322
-  ssl:
-    key-store: classpath:keystore.p12
-    key-store-password: S3cur3K3y! # 你在生成证书时设置的密钥库密码
-    key-store-type: PKCS12
+  #ssl:
+  #  key-store: classpath:keystore.p12
+  #  key-store-password: S3cur3K3y! # 你在生成证书时设置的密钥库密码
+  #  key-store-type: PKCS12
   tomcat:
     max-swallow-size: -1
   error:
@@ -50,16 +50,20 @@ spring:
   mail:
     host: smtp.163.com
    # port: 587 # TSL端口 不懂为什么出现未知错误。
-    port: 25
+    port: 465
     username: yanjue2024@163.com
     password: LYe8Gh5fsF8ksLTH
     properties:
       mail:
+        debug: true
         smtp:
           auth: true
-          starttls:
-            enable: true # 开启TLS加密
-            required: true
+          ssl:
+            enable: true
+#          starttls:
+#            enable: true # 开启TLS加密
+#            required: true
+    protocol: smtp
 
 
   jackson:
@@ -76,15 +80,16 @@ spring:
     open-in-view: false #懒加载时使用，建议false
   datasource:
     druid:
-      password: slweb2025
+ #     password: slweb2025
+      password: fzg450902
       username: root
-      url: jdbc:mysql://mysql:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      url: jdbc:mysql://localhost:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
       driver-class-name: com.mysql.cj.jdbc.Driver
 # 8008
   #redis 配置
   redis:
     database: 0
-    host: redis
+    host: 127.0.0.1
     port: 6379
     lettuce:
       pool:
@@ -126,11 +131,13 @@ mybatis-plus:
 #mongodb
 
 minio:
-  endpoint: https://datawisdom.tech:9000
+  #endpoint: https://datawisdom.tech:9000
   access-key: root
-  secret-key: slweb2025
+#  secret-key: slweb2025
+  secret-key: fzg450902
   bucket-name: website
   temp-bucket-name: temp-image
+  endpoint: http://192.168.18.71:9000
 
 #ande专用配置
 #minidao:
