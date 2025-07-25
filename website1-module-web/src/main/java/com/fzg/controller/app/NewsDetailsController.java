@@ -2,7 +2,6 @@ package com.fzg.controller.app;
 
 import com.fzg.model.Result;
 import com.fzg.service.NewsDetailService;
-import com.fzg.service.NewsService;
 import com.fzg.vo.NewsDetailsVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;

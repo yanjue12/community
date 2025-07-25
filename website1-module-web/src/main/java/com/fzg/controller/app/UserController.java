@@ -27,7 +27,6 @@ public class UserController {
     @Operation(summary = "用户注册接口")
     @PostMapping("/register")
     public Result register(@Validated (RegisterVO.RegisterVOValidated.class) @RequestBody RegisterVO registerVO) {
-        log.info("registerVO:{}=========",registerVO);
 
         return userService.register(registerVO);
     }
@@ -35,7 +34,6 @@ public class UserController {
     @Operation(summary = "用户发送验证码接口")
     @PostMapping("/sendVerificationCode")
     public Result sendVerificationCode(@Validated (RegisterVO.RegisterVOValidated.class) @RequestBody RegisterVO registerVO) {
-        log.info("registerVO:{}=========",registerVO);
 
         return userService.sendVerificationCode(registerVO);
     }
@@ -50,7 +48,6 @@ public class UserController {
     @PostMapping("/login")
     public Result login(@RequestBody UserLoginVO userLoginVO) {
 
-        log.info("loginVO:{}=========",userLoginVO);
 
         return userService.accountLogin(userLoginVO);
 
@@ -61,7 +58,6 @@ public class UserController {
     public Result logout() {
 
         StpUtil.logout();
-      //  StpUtil.getSession().logout();
         return Result.success("退出成功");
 
     }

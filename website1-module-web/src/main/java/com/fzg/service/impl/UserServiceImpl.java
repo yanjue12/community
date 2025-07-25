@@ -54,7 +54,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         String username = userLoginVO.getUsername();
         String password = userLoginVO.getPassword();
-        //判断用户名是否正确 || 存在
+
         if(StrUtil.isNotEmpty(username)){
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("username",username);
@@ -63,7 +63,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 return Result.fail(EnumReturn.USERNAME_NOT_EXISTS);
             }
         }
-        //判断账号是否存在 || 正确
         if(StrUtil.isNotEmpty(userLoginVO.getAccount())){
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("account",userLoginVO.getAccount());
@@ -73,7 +72,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             }
         }
 
-        //判断邮箱是否存在 || 正确
         if(StrUtil.isNotEmpty(userLoginVO.getEmail())){
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("email",userLoginVO.getEmail());
@@ -82,13 +80,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);}
         }
 
-        //判断用户状态
-        if(user.getStates() == 2){
+        if(2 == user.getStates()){
             return Result.fail(EnumReturn.USER_DISABLED);
         }
 
 
-        String encryptPwd = UserUtil.getUserEncryptPassword(user.getAccount(), userLoginVO.getPassword());
+        String encryptPwd = UserUtil.getUserEncryptPassword(user.getAccount(), password);
         if(!user.getPassword().equals(encryptPwd)){
             return Result.fail(EnumReturn.PASSWORD_ERROR);
         }
@@ -96,7 +93,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
 
 
-        log.info("################## user:{}",user);
 
         //登录成功，记录token
         StpUtil.login(user.getId());
@@ -112,7 +108,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         response.put("role",user.getRole());
         response.put("tokenInfo",tokenInfo);
 
-        log.info("################## response:{}",response);
 
         return Result.success(response);
 
@@ -131,7 +126,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         String email = registerVO.getEmail();
-        log.info("################## email:{}",email);
         if(StrUtil.isEmpty(email)){
             return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);
         }
@@ -148,17 +142,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String r = RandomUtil.randomString(6);
         String timestampLastSix = String.valueOf(System.currentTimeMillis()).substring(6);
         String account = r+timestampLastSix;
-        log.info("account:{}####################",account);
 
 
         //密码加密
         String encryptPwd = UserUtil.getUserEncryptPassword(account, registerVO.getPassword());
-        log.info("encryptPwd:{}####################",encryptPwd);
 
         //TODO 设置默认头像
 
 
-        //保存用户
         User user = new User();
         user.setEmail(email);
         user.setUsername(email);
@@ -219,7 +210,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             javaMailSender.send(message);
             return Result.success("邮件成功发送");
         } catch (Exception e) {
-            log.error("################## 邮件发送失败：{},邮箱：{}",e.getMessage(),email);
+            log.error(" 邮件发送失败：{},邮箱：{}",e.getMessage(),email);
             return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
         }
 

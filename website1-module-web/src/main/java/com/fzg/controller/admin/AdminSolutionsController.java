@@ -30,15 +30,12 @@ public class AdminSolutionsController {
 
     private final SolutionsService solutionsService;
 
-    //获取解决方案列表
     @GetMapping("/list")
-    //@OperationLogAnnotation(operationDesc = "展示解决方案",operationType = "Get-list")
     @SaCheckRole("admin")
     public Result listSolutions() {
 
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
 
-        log.info("tokenInfo:{}", tokenInfo);
 
         if(tokenInfo.getTokenValue() == null || !StpUtil.isLogin()){
             return Result.fail(EnumReturn.UN_LOGIN_OR_TOKEN_INVAID);
@@ -64,7 +61,6 @@ public class AdminSolutionsController {
     @SaCheckRole("admin")
     @OperationLogAnnotation(operationDesc = "修改解决方案",operationType = "PUT-update")
     public Result updateSolutions(@PathVariable Integer id, @RequestBody SolutionsVO solutionsVO) {
-        log.info("修改解决方案，ID：{}，数据：{}", id, solutionsVO);
         return solutionsService.updateSolutions(id, solutionsVO);
     }
 

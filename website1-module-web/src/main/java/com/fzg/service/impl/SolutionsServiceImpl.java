@@ -53,16 +53,13 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
      */
     @Override
     public List<SolutionsVO> solutionsList() {
-        //查询状态为1的解决方案
         LambdaQueryWrapper<Solutions> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Solutions::getStates, 1);
         List<Solutions> solutionsList = this.list(queryWrapper);
 
         List<SolutionsVO> solutionsVOList = new ArrayList<>();
 
-        //查询状态为1的解决方案的子标题
         for (Solutions solutions : solutionsList) {
-            //封装解决方案到解决方案VO中
             SolutionsVO solutionsVO = new SolutionsVO();
            // BeanUtils.copyProperties(solutions, solutionsVO);
             solutionsVO.setUrl(solutions.getImageUrl());
@@ -84,11 +81,7 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
                 subtitlesVOList.add(subtitlesVO);
             }
             solutionsVO.setSubtitlesVOList(subtitlesVOList);
-
-
             solutionsVOList.add(solutionsVO);
-
-
         }
         return solutionsVOList;
 
@@ -115,7 +108,6 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         solutions.setTitle(solutionsVO.getTitle());
         solutions.setImageUrl(solutionsVO.getUrl());
         solutions.setStates(Short.valueOf("1"));
-        //solutions.setIntroduction(solutionsVO.getIntroduction());
 
         boolean saveSolutionResult = this.save(solutions);
         if (!saveSolutionResult) {
@@ -128,17 +120,13 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             for (SubtitleVO subtitleVO : subtitlesVOList) {
                 Subtitles subtitle = new Subtitles();
                 // BeanUtils.copyProperties(subtitleVO, subtitle);
-                // 设置子标题所属的解决方案 ID
                 subtitle.setSolutionId(solutions.getId());
                 subtitle.setSubtitle(subtitleVO.getSubtitle());
                 subtitle.setDescription(subtitleVO.getDescription());
-                log.info("解决方案的id为：{}", solutions.getId());
                 subtitlesList.add(subtitle);
             }
-            // 批量保存子标题
             boolean saveSubtitlesResult = subtitlesMapper.insertBatch(subtitlesList);
             if (!saveSubtitlesResult) {
-                // 若子标题保存失败，进行回滚
                 throw new RuntimeException("子标题保存失败");
             }
 
@@ -157,7 +145,6 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
     @Transactional(rollbackFor = Exception.class)
     public Result updateSolutions(Integer id, SolutionsVO solutionsVO) {
 
-        log.info("进入修改解决方案逻辑层");
         // 参数校验
         if (id == null || solutionsVO == null) {
             return Result.fail(EnumReturn.PARAMS_EMPTY);
@@ -184,14 +171,11 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
 
         solution.setTitle(solutionsVO.getTitle());
         solution.setImageUrl(solutionsVO.getUrl());
-        //solution.setIntroduction();
-        log.info("修改后的解决方案为：{}", solution);
 
         if(!this.updateById(solution)) {
             return  Result.fail(EnumReturn.SOLUTIONS_UPDATE_ERROR);
         }
 
-        log.info("数据库更新完了解决方案表");
 
         // 更新子标题
         List<SubtitleVO> subtitlesVOList = solutionsVO.getSubtitlesVOList();
@@ -201,24 +185,21 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             deleteWrapper.eq(Subtitles::getSolutionId, id);
             subtitlesMapper.delete(deleteWrapper);
 
-            log.info("删除子标题");
 
             // 插入新的子标题
             List<Subtitles> subtitlesList = new ArrayList<>();
             for (SubtitleVO subtitleVO : subtitlesVOList) {
                 Subtitles subtitle = new Subtitles();
-                //fixme 可能有bug
+                //fixme 这里其实可以搞事务传递那种更新不需要删除
                 BeanUtils.copyProperties(subtitleVO, subtitle);
                 subtitle.setSolutionId(id);
                 subtitlesList.add(subtitle);
             }
-            log.info("更新后的子标题为：{}", subtitlesList);
             boolean saveSubtitlesResult = subtitlesMapper.insertBatch(subtitlesList);
             if (!saveSubtitlesResult) {
                 throw new RuntimeException("子标题更新失败");
             }
         }
-        log.info("所有都更新完成。");
         // 返回成功结果
         return Result.success(EnumReturn.OPERATION_SUCCESS);
     }
@@ -238,7 +219,6 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         }
 
         // 删除解决方案
-        // 1.minio图片删除
         try {
             this.minioService.removeFile(solution.getImageUrl(), bucketName, minioClient);
         } catch (Exception e) {
@@ -255,7 +235,6 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         deleteWrapper.eq(Subtitles::getSolutionId, id);
         boolean deleteSubtitlesResult = subtitlesMapper.delete(deleteWrapper) > 0;
         if (!deleteSubtitlesResult) {
-            // 可以选择抛出异常回滚事务，或者记录日志
             log.warn("删除解决方案 {} 对应的子标题时未找到相关记录", id);
         }
 

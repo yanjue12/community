@@ -25,7 +25,6 @@ public class AdminContactUsController {
 
     @GetMapping("/list")
     @SaCheckRole("admin")
-    //@OperationLogAnnotation(operationDesc = "展示联系记录",operationType = "Get-list")
     public Result listSolutions() {
 
         if(!StpUtil.isLogin()){
@@ -38,7 +37,6 @@ public class AdminContactUsController {
     }
 
 
-    //修改状态
     @PutMapping("/changeState/{id}")
     @SaCheckRole("admin")
     @OperationLogAnnotation(operationDesc = "修改联系记录状态",operationType = "Put-changeState")
@@ -47,7 +45,6 @@ public class AdminContactUsController {
     }
 
 
-    // 删除联系记录
     @DeleteMapping("/delete/{id}")
     @SaCheckRole("admin")
     @OperationLogAnnotation(operationDesc = "删除联系记录", operationType = "DELETE-delete-id")
@@ -68,14 +65,12 @@ public class AdminContactUsController {
 
 
 
-    // 新增搜索接口，根据姓名模糊查询
     @GetMapping("/search")
     @SaCheckRole("admin")
     @OperationLogAnnotation(operationDesc = "根据姓名模糊查询联系记录", operationType = "Get-search")
     public Result searchByContactName(@RequestParam String name) {
 
         LambdaQueryWrapper<ContactUs> queryWrapper = new LambdaQueryWrapper<>();
-        // 模糊查询姓名
         queryWrapper.like(ContactUs::getName, name);
         queryWrapper.orderByDesc(ContactUs::getCreatedAt);
         List<ContactUs> list = contactUsService.list(queryWrapper);

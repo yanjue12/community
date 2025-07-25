@@ -37,11 +37,8 @@ public class MinioController {
     @PostMapping("/upload")
     public String uploadFile(@RequestParam MultipartFile file){
 
-        String URL = minioService.upload(file, bucketName, minioClient);
 
-        System.out.println("上传文件URL：" + URL);
-
-        return URL;
+        return minioService.upload(file, bucketName, minioClient);
 
        /* if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
@@ -71,13 +68,8 @@ public class MinioController {
     @PostMapping("/uploadByUrl")
     public String uploadFileByUrl(@RequestParam String url){
 
-        String URL = minioService.uploadByUrl(url, bucketName, minioClient);
 
-        System.out.println(URL);
-
-        System.out.println("通过图片URL进行上传后返回的url "+ URL);
-
-        return URL;
+        return minioService.uploadByUrl(url, bucketName, minioClient);
 
 
     }

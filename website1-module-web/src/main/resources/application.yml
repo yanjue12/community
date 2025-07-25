@@ -126,7 +126,7 @@ mybatis-plus:
 #mongodb
 
 minio:
-  endpoint: http://minio:9000
+  endpoint: https://datawisdom.tech:9000
   access-key: root
   secret-key: slweb2025
   bucket-name: website

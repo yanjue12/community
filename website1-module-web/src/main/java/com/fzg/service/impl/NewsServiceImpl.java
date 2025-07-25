@@ -9,7 +9,6 @@ import com.fzg.mapper.NewsDetailMapper;
 import com.fzg.model.News;
 import com.fzg.model.NewsDetail;
 import com.fzg.model.Result;
-import com.fzg.service.MinioService;
 import com.fzg.service.NewsService;
 import com.fzg.mapper.NewsMapper;
 import io.minio.MinioClient;
@@ -23,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -47,14 +45,6 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
 
     private final MinioProperties minioProperties;
 
-    private final ThreadLocal<List<String>> uploadedImages = ThreadLocal.withInitial(ArrayList::new);
-
-    // 正则表达式匹配临时图片URL
-    private static final Pattern TEMP_IMG_PATTERN =
-            Pattern.compile("src=\"(.*?/temp-images/.*?)\"");
-
-
-
 
     /**
      * 获取新闻详情
@@ -63,7 +53,6 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
     @Override
     public Result newsList() {
 
-        //获取新闻列表
         List<News> list = this.list();
         if(list.isEmpty()){
             return Result.fail(EnumReturn.NEWS_LIST_EMPTY);
@@ -82,11 +71,8 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
 
         List<Integer> ids = list.stream().map(News::getId).collect(Collectors.toList());
 
-        //批量 详情
         List<NewsDetail> details = getNewsDetailsByNewIds(ids);
-        //log.info("根据新闻id列表查询新闻详情，ids：{}，详情：{}",ids,details);
 
-        // 将详情存储在 Map 中以便快速查找
         Map<Integer, String> detailsMap = details.stream()
                 .collect(Collectors.toMap(NewsDetail::getNewsId, NewsDetail::getContent));
 
@@ -97,7 +83,6 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
             newsCreateBO.setContent(content);
         }
 
-        //log.info("获取新闻详情，新闻列表：{}",newsCreateBOList);
         return Result.success(newsCreateBOList);
     }
 
@@ -130,7 +115,6 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
         newsMapper.insert(news);
 
         Integer newsId = news.getId();
-       // log.debug("插入数据库后使用mp自动回填 主键id:{}", newsId);
 
         //处理 details 字符串
         String content = newsCreateBO.getContent();
@@ -143,7 +127,6 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
             //上传获取新url
             String Url = minioService.uploadByUrl(imgUrl, minioProperties.getBucketName(), minioClient);
 
-            log.debug("上传图片，旧url：{}，新url：{}",imgUrl,Url);
 
             //替换url
             imgElement.attr("src",Url);
@@ -261,7 +244,6 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
                 minioService.removeFile(imgUrl,minioProperties.getBucketName(),minioClient);
                 //2.在上传新图
                 String newUrl = minioService.uploadByUrl(imgUrl, minioProperties.getBucketName(), minioClient);
-                log.debug("上传图片，旧 url：{}，新 url：{}", imgUrl, newUrl);
                 imgElement.attr("src", newUrl);
             }
         }
@@ -269,31 +251,14 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
         String updatedContent = newDoc.body().html();
 
         if (newsDetail == null) {
-            // 若新闻详情不存在，则创建新的新闻详情记录
             newsDetail = new NewsDetail();
             newsDetail.setNewsId(id);
             newsDetail.setContent(updatedContent);
             newsDetailsMapper.insert(newsDetail);
         } else {
-            // 若新闻详情存在，则更新新闻详情内容
             newsDetail.setContent(updatedContent);
             newsDetailsMapper.updateById(newsDetail);
         }
-
-
-       /* if (newsDetail == null) {
-            // 若新闻详情不存在，则创建新的新闻详情记录
-            newsDetail = new NewsDetail();
-            newsDetail.setNewsId(id);
-            //TODO 新闻详情的内容填充
-            //newsDetail.setContent();
-            newsDetailsMapper.insert(newsDetail);
-        } else {
-            // 若新闻详情存在，则更新新闻详情内容
-            newsDetail.setContent(newContent);
-            newsDetailsMapper.updateById(newsDetail);
-        }*/
-
 
     }
 

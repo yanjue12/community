@@ -28,7 +28,6 @@ public class MinioServiceImpl implements MinioService {
      */
     @Override
     public String upload(MultipartFile file, String bucketName, MinioClient minioClient) {
-        //唯一文件名
         String originalFilename = file.getOriginalFilename();
         String fileExtension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
@@ -37,7 +36,6 @@ public class MinioServiceImpl implements MinioService {
         String uniqueObjectName = UUID.randomUUID().toString()  + fileExtension;
 
 
-        // 确保桶存在
         try {
             if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
                 minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
@@ -54,8 +52,6 @@ public class MinioServiceImpl implements MinioService {
                                 .build());
             }
 
-            // 返回文件的访问 URL
-            //String.format("%s/%s%s",minioClient.getEndpoint, bucketName, objectName);
 
             String signatureUrl = minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs
@@ -67,7 +63,6 @@ public class MinioServiceImpl implements MinioService {
 
             return extractEffectiveUrl(signatureUrl);
         } catch (Exception e) {
-            // 处理异常，例如记录日志或返回错误信息
             e.printStackTrace(); // 或使用日志记录工具
             throw new RuntimeException("文件上传失败: " + e.getMessage());
         }
@@ -83,19 +78,14 @@ public class MinioServiceImpl implements MinioService {
     @Override
     public String uploadByUrl(String imageUrl, String bucketName, MinioClient minioClient) {
         try {
-            // 1. 从 URL 下载图片到临时文件（或直接使用 InputStream）
             URL url = new URL(imageUrl);
             String originalFilename = getFileNameFromUrl(imageUrl); // 获取文件名（如 "image.jpg"）
-            log.info("通过url上传到minio时，文件名：{}",originalFilename);
             String fileExtension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
                 fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
             }
-            log.info("通过url上传到minio时，文件扩展名：{}",fileExtension);
-            //唯一文件名
             String uniqueObjectName = UUID.randomUUID().toString()  + fileExtension;
 
-            log.info("通过url上传到minio时，文件名：{}",uniqueObjectName);
             // 2. 使用 InputStream 直接上传（避免本地存储）
             try (InputStream inputStream = url.openStream()) {
                 // 3. 上传到 MinIO
@@ -118,7 +108,6 @@ public class MinioServiceImpl implements MinioService {
                             .bucket(
                                     bucketName).object(uniqueObjectName).build()
             );
-            log.info("通过url上传到minio时返回的url：{}",signatureURL);
 
             return extractEffectiveUrl(signatureURL);
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
@@ -131,22 +120,17 @@ public class MinioServiceImpl implements MinioService {
      * 从 URL 中提取文件名（如 "https://example.com/image.jpg" → "image.jpg"）
      */
     public String getFileNameFromUrl(String url) {
-        // 确保 URL 不为 null
         if (url == null || url.isEmpty()) {
             return null;
         }
 
-        // 找到最后一个 '/' 的位置
         int lastSlashIndex = url.lastIndexOf('/');
-        // 若没有 '/'，则整个 URL 就是文件名
         if (lastSlashIndex == -1) {
             return url;
         }
 
-        // 截取文件名部分
         String fileNameWithQuery = url.substring(lastSlashIndex + 1);
 
-        // 如果文件名中包含 '?'，则去掉查询参数
         int queryIndex = fileNameWithQuery.indexOf('?');
         if (queryIndex != -1) {
             fileNameWithQuery = fileNameWithQuery.substring(0, queryIndex);
@@ -225,7 +209,6 @@ public class MinioServiceImpl implements MinioService {
             url = url.substring(0, lastSlashIndex + 1 + dotIndex + invalidCharIndex);
         }
 
-        // 5. 去除 ? 及其后的查询参数（包括签名、过期时间等）
         int queryParamStart = url.indexOf('?');
         if (queryParamStart > 0) {
             url = url.substring(0, queryParamStart);

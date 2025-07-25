@@ -22,7 +22,6 @@ public class SolutionsController {
     @GetMapping("/list")
     public Result<List<SolutionsVO>> solutionsList() {
 
-        //获取解决方案列表（包含子标题表获取）
         List<SolutionsVO> solutionsVOList =  solutionsService.solutionsList();
 
         return Result.success(solutionsVOList);

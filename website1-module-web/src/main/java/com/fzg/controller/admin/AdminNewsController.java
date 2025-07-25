@@ -29,10 +29,8 @@ public class AdminNewsController {
     @OperationLogAnnotation(operationType = "POST-add",operationDesc = "创建新闻")
     public Result createNews(@RequestBody NewsCreateBO newsCreateBO) {
         try {
-            // 调用服务层方法创建新闻
             return Result.success( newsService.createNewsWithContent(newsCreateBO));
         } catch (Exception e) {
-            // 处理异常
             return Result.fail(EnumReturn.NEWS_CREATE_ERROR);
         }
     }
@@ -48,11 +46,9 @@ public class AdminNewsController {
     @OperationLogAnnotation(operationType = "DELETE-delete-id",operationDesc = "删除新闻")
     public Result deleteNews(@PathVariable Integer id) {
         try {
-            // 调用服务层方法删除新闻
             this.newsService.deleteNews(id);
             return Result.success(EnumReturn.OPERATION_SUCCESS);
         } catch (Exception e) {
-            // 处理异常
             return Result.fail(EnumReturn.NEWS_DELETE_ERROR);
         }
     }
@@ -72,11 +68,9 @@ public class AdminNewsController {
         System.out.println(StpUtil.getRoleList());
 
         try {
-            // 调用服务层方法更新新闻
             newsService.updateNews(id, newsCreateBO);
             return Result.success(EnumReturn.OPERATION_SUCCESS);
         } catch (Exception e) {
-            // 处理异常
             return Result.fail(EnumReturn.NEWS_UPDATE_ERROR);
         }
     }
