@@ -39,7 +39,7 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
 
     private final NewsMapper newsMapper;
 
-    private final MinioService minioService;
+    private final MinioServiceImpl minioService;
 
     private final MinioClient minioClient;
 
@@ -257,7 +257,9 @@ public class NewsServiceImpl extends ServiceImpl<NewsMapper, News>
         for (Element imgElement : newImgElements) {
             String imgUrl = imgElement.attr("src");
             if (!oldImgUrls.containsKey(imgUrl)) {
-                // 图片 URL 变化，上传到 MinIO 并替换
+                // 1.图片 URL 变化 先删除旧图片
+                minioService.removeFile(imgUrl,minioProperties.getBucketName(),minioClient);
+                //2.在上传新图
                 String newUrl = minioService.uploadByUrl(imgUrl, minioProperties.getBucketName(), minioClient);
                 log.debug("上传图片，旧 url：{}，新 url：{}", imgUrl, newUrl);
                 imgElement.attr("src", newUrl);

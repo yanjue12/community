@@ -1,19 +1,22 @@
 package com.fzg.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fzg.config.MinioProperties;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.SubtitlesMapper;
 import com.fzg.model.Result;
 import com.fzg.model.Solutions;
 import com.fzg.model.Subtitles;
+import com.fzg.service.MinioService;
 import com.fzg.service.SolutionsService;
 import com.fzg.mapper.SolutionsMapper;
 import com.fzg.vo.SolutionsVO;
 import com.fzg.vo.SubtitleVO;
+import io.minio.MinioClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +38,15 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
 
     @Resource
     private SubtitlesMapper subtitlesMapper;
+
+    @Resource
+    private MinioServiceImpl minioService;
+
+    @Resource
+    private MinioClient minioClient;
+
+    @Value("${minio.bucket-name}")
+    private String bucketName;
 
     /**
      * 列出所有解决方案(解决方案表 子标题表)
@@ -157,16 +169,17 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             return Result.fail(EnumReturn.SOLUTIONS_NOT_FOUND);
         }
 
-        /*if (solutionsVO.getTitle() != null) {
-            solution.setTitle(solutionsVO.getTitle());
-        }
-        if (solutionsVO.getUrl() != null) {
-            solution.setImageUrl(solutionsVO.getUrl());
+        String dbImageUrl = solution.getImageUrl();
+
+        if(!dbImageUrl.equals(solutionsVO.getUrl())){
+            try {
+                this.minioService.removeFile(dbImageUrl, bucketName, minioClient);
+            } catch (Exception e) {
+                return Result.fail(EnumReturn.SOLUTIONS_UPDATE_ERROR_FOR_IMAGE);
+            }
+
         }
 
-        if (this.updateById(solution)) {
-            return Result.fail(EnumReturn.SOLUTIONS_UPDATE_ERROR);
-        }*/
 
 
         solution.setTitle(solutionsVO.getTitle());
@@ -225,6 +238,13 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         }
 
         // 删除解决方案
+        // 1.minio图片删除
+        try {
+            this.minioService.removeFile(solution.getImageUrl(), bucketName, minioClient);
+        } catch (Exception e) {
+            return Result.fail(EnumReturn.SOLUTIONS_DELETE_ERROR_FOR_IMAGE);
+        }
+
         boolean deleteSolutionResult = this.removeById(id);
         if (!deleteSolutionResult) {
             return Result.fail(EnumReturn.SOLUTIONS_DELETE_ERROR);

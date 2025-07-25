@@ -56,13 +56,16 @@ public class MinioServiceImpl implements MinioService {
 
             // 返回文件的访问 URL
             //String.format("%s/%s%s",minioClient.getEndpoint, bucketName, objectName);
-            return minioClient.getPresignedObjectUrl(
+
+            String signatureUrl = minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs
                             .builder()
                             .method(Method.GET)
                             .bucket(
                                     bucketName).object(uniqueObjectName).build()
             );
+
+            return extractEffectiveUrl(signatureUrl);
         } catch (Exception e) {
             // 处理异常，例如记录日志或返回错误信息
             e.printStackTrace(); // 或使用日志记录工具
@@ -127,7 +130,7 @@ public class MinioServiceImpl implements MinioService {
     /**
      * 从 URL 中提取文件名（如 "https://example.com/image.jpg" → "image.jpg"）
      */
-    private String getFileNameFromUrl(String url) {
+    public String getFileNameFromUrl(String url) {
         // 确保 URL 不为 null
         if (url == null || url.isEmpty()) {
             return null;
@@ -153,10 +156,22 @@ public class MinioServiceImpl implements MinioService {
     }
 
 
+
+    //文件删除
+    public void removeFile(String objectName, String bucketName, MinioClient minioClient) {
+        try {
+            String fileName = getFileNameFromUrl(objectName);
+            minioClient.removeObject(RemoveObjectArgs.builder().bucket(bucketName).object(fileName).build());
+        } catch (Exception e) {
+            throw new RuntimeException("删除文件失败: " + e.getMessage());
+        }
+    }
+
+
     /**
      * 根据文件扩展名获取 Content-Type
      */
-    private String getContentType(String fileExtension) {
+    public String getContentType(String fileExtension) {
         fileExtension = fileExtension.toLowerCase(); // 确保扩展名为小写
         if (fileExtension.equals(".jpg") || fileExtension.equals(".jpeg")) {
             return "image/jpeg";

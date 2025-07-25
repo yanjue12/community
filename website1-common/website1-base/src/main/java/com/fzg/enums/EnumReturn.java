@@ -57,6 +57,8 @@ public enum EnumReturn {
         SOLUTIONS_DELETE_ERROR(2045, "解决方案删除失败"),
         SOLUTIONS_LIST_ERROR(2046, "解决方案列表获取失败"),
         CONTACTUS_NOT_EXISTS(2047, "联系我们不存在"),
+        SOLUTIONS_UPDATE_ERROR_FOR_IMAGE(2048, "解决方案更新失败，图片更新失败"),
+        SOLUTIONS_DELETE_ERROR_FOR_IMAGE(2049, "解决方案删除失败，图片删除失败"),
 
         OPERATION_SUCCESS(2999,"操作成功"),
 

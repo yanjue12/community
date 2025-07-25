@@ -1,6 +1,5 @@
 package com.fzg.controller.app;
 
-import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.fzg.model.Result;
 import com.fzg.service.NewsService;
 import com.fzg.vo.NewsVO;

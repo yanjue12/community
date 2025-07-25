@@ -1,10 +1,9 @@
 server:
   port: 9322
- # ssl:
- #   key-store: classpath:keystore.p12
- #   key-store-password: S3cur3K3y! # 你在生成证书时设置的密钥库密码
- #   key-store-type: PKCS12
- #   key-alias: tomcat
+  ssl:
+    key-store: classpath:keystore.p12
+    key-store-password: S3cur3K3y! # 你在生成证书时设置的密钥库密码
+    key-store-type: PKCS12
   tomcat:
     max-swallow-size: -1
   error:
@@ -77,15 +76,15 @@ spring:
     open-in-view: false #懒加载时使用，建议false
   datasource:
     druid:
-      password: fzg450902
+      password: slweb2025
       username: root
-      url: jdbc:mysql://192.168.18.71:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      url: jdbc:mysql://mysql:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
       driver-class-name: com.mysql.cj.jdbc.Driver
 # 8008
   #redis 配置
   redis:
     database: 0
-    host: 192.168.18.71
+    host: redis
     port: 6379
     lettuce:
       pool:
@@ -127,9 +126,9 @@ mybatis-plus:
 #mongodb
 
 minio:
-  endpoint: http://192.168.18.71:9000
+  endpoint: http://minio:9000
   access-key: root
-  secret-key: fzg450902
+  secret-key: slweb2025
   bucket-name: website
   temp-bucket-name: temp-image
 
