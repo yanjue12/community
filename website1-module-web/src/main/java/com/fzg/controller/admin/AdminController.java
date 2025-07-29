@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 @SaCheckLogin
 public class AdminController {
 
-   /* @PostMapping("/add")
-    public Result addAdmin(@RequestBody ){
+    /*@PostMapping("/add")
+    public Result addAdmin(@RequestBody){
         return
     }*/
 }
