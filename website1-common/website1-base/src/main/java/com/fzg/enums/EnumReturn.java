@@ -42,7 +42,7 @@ public enum EnumReturn {
         NEWS_CREATE_ERROR(2024, "创建新闻失败"),
         NEWS_DELETE_ERROR(2025, "删除新闻失败"),
         NEWS_UPDATE_ERROR(2026, "更新新闻失败"),
-
+        NEWS_CONTENT_EMPTY(2027, "新闻内容不能为空"),
 
         UN_LOGIN_OR_TOKEN_INVAID(2027, "未登录或token失效"),
 
@@ -59,6 +59,7 @@ public enum EnumReturn {
         CONTACTUS_NOT_EXISTS(2047, "联系我们不存在"),
         SOLUTIONS_UPDATE_ERROR_FOR_IMAGE(2048, "解决方案更新失败，图片更新失败"),
         SOLUTIONS_DELETE_ERROR_FOR_IMAGE(2049, "解决方案删除失败，图片删除失败"),
+        SOLUTIONS_SUBTITLES_SAVE_ERROR(2050, "解决方案子标题保存失败"),
 
         OPERATION_SUCCESS(2999,"操作成功"),
 

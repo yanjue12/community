@@ -5,7 +5,7 @@ package com.fzg.constant;
  */
 public class RedisVerificationKey {
 
-    public static final String getVerificationCodeKey(String email){
+    public static String getVerificationCodeKey(String email){
          return String.format("vCode-%s",email);
     }
 
