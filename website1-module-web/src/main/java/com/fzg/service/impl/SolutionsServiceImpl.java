@@ -1,29 +1,34 @@
 package com.fzg.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fzg.config.MinioProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fzg.constant.RedisSolutionsKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.SubtitlesMapper;
 import com.fzg.model.Result;
 import com.fzg.model.Solutions;
 import com.fzg.model.Subtitles;
-import com.fzg.service.MinioService;
 import com.fzg.service.SolutionsService;
 import com.fzg.mapper.SolutionsMapper;
 import com.fzg.vo.SolutionsVO;
 import com.fzg.vo.SubtitleVO;
 import io.minio.MinioClient;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
 * @author yanju
@@ -32,18 +37,19 @@ import java.util.List;
 */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions>
     implements SolutionsService {
 
+    private final RedisTemplate redisTemplate;
 
-    @Resource
-    private SubtitlesMapper subtitlesMapper;
+    private final SubtitlesMapper subtitlesMapper;
 
-    @Resource
-    private MinioServiceImpl minioService;
+    private final MinioServiceImpl minioService;
 
-    @Resource
-    private MinioClient minioClient;
+    private final MinioClient minioClient;
+
+    private final ObjectMapper objectMapper;
 
     @Value("${minio.bucket-name}")
     private String bucketName;
@@ -52,16 +58,43 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
      * 列出所有解决方案(解决方案表 子标题表)
      */
     @Override
-    public List<SolutionsVO> solutionsList() {
+    public Page<SolutionsVO> solutionsList(Integer pageNumber, Integer pageSize) {
+
+        String redisKey = RedisSolutionsKey.getSolutionsKey(pageNumber, pageSize);
+
+
+        // 先从 Redis 中获取数据
+        Object cachedData = redisTemplate.opsForValue().get(redisKey);
+        if (cachedData != null) {
+            try {
+                return objectMapper.readValue(cachedData.toString(), Page.class);
+            } catch (JsonProcessingException e) {
+                log.error("反序列化 Redis 数据失败，key: {}", redisKey, e);
+            }
+        }
+
+        Page<Solutions> page = new Page<>(pageNumber,pageSize);
         LambdaQueryWrapper<Solutions> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Solutions::getStates, 1);
-        List<Solutions> solutionsList = this.list(queryWrapper);
+        Page<Solutions> solutionsPage = this.page(page, queryWrapper);
 
+        long count = 0;
+        if(pageNumber == 1){
+             count = this.count(queryWrapper);
+             if(count % pageSize == 0){
+                 count = count / pageSize;
+             }else{
+                 count = count / pageSize;
+                 count++;
+             }
+        }
+
+        Page<SolutionsVO> solutionsVOPage = new Page<>(pageNumber, pageSize, solutionsPage.getTotal());
         List<SolutionsVO> solutionsVOList = new ArrayList<>();
+        List<Solutions> solutionsList = solutionsPage.getRecords();
 
         for (Solutions solutions : solutionsList) {
             SolutionsVO solutionsVO = new SolutionsVO();
-           // BeanUtils.copyProperties(solutions, solutionsVO);
             solutionsVO.setUrl(solutions.getImageUrl());
             solutionsVO.setTitle(solutions.getTitle());
             solutionsVO.setId(solutions.getId());
@@ -83,8 +116,20 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             solutionsVO.setSubtitlesVOList(subtitlesVOList);
             solutionsVOList.add(solutionsVO);
         }
-        return solutionsVOList;
 
+        solutionsVOPage.setRecords(solutionsVOList);
+        solutionsVOPage.setTotal(count);
+
+        // 将查询结果存入 Redis，设置过期时间为 1 小时
+
+        try {
+            String jsonData = objectMapper.writeValueAsString(solutionsVOPage);
+            redisTemplate.opsForValue().set(redisKey, jsonData, 1, TimeUnit.HOURS);
+        } catch (JsonProcessingException e) {
+            log.error("序列化分页数据失败，key: {}", redisKey, e);
+        }
+
+        return solutionsVOPage;
     }
 
     /**
@@ -104,6 +149,7 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             return Result.fail(EnumReturn.PARAMS_EMPTY);
         }
 
+
         Solutions solutions = new Solutions();
         solutions.setTitle(solutionsVO.getTitle());
         solutions.setImageUrl(solutionsVO.getUrl());
@@ -118,20 +164,24 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         if (subtitlesVOList != null && !subtitlesVOList.isEmpty()) {
             List<Subtitles> subtitlesList = new ArrayList<>();
             for (SubtitleVO subtitleVO : subtitlesVOList) {
+                log.info("开始拷贝子标题");
                 Subtitles subtitle = new Subtitles();
                 // BeanUtils.copyProperties(subtitleVO, subtitle);
                 subtitle.setSolutionId(solutions.getId());
                 subtitle.setSubtitle(subtitleVO.getSubtitle());
                 subtitle.setDescription(subtitleVO.getDescription());
                 subtitlesList.add(subtitle);
+                log.info("子标题拷贝完成subtitle:{}",subtitle);
             }
             boolean saveSubtitlesResult = subtitlesMapper.insertBatch(subtitlesList);
+            log.info("子标题保存完成saveSubtitlesResult:{}",saveSubtitlesResult);
             if (!saveSubtitlesResult) {
-                throw new RuntimeException("子标题保存失败");
+                return Result.fail(EnumReturn.SOLUTIONS_SUBTITLES_SAVE_ERROR);
             }
-
-
         }
+
+        //删cache
+        clearSolutionsCache();
         return Result.success(200);
     }
 
@@ -200,6 +250,8 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
                 throw new RuntimeException("子标题更新失败");
             }
         }
+
+        clearSolutionsCache();
         // 返回成功结果
         return Result.success(EnumReturn.OPERATION_SUCCESS);
     }
@@ -238,6 +290,7 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
             log.warn("删除解决方案 {} 对应的子标题时未找到相关记录", id);
         }
 
+        clearSolutionsCache();
         return Result.success(EnumReturn.OPERATION_SUCCESS);
     }
 
@@ -260,19 +313,50 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
         solutions.setStates(state);
 
         if (this.updateById(solutions)) {
+            clearSolutionsCache();
             return Result.success(EnumReturn.OPERATION_SUCCESS);
         } else {
             return Result.fail(EnumReturn.SOLUTIONS_UPDATE_ERROR);
         }
+
     }
 
+
+
+    /**
+     * 清除所有解决方案相关的Redis缓存
+     */
+    private void clearSolutionsCache() {
+        try {
+            // 匹配所有solutions分页缓存键（假设键格式为"solutions:page:*:size:*"）
+            Set<String> keys = redisTemplate.keys("solutions:page:*:size:*");
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                log.info("清除Solutions缓存成功，共删除 {} 个缓存项", keys.size());
+            } else {
+                log.info("没有找到需要清除的Solutions缓存");
+            }
+        } catch (Exception e) {
+            log.error("清除Solutions缓存失败", e);
+        }
+    }
+
+
+
+
+
+
     @Override
-    public Result AdminSolutionsList() {
+    public Result<List<SolutionsVO>> AdminSolutionsList() {
+
         LambdaQueryWrapper<Solutions> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.orderByDesc(Solutions::getStates).orderByAsc(Solutions::getUpdatedAt);
-        List<Solutions> solutionsList = this.list(queryWrapper);
+
+
 
         List<SolutionsVO> solutionsVOList = new ArrayList<>();
+
+        List<Solutions> solutionsList = this.list(queryWrapper);
 
         for (Solutions solutions : solutionsList) {
             //封装解决方案到解决方案VO中
@@ -297,8 +381,6 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
                 subtitlesVOList.add(subtitlesVO);
             }
             solutionsVO.setSubtitlesVOList(subtitlesVOList);
-
-
             solutionsVOList.add(solutionsVO);
 
 

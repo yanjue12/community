@@ -1,5 +1,6 @@
 package com.fzg.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fzg.model.Result;
 import com.fzg.model.Solutions;
@@ -14,7 +15,7 @@ import java.util.List;
 */
 public interface SolutionsService extends IService<Solutions> {
 
-    List<SolutionsVO> solutionsList();
+    Page<SolutionsVO> solutionsList(Integer pageNumber, Integer pageSize);
 
     Result addSolutions(SolutionsVO solutionsVO);
 
@@ -24,7 +25,8 @@ public interface SolutionsService extends IService<Solutions> {
 
     Result changeSolutionsState(Integer id, Short state);
 
-    Result AdminSolutionsList();
 
     Result batchDeleteSolutions(List<Integer> ids);
+
+    Result<List<SolutionsVO>> AdminSolutionsList();
 }
