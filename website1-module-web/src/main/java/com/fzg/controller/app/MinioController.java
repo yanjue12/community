@@ -1,5 +1,7 @@
 package com.fzg.controller.app;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.fzg.service.MinioService;
 import io.minio.*;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -18,6 +20,7 @@ import java.io.InputStream;
 @RestController
 @RequestMapping("/minio")
 @RequiredArgsConstructor
+//@SaCheckLogin
 @Schema(name = "MinioController", description = "Minio文件管理")
 public class MinioController {
 
@@ -35,8 +38,8 @@ public class MinioController {
      * @throws  Exception 异常
      */
     @PostMapping("/upload")
+//    @SaCheckRole("admin")
     public String uploadFile(@RequestParam MultipartFile file){
-
 
         return minioService.upload(file, bucketName, minioClient);
 
@@ -66,6 +69,7 @@ public class MinioController {
      * @throws  Exception 异常
      */
     @PostMapping("/uploadByUrl")
+//    @SaCheckRole("admin")
     public String uploadFileByUrl(@RequestParam String url){
 
 
@@ -83,6 +87,7 @@ public class MinioController {
      * @throws  Exception 异常
      */
     @GetMapping("/download/{objectName}")
+//    @SaCheckRole("admin")
     public ResponseEntity<InputStreamResource> downloadFile(@PathVariable String objectName) throws Exception {
 
         InputStream inputStream = minioClient.getObject(
@@ -105,6 +110,7 @@ public class MinioController {
      * @throws  Exception 异常
      */
     @DeleteMapping("/delete/{objectName}")
+//    @SaCheckRole("admin")
     public void deleteFile(@PathVariable String objectName) throws Exception {
         minioClient.removeObject(
                 RemoveObjectArgs.builder()
