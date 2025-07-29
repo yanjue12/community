@@ -1,5 +1,6 @@
 package com.fzg.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fzg.bo.NewsCreateBO;
 import com.fzg.model.News;
@@ -15,11 +16,14 @@ import java.util.List;
 */
 public interface NewsService extends IService<News> {
 
-    Result newsList();
 
     Result createNewsWithContent(NewsCreateBO newsCreateBO);
 
     void deleteNews(Integer id);
 
     void updateNews(Integer id, NewsCreateBO newsCreateBO);
+
+    Result<Page<NewsVO>> userNewsList(Integer pageNumber, Integer i);
+
+    Result<List<NewsCreateBO>> adminNewsList();
 }

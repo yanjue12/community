@@ -3,15 +3,19 @@ package com.fzg.controller.admin;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.annotation.OperationLogAnnotation;
 import com.fzg.bo.NewsCreateBO;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.NewsService;
+import com.fzg.vo.NewsVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 
 @RestController
@@ -65,7 +69,6 @@ public class AdminNewsController {
     @SaCheckRole("admin")
     @OperationLogAnnotation(operationType = "PUT-update-id",operationDesc = "更新新闻")
     public Result updateNews(@PathVariable Integer id, @RequestBody NewsCreateBO newsCreateBO) {
-        System.out.println(StpUtil.getRoleList());
 
         try {
             newsService.updateNews(id, newsCreateBO);
@@ -81,10 +84,8 @@ public class AdminNewsController {
      */
     @GetMapping("/list")
     @SaCheckRole("admin")
-    public Result listNews() {
+    public Result<List<NewsCreateBO>> listNews() {
 
-        System.out.println(StpUtil.getRoleList());
-
-        return newsService.newsList();
+        return newsService.adminNewsList();
     }
 }

@@ -1,5 +1,6 @@
 package com.fzg.controller.app;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.model.Result;
 import com.fzg.service.NewsService;
 import com.fzg.vo.NewsVO;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -24,11 +26,8 @@ public class NewsController {
 
 
     @GetMapping("/list")
-    public Result<List<NewsVO>> list(){
+    public Result<Page<NewsVO>> list(@RequestParam Integer pageNumber){
 
-        return newsService.newsList();
-
-
-       // return Result.success(newsVOList);
+        return newsService.userNewsList(pageNumber,10);
     }
 }
