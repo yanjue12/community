@@ -1,0 +1,139 @@
+server:
+  port: 9322
+  ssl:
+    key-store: classpath:keystore.p12
+    key-store-password: S3cur3K3y! # 你在生成证书时设置的密钥库密码
+    key-store-type: PKCS12
+  tomcat:
+    max-swallow-size: -1
+  error:
+    include-exception: true
+    include-stacktrace: ALWAYS
+    include-message: ALWAYS
+  compression:
+    enabled: true
+    min-response-size: 1024
+    mime-types: application/javascript,application/json,application/xml,text/html,text/xml,text/plain,text/css,image/*
+  http-port: 9321
+
+sa-token:
+  # token 名称 (同时也是 cookie 名称)
+  token-name: Authorization
+  # token 有效期，单位秒，-1 代表永不过期
+  timeout: 2592000
+  # token 临时有效期 (指定时间内无操作就视为token过期) 单位: 秒
+  activity-timeout: -1
+  # 是否允许同一账号并发登录 (为 true 时允许一起登录, 为 false 时新登录挤掉旧登录)
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个 token (为 true 时所有登录共用一个 token, 为 false 时每次登录新建一个 token)
+  is-share: false
+  # token 风格
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: false
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics,httptrace
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+    allow-circular-references: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  mail:
+    host: smtp.163.com
+    # port: 587 # TSL端口 不懂为什么出现未知错误。
+    port: 465
+    username: yanjue2024@163.com
+    password: LYe8Gh5fsF8ksLTH
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+    protocol: smtp
+
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  #  jpa:
+  #    open-in-view: false
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update
+    database: mysql
+    show-sql: true
+    open-in-view: false #懒加载时使用，建议false
+  datasource:
+    druid:
+      password: slweb2025
+     # password: fzg450902
+      username: root
+      url: jdbc:mysql://mysql:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  # 8008
+  #redis 配置
+  redis:
+    database: 0
+    host: redis
+    port: 6379
+    #password: slweb2025
+    lettuce:
+      pool:
+        #        max-active: 8   #最大连接数据库连接数,设 -1 为没有限制
+        #        max-idle: 8     #最大等待连接中的数量,设 0 为没有限制
+        #        max-wait: -1ms  #最大建立连接等待时间。如果超过此时间将接到异常。设为-1表示无限制。
+        #        min-idle: 0     #最小等待连接中的数量,设 0 为没有限制
+        #      shutdown-timeout: 100ms
+        max-active: 30   #最大连接数据库连接数,设 -1 为没有限制
+        max-idle: 30    #最大等待连接中的数量,设 0 为没有限制
+        max-wait: 10000  #最大建立连接等待时间。如果超过此时间将接到异常。设为-1表示无限制。
+        min-idle: 10    #最小等待连接中的数量,设 0 为没有限制
+        shutdown-timeout: 100000ms
+
+
+#mybatis plus 设置
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  global-config:
+    # 关闭MP3.0自带的banner
+    banner: false
+    db-config:
+      #主键类型  0:"数据库ID自增",1:"该类型为未设置主键类型", 2:"用户输入ID",3:"全局唯一ID (数字类型唯一ID)", 4:"全局唯一ID UUID",5:"字符串全局唯一ID (idWorker 的字符串表示)";
+      id-type: ASSIGN_ID
+      # 默认数据库表下划线命名
+      table-underline: true
+      sql-injector: com.baomidou.mybatisplus.mapper.LogicSqlInjector
+      logic-delete-field: isDel  # 全局逻辑删除的实体字段名(since 3.3.0,配置后可以忽略不配置步骤2)
+      logic-delete-value: 1 # 逻辑已删除值(默认为 1)
+      logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
+      insert-strategy: not_null
+
+  configuration:
+    # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用
+    #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 返回类型为Map,显示null对应的字段
+    call-setters-on-nulls: true
+
+#mongodb
+
+minio:
+  endpoint: https://datawisdom.tech:9000
+  access-key: root
+  secret-key: slweb2025
+  bucket-name: website
+  temp-bucket-name: temp-image
+
+cas:
+  prefixUrl: http://cas.example.org:8443/cas
+

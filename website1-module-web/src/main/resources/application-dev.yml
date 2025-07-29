@@ -1,0 +1,342 @@
+server:
+  port: 9322
+  #ssl:
+  #  key-store: classpath:keystore.p12
+  #  key-store-password: S3cur3K3y! # 你在生成证书时设置的密钥库密码
+  #  key-store-type: PKCS12
+  tomcat:
+    max-swallow-size: -1
+  error:
+    include-exception: true
+    include-stacktrace: ALWAYS
+    include-message: ALWAYS
+  compression:
+    enabled: true
+    min-response-size: 1024
+    mime-types: application/javascript,application/json,application/xml,text/html,text/xml,text/plain,text/css,image/*
+  http-port: 9321
+
+sa-token:
+  # token 名称 (同时也是 cookie 名称)
+  token-name: Authorization
+  # token 有效期，单位秒，-1 代表永不过期
+  timeout: 2592000
+  # token 临时有效期 (指定时间内无操作就视为token过期) 单位: 秒
+  activity-timeout: -1
+  # 是否允许同一账号并发登录 (为 true 时允许一起登录, 为 false 时新登录挤掉旧登录)
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个 token (为 true 时所有登录共用一个 token, 为 false 时每次登录新建一个 token)
+  is-share: false
+  # token 风格
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: true
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: metrics,httptrace
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+    allow-circular-references: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  mail:
+    host: smtp.163.com
+    # port: 587 # TSL端口 不懂为什么出现未知错误。
+    port: 465
+    username: yanjue2024@163.com
+    password: LYe8Gh5fsF8ksLTH
+    properties:
+      mail:
+        #debug: true
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+    #          starttls:
+    #            enable: true # 开启TLS加密
+    #            required: true
+    protocol: smtp
+
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  #  jpa:
+  #    open-in-view: false
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update
+    database: mysql
+    show-sql: true
+    open-in-view: false #懒加载时使用，建议false
+  datasource:
+    druid:
+      # password: slweb2025
+      password: fzg450902
+      username: root
+      url: jdbc:mysql://localhost:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  # 8008
+  #redis 配置
+  redis:
+    database: 0
+    host: 127.0.0.1
+    port: 6379
+    lettuce:
+      pool:
+        #        max-active: 8   #最大连接数据库连接数,设 -1 为没有限制
+        #        max-idle: 8     #最大等待连接中的数量,设 0 为没有限制
+        #        max-wait: -1ms  #最大建立连接等待时间。如果超过此时间将接到异常。设为-1表示无限制。
+        #        min-idle: 0     #最小等待连接中的数量,设 0 为没有限制
+        #      shutdown-timeout: 100ms
+        max-active: 30   #最大连接数据库连接数,设 -1 为没有限制
+        max-idle: 30    #最大等待连接中的数量,设 0 为没有限制
+        max-wait: 10000  #最大建立连接等待时间。如果超过此时间将接到异常。设为-1表示无限制。
+        min-idle: 10    #最小等待连接中的数量,设 0 为没有限制
+        shutdown-timeout: 100000ms
+
+
+#mybatis plus 设置
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  global-config:
+    # 关闭MP3.0自带的banner
+    banner: false
+    db-config:
+      #主键类型  0:"数据库ID自增",1:"该类型为未设置主键类型", 2:"用户输入ID",3:"全局唯一ID (数字类型唯一ID)", 4:"全局唯一ID UUID",5:"字符串全局唯一ID (idWorker 的字符串表示)";
+      id-type: ASSIGN_ID
+      # 默认数据库表下划线命名
+      table-underline: true
+      sql-injector: com.baomidou.mybatisplus.mapper.LogicSqlInjector
+      logic-delete-field: isDel  # 全局逻辑删除的实体字段名(since 3.3.0,配置后可以忽略不配置步骤2)
+      logic-delete-value: 1 # 逻辑已删除值(默认为 1)
+      logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
+      insert-strategy: not_null
+
+  configuration:
+    # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用
+    #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 返回类型为Map,显示null对应的字段
+    call-setters-on-nulls: true
+
+#mongodb
+
+minio:
+  #endpoint: https://datawisdom.tech:9000
+  access-key: root
+  #secret-key: slweb2025
+  secret-key: fzg450902
+  bucket-name: website
+  temp-bucket-name: temp-image
+  endpoint: http://192.168.18.71:9000
+
+#ande专用配置
+#minidao:
+#  base-package: org.ande.modules.jmreport.*
+#ande:
+#  # 签名密钥串(前后端要一致，正式发布请自行修改)
+#  signatureSecret: ffsdsadasd215215216bb215a25211
+#  # 本地：local\Minio：minio\阿里云：alioss
+#  uploadType: minio
+#  path:
+#    #文件上传根目录 设置
+#    upload: /opt/upFiles
+#    #webapp文件路径
+#    webapp: /opt/webapp
+#  shiro:
+#    excludeUrls: /test/andeDemo/demo3,/test/andeDemo/redisDemo/**,/category/**,/visual/**,/map/**,/jmreport/bigscreen2/**
+#  #阿里云oss存储和大鱼短信秘钥配置
+#  oss:
+#    accessKey: LTAI38eU3l0VKymn
+#    secretKey: bMMqi8M1OXWPR2KUSKzWxz94yxKbOq
+#    endpoint: oss-cn-beijing.aliyuncs.com
+#    bucketName: andeboot-mono
+#  # ElasticSearch 6设置
+#  #  elasticsearch:
+#  #    cluster-name: ande-ES
+#  #    cluster-nodes: 127.0.0.1:9200
+#  #    check-enabled: false
+#  # 表单设计器配置
+#  desform:
+#    # 主题颜色（仅支持 16进制颜色代码）
+#    theme-color: "#1890ff"
+#    # 文件、图片上传方式，可选项：qiniu（七牛云）、system（跟随系统配置）
+#    upload-type: system
+#    map:
+#      # 配置百度地图的AK，申请地址：https://lbs.baidu.com/apiconsole/key?application=key#/home
+#      baidu: ??
+#  # 在线预览文件服务器地址配置
+#  file-view-domain: 127.0.0.1:8012
+#  # minio文件上传
+#  minio:
+#    minio_url: http://119.3.240.208:9539
+#    minio_name: minioadmin
+#    minio_pass: minioadmin
+#    bucketName: andemono
+#  #大屏报表参数设置
+#  jmreport:
+#    mode: dev
+#    #数据字典是否进行saas数据隔离，自己看自己的字典
+#    saas: false
+#    #是否需要校验token
+#    is_verify_token: true
+#    #必须校验方法
+#    verify_methods: remove,delete,save,add,update
+#  #Wps在线文档
+#  wps:
+#    domain: https://wwo.wps.cn/office/
+#    appid: ??
+#    appsecret: ??
+#  #xxl-job配置
+#  #  xxljob:
+#  #    enabled: false
+#  #    adminAddresses: http://127.0.0.1:9080/xxl-job-admin
+#  #    appname: ${spring.application.name}
+#  #    accessToken: ''
+#  #    address: 127.0.0.1:30007
+#  #    ip: 127.0.0.1
+#  #    port: 30007
+#  #    logPath: logs/ande/job/jobhandler/
+#  #    logRetentionDays: 30
+#  route:
+#    config:
+#      data-id: ande-gateway-router
+#      group: DEFAULT_GROUP
+#      #自定义路由配置 yml nacos database
+#      data-type: database
+#  #分布式锁配置
+#  redisson:
+#    address: 49.4.48.168:9569
+#    password: 987412365aB
+#    type: STANDALONE
+#    enabled: true
+#cas单点登录
+cas:
+  prefixUrl: http://cas.example.org:8443/cas
+#Mybatis输出sql日志
+#logging:
+#  level:
+#    org.springframework.boot.autoconfigure: ERROR
+#    org.ande.modules.system.mapper: info
+#    org.ande.*: info
+#    org.springframework.data.mongodb.core: debug  #控制台显示mongodb日志
+#    springfox: error
+#swagger
+#knife4j:
+#  #开启增强配置
+#  enable: true
+#  #开启生产环境屏蔽
+#  production: false
+#  basic:
+#    enable: false
+#    username: zhangwei
+#    password: zhangwei123
+#################### 微信公众号、小程序相关配置 ####################
+wx:
+  mp: # 公众号配置（必填），参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-starters/wx-java-mp-spring-boot-starter/README.md 文档
+    #    app-id: wx041349c6f39b268b
+    #    secret: 5abee519483bc9f8cb37ce280e814bd0
+    app-id: wx5b23ba7a5589ecbb # 测试号
+    secret: 2a7b3b20c537e52e74afd395eb85f61f
+    # 存储配置，解决 AccessToken 的跨节点的共享
+    config-storage:
+      type: RedisTemplate # 采用 RedisTemplate 操作 Redis，会自动从 Spring 中获取
+      key-prefix: wx # Redis Key 的前缀
+      http-client-type: HttpClient # 采用 HttpClient 请求微信公众号平台
+  miniapp: # 小程序配置（必填），参见 https://github.com/Wechat-Group/WxJava/blob/develop/spring-boot-starters/wx-java-miniapp-spring-boot-starter/README.md 文档
+    #    appid: wx62056c0d5e8db250
+    #    secret: 333ae72f41552af1e998fe1f54e1584a
+    appid: wxea7fdfbe52395e38 # wenhualian的接口测试号
+    secret: 0658acb86b03a98271b2b64518d3bbdb
+    config-storage:
+      type: RedisTemplate # 采用 RedisTemplate 操作 Redis，会自动从 Spring 中获取
+      key-prefix: wa # Redis Key 的前缀
+      http-client-type: HttpClient # 采用 HttpClient 请求微信公众号平台
+
+#第三方登录
+#justauth:
+#  type:
+#    DINGTALK: # 钉钉
+#      client-id: dingvrnreaje3yqvzhxg
+#      client-secret: i8E6iZyDvZj51JIb0tYsYfVQYOks9Cq1lgryEjFRqC79P3iJcrxEwT6Qk2QvLrLI
+#      ignore-check-redirect-uri: true
+#    WECHAT_ENTERPRISE: # 企业微信
+#      client-id: wwd411c69a39ad2e54
+#      client-secret: 1wTb7hYxnpT2TUbIeHGXGo7T0odav1ic10mLdyyATOw
+#      agent-id: 1000004
+#      ignore-check-redirect-uri: true
+#    WECHAT_MINI_APP: # 微信小程序
+#      client-id: ${wx.miniapp.appid}
+#      client-secret: ${wx.miniapp.secret}
+#      ignore-check-redirect-uri: true
+#      ignore-check-state: true # 微信小程序，不会使用到 state，所以不进行校验
+#    WECHAT_MP: # 微信公众号
+#      client-id: ${wx.mp.app-id}
+#      client-secret: ${wx.mp.secret}
+#      ignore-check-redirect-uri: true
+#      ignore-check-state: true # 微信公众号，未调用后端的 getSocialAuthorizeUrl 方法，所以无法进行 state 校验 TODO 芋艿：后续考虑支持
+#  cache:
+#    type: REDIS
+#    prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
+#    timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
+#  enabled: true
+
+#第三方APP对接
+third-app:
+  enabled: true
+  type:
+    #企业微信
+    WECHAT_ENTERPRISE:
+      enabled: false
+      #CORP_ID
+      client-id: ??
+      #SECRET
+      client-secret: ??
+      #自建应用id
+      agent-id: ??
+      #自建应用秘钥（新版企微需要配置）
+      # agent-app-secret: ??
+    #钉钉 a
+    DINGTALK:
+      enabled: false
+      # appKey
+      client-id: ??
+      # appSecret
+      client-secret: ??
+      agent-id: ??
+#my:
+#  #开发第几个版本步骤用来区分功能
+#  dev: 1
+#  needcaptcha: false
+#  redis1: #rfid  redis
+#    host: 127.0.0.1
+#    port: 6379
+#    # password: 987412365aB
+#    lettuce:
+#      pool:
+#        min-idle: 5
+#        max-idle: 10
+#        max-active: 8
+#        max-wait: 1ms
+#      shutdown-timeout: 100ms
+#  redis2:
+#    host: 47.95.6.66
+#    port: 6379
+#    password: huading123@
+#    lettuce:
+#      pool:
+#        min-idle: 5
+#        max-idle: 10
+#        max-active: 8
+#        max-wait: 1ms
+#      shutdown-timeout: 100ms
+
