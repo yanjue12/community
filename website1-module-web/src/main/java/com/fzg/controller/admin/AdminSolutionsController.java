@@ -5,6 +5,7 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.annotation.OperationLogAnnotation;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
@@ -32,14 +33,7 @@ public class AdminSolutionsController {
 
     @GetMapping("/list")
     @SaCheckRole("admin")
-    public Result listSolutions() {
-
-        SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-
-
-        if(tokenInfo.getTokenValue() == null || !StpUtil.isLogin()){
-            return Result.fail(EnumReturn.UN_LOGIN_OR_TOKEN_INVAID);
-        }
+    public Result<List<SolutionsVO>> listSolutions() {
 
         return solutionsService.AdminSolutionsList();
     }
