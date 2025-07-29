@@ -19,6 +19,8 @@
 
     <dependencies>
 
+
+
         <!--公共核心-->
         <dependency>
             <groupId>org.fzg</groupId>

@@ -14,7 +14,6 @@ public class UserUtil {
         String[] salts = {"sun","moon","star","sky","cloud","fog","rain","wind","rainbow"};
         int hashCode = account.hashCode() + 159;
         int mod = Math.abs( hashCode % 9 );
-        System.out.println("mod:" + mod);
         return salts[mod];
     }
 

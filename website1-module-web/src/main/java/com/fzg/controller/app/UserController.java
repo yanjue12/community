@@ -2,11 +2,9 @@ package com.fzg.controller.app;
 
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.UserService;
-import com.fzg.vo.RegisterVO;
-import com.fzg.vo.UserLoginVO;
+import com.fzg.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
@@ -62,19 +60,45 @@ public class UserController {
 
     }
 
-    //修改用户名
+
+    /**
+     * 修改用户名
+     * @param updateUsernameVO 包含新用户名的请求对象
+     * @return 操作结果
+     */
+    @Operation(summary = "修改用户名接口")
+    @PostMapping("/updateUsername")
+    public Result updateUsername(@RequestBody UpdateUsernameVO updateUsernameVO) {
+        Integer userId = (Integer) StpUtil.getLoginId();
+        return userService.updateUsername(userId,updateUsernameVO);
+    }
 
 
-    //修改密码
+
+    /**
+     * 修改密码
+     * @param updatePasswordVO 包含旧密码和新密码的请求对象
+     * @return 操作结果
+     */
+    @Operation(summary = "修改密码接口")
+    @PostMapping("/updatePassword")
+    public Result updatePassword(@RequestBody UpdatePasswordVO updatePasswordVO) {
+        Integer userId = (Integer) StpUtil.getLoginId();
+        return userService.updatePassword(userId,updatePasswordVO);
+    }
 
 
 
-    //忘记密码进行重置
-    /*@PostMapping("/forgetPassword")
-    public Result forgetPassword(@RequestBody RegisterVO registerVO) {
-
-        return userService.forgetPassword(userLoginVO);
-    }*/
+    /**
+     * 忘记密码进行重置
+     * @param forgetPasswordVO 包含验证码和新密码的请求对象
+     * @return 操作结果
+     */
+    @Operation(summary = "忘记密码重置接口")
+    @PostMapping("/forgetPassword")
+    public Result forgetPassword(@RequestBody ForgetPasswordVO forgetPasswordVO) {
+        return userService.forgetPassword(forgetPasswordVO);
+    }
 
 
 

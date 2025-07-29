@@ -16,13 +16,13 @@ import com.fzg.model.User;
 import com.fzg.service.UserService;
 import com.fzg.mapper.UserMapper;
 import com.fzg.util.UserUtil;
-import com.fzg.vo.RegisterVO;
-import com.fzg.vo.UserLoginVO;
+import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.HashMap;
@@ -43,6 +43,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private RedisTemplate redisTemplate;
     @Resource
     private JavaMailSender javaMailSender;
+
+
+
+
+
 
     @Override
     public Result accountLogin(UserLoginVO userLoginVO) {
@@ -114,6 +119,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
 
+
+
+
+
+
     /**
      * 注册 校验验证码 密码 邮箱
      * @param registerVO
@@ -172,6 +182,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
 
+
+
+
+
+
     @Override
     public Result sendVerificationCode(RegisterVO registerVO) {
         String email = registerVO.getEmail();
@@ -216,6 +231,90 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
 
     }
+
+
+
+
+
+
+
+    @Override
+    public Result updateUsername(Integer userId, UpdateUsernameVO updateUsernameVO) {
+        User user = this.getById(userId);
+        user.setUsername(updateUsernameVO.getUsername());
+        if(this.updateById(user)){
+            return Result.success(EnumReturn.OPERATION_SUCCESS);
+        }
+        return Result.fail(EnumReturn.OPERATION_FAIL);
+    }
+
+
+
+
+
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result updatePassword(Integer userId, UpdatePasswordVO updatePasswordVO) {
+        User user = this.getById(userId);
+        String oldPassword = updatePasswordVO.getOldPassword();
+        String newPassword = updatePasswordVO.getNewPassword();
+        //密码加密之后验证。
+        String userOldEncryptPassword = UserUtil.getUserEncryptPassword(user.getAccount(), oldPassword);
+
+        if(!user.getPassword().equals(userOldEncryptPassword)){
+            return  Result.fail(EnumReturn.PASSWORD_ERROR);
+        }
+
+        //新密码加密
+        String newEncryptPassword = UserUtil.getUserEncryptPassword(user.getAccount(), newPassword);
+        user.setPassword(newEncryptPassword);
+        if(this.updateById(user)){
+            return Result.success(EnumReturn.OPERATION_SUCCESS);
+        }
+        return Result.fail(EnumReturn.OPERATION_FAIL);
+    }
+
+
+
+
+
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result forgetPassword(ForgetPasswordVO forgetPasswordVO) {
+        String email = forgetPasswordVO.getEmail();
+        String verificationCode = forgetPasswordVO.getVerificationCode();
+        String newPassword = forgetPasswordVO.getNewPassword();
+
+        //从redis中获取验证码
+        String redisVerificationCode = (String) redisTemplate.opsForValue()
+                .get(RedisVerificationKey.getVerificationCodeKey(email));
+
+        if(redisVerificationCode == null || !redisVerificationCode.equals(verificationCode)){
+            return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+        }
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getEmail,email);
+        User user = this.getOne(queryWrapper);
+        if(user == null){
+            return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);
+        }
+
+        String userEncryptPassword = UserUtil.getUserEncryptPassword(user.getAccount(), newPassword);
+        user.setPassword(userEncryptPassword);
+        if(this.updateById(user)){
+            return Result.success(EnumReturn.OPERATION_SUCCESS);
+        }
+        return Result.fail(EnumReturn.OPERATION_FAIL);
+    }
+
+
+
+
+
 
 }
 

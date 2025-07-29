@@ -3,8 +3,7 @@ package com.fzg.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fzg.model.User;
 import com.fzg.model.Result;
-import com.fzg.vo.RegisterVO;
-import com.fzg.vo.UserLoginVO;
+import com.fzg.vo.*;
 
 /**
 * @author yanju
@@ -17,4 +16,10 @@ public interface UserService extends IService<User> {
     Result register(RegisterVO registerVO);
 
     Result sendVerificationCode(RegisterVO registerVO);
+
+    Result updateUsername(Integer userId, UpdateUsernameVO updateUsernameVO);
+
+    Result updatePassword(Integer userId, UpdatePasswordVO updatePasswordVO);
+
+    Result forgetPassword(ForgetPasswordVO forgetPasswordVO);
 }
