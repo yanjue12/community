@@ -2,14 +2,11 @@ package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
-import cn.dev33.satoken.stp.StpUtil;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.annotation.OperationLogAnnotation;
 import com.fzg.bo.NewsCreateBO;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.NewsService;
-import com.fzg.vo.NewsVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +29,7 @@ public class AdminNewsController {
     @SaCheckRole("admin")
     @OperationLogAnnotation(operationType = "POST-add",operationDesc = "创建新闻")
     public Result createNews(@RequestBody NewsCreateBO newsCreateBO) {
+
         try {
             return Result.success( newsService.createNewsWithContent(newsCreateBO));
         } catch (Exception e) {

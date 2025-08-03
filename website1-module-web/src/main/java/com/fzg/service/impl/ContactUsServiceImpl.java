@@ -8,7 +8,10 @@ import com.fzg.service.ContactUsService;
 import com.fzg.mapper.ContactUsMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
 
 /**
 * @author yanju
@@ -22,6 +25,9 @@ public class ContactUsServiceImpl extends ServiceImpl<ContactUsMapper, ContactUs
     implements ContactUsService{
 
     private final ContactUsMapper contactUsMapper;
+
+    @Resource
+    private  JavaMailSender javaMailSender;
 
     @Override
     public Result mySave(ContactUs contactUs) {
@@ -41,6 +47,25 @@ public class ContactUsServiceImpl extends ServiceImpl<ContactUsMapper, ContactUs
         if(contactUsMapper.insert(contactUs) == 0) {
             return Result.fail(EnumReturn.OPERATION_FAIL);
         }else{
+
+
+            //发送邮件
+            /*SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("yanjue2024@163.com");
+            message.setSubject("有客户联系您，");
+            message.setTo("企业个人邮箱");
+            message.setText("客户姓名："+contactUs.getName()+"\n客户邮箱："+contactUs.getEmail()+"\n客户公司："+contactUs.getCompany()+"\n客户联系电话："+contactUs.getPhone()+"\n客户留言："+contactUs.getMessage());
+
+            log.info("################## 客户留言：{}",contactUs.getMessage());
+
+            try {
+                javaMailSender.send(message);
+                return Result.success("邮件成功发送");
+            } catch (Exception e) {
+                log.error(" 邮件发送失败：{},邮箱：{}",e.getMessage(),"企业个人邮箱");
+                return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+            }*/
+
             return Result.success(EnumReturn.OPERATION_SUCCESS);
         }
     }

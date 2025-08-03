@@ -1,7 +1,5 @@
 package com.fzg.controller.app;
 
-import cn.dev33.satoken.annotation.SaCheckLogin;
-import cn.dev33.satoken.annotation.SaCheckRole;
 import com.fzg.service.MinioService;
 import io.minio.*;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -38,7 +36,7 @@ public class MinioController {
      * @throws  Exception 异常
      */
     @PostMapping("/upload")
-//    @SaCheckRole("admin")
+    //@SaCheckRole("admin")
     public String uploadFile(@RequestParam MultipartFile file){
 
         return minioService.upload(file, bucketName, minioClient);
