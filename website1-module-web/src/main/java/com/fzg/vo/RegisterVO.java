@@ -19,12 +19,14 @@ public class RegisterVO {
 
     }
 
+    private String username;
+
     @Email(groups = {RegisterVOValidated.class},message = "邮箱格式不正确")
     private String email;
 
     @Size(min = 6,max = 20,groups = {RegisterVOValidated.class},message = "密码长度为6-20位")
     private String password;
 
-    private String verificationCode;
+    private String code;
 
 }

@@ -19,12 +19,12 @@ public class UserUtil {
 
     /**
      * 获取用户加密密码
-     * @param account
+     * @param email
      * @param password
      * @return
      */
-    public static String getUserEncryptPassword(String account, String password){
-        String pwdAndSalt = password + getUserSalt(account);
+    public static String getUserEncryptPassword(String email, String password){
+        String pwdAndSalt = password + getUserSalt(email);
         return MD5Util.MD5Encode(pwdAndSalt,"utf8");
     }
 }

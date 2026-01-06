@@ -131,54 +131,46 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      */
     @Override
     public Result register(RegisterVO registerVO) {
-//        if (null == registerVO) {
-//            return Result.fail(EnumReturn.USERNAME_PASSWORD_EMPTY);
-//        }
-//
-//        String email = registerVO.getEmail();
-//        if(StrUtil.isEmpty(email)){
-//            return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);
-//        }
-//
-//        //从redis中获取验证码
-//        String verificationCode = (String) redisTemplate.opsForValue()
-//                .get(RedisVerificationKey.getVerificationCodeKey(email));
-//
-//        if(verificationCode == null || !verificationCode.equals(registerVO.getVerificationCode())){
-//            return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
-//        }
-//
-//        //生成账号
-//        String r = RandomUtil.randomString(6);
-//        String timestampLastSix = String.valueOf(System.currentTimeMillis()).substring(6);
-//        String account = r+timestampLastSix;
-//
-//
-//        //密码加密
-//        String encryptPwd = UserUtil.getUserEncryptPassword(account, registerVO.getPassword());
-//
-//        //TODO 设置默认头像
-//
-//
-//        User user = new User();
-//        user.setEmail(email);
-//        user.setUsername(email);
-//        user.setPassword(encryptPwd);
-//        user.setAccount(account);
-//        user.setStates((short) 1);
-//
-//        if(this.save(user)){
-//            SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-//
-//            tokenInfo.setTokenTimeout(3600);
-//            SaSession session = StpUtil.getSession();
-//            session.set("USER_NAME",user.getUsername());
-//            session.set("USER_ID",user.getId());
-//            return Result.success(tokenInfo);
-//        }else{
-//            return Result.fail(EnumReturn.REGISTER_FAIL);
-//        }
-        return Result.success(EnumReturn.OPERATION_SUCCESS);
+        if (null == registerVO) {
+            return Result.fail(EnumReturn.USERNAME_PASSWORD_EMPTY);
+        }
+
+        String email = registerVO.getEmail();
+        if(StrUtil.isEmpty(email)){
+            return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);
+        }
+
+        //从redis中获取验证码
+        String verificationCode = (String) redisTemplate.opsForValue()
+                .get(RedisVerificationKey.getVerificationCodeKey(email));
+
+        if(verificationCode == null || !verificationCode.equals(registerVO.getCode())){
+            return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+        }
+
+
+
+        //密码加密
+        String encryptPwd = UserUtil.getUserEncryptPassword(email, registerVO.getPassword());
+
+        //TODO 设置默认头像
+        User user = new User();
+        user.setEmail(email);
+        user.setUsername(registerVO.getUsername());
+        user.setPassword(encryptPwd);
+
+        if(this.save(user)){
+            StpUtil.login(user.getId());
+            SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+
+            tokenInfo.setTokenTimeout(3600);
+            SaSession session = StpUtil.getSession();
+            session.set("USER_NAME",user.getUsername());
+            session.set("USER_ID",user.getId());
+            return Result.success(tokenInfo);
+        }else{
+            return Result.fail(EnumReturn.REGISTER_FAIL);
+        }
     }
 
 
