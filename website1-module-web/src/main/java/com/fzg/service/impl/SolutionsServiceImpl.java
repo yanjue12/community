@@ -1,5 +1,6 @@
 package com.fzg.service.impl;
 
+import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -396,7 +397,6 @@ public class SolutionsServiceImpl extends ServiceImpl<SolutionsMapper, Solutions
     @Override
     @Transactional(rollbackFor = Exception.class,propagation = Propagation.REQUIRED)
     public Result batchDeleteSolutions(List<Integer> ids) {
-
         return null;
     }
 

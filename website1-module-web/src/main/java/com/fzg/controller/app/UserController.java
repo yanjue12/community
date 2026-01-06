@@ -13,7 +13,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/app/user")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Schema(name = "用户模块", description = "用户模块")
 @Slf4j
@@ -30,7 +30,7 @@ public class UserController {
     }
 
     @Operation(summary = "用户发送验证码接口")
-    @PostMapping("/sendVerificationCode")
+    @PostMapping("/send-code")
     public Result sendVerificationCode(@Validated (RegisterVO.RegisterVOValidated.class) @RequestBody RegisterVO registerVO) {
 
         return userService.sendVerificationCode(registerVO);

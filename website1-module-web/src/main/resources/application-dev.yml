@@ -52,7 +52,7 @@ spring:
     # port: 587 # TSL端口 不懂为什么出现未知错误。
     port: 465
     username: yanjue2024@163.com
-    password: LYe8Gh5fsF8ksLTH
+    password: URemYh2RAgG7j3YP
     properties:
       mail:
         #debug: true
@@ -83,7 +83,7 @@ spring:
       # password: slweb2025
       password: fzg450902
       username: root
-      url: jdbc:mysql://localhost:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      url: jdbc:mysql://localhost:3306/community?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
       driver-class-name: com.mysql.cj.jdbc.Driver
   # 8008
   #redis 配置
