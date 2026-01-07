@@ -3,6 +3,9 @@ package com.fzg.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.User;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
 * @author yanju
@@ -13,6 +16,7 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface UserMapper extends BaseMapper<User> {
 
+    List<User> selectByCondition(@Param("condition") String condition);
 }
 
 

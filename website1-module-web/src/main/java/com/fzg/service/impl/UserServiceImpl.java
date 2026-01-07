@@ -18,14 +18,18 @@ import com.fzg.mapper.UserMapper;
 import com.fzg.util.UserUtil;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -44,7 +48,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Resource
     private JavaMailSender javaMailSender;
 
-
+    @Autowired
+    private UserMapper userMapper;
 
 
 
@@ -320,6 +325,57 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
 
 
+
+    @Override
+    public Result login(UserLoginVO userLoginVO) {
+        if (null == userLoginVO) {
+            return Result.fail(EnumReturn.USERNAME_PASSWORD_EMPTY);
+        }
+
+        String condition = userLoginVO.getCondition();
+        if(StringUtils.isEmpty(condition)){
+            return Result.fail(EnumReturn.USERNAME_EMAIL_EMPTY);
+        }
+        List<User> userList = userMapper.selectByCondition(condition);
+        if(CollectionUtils.isEmpty(userList)){
+            Result r = new Result<>();
+            r.setMsg("当前用户名不存在，请重新输入");
+        }
+        User user = userList.get(0);
+
+        if(!"0".equals(user.getStatus())){
+            return Result.fail(EnumReturn.USER_DISABLED);
+        }
+
+
+        String encryptPwd = UserUtil.getUserEncryptPassword(user.getEmail(), userLoginVO.getPassword());
+        if(!user.getPassword().equals(encryptPwd)){
+            return Result.fail(EnumReturn.PASSWORD_ERROR);
+        }
+
+
+        //登录成功，记录token
+        StpUtil.login(user.getId());
+        SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+        tokenInfo.setTokenTimeout(3600);
+        SaSession session = StpUtil.getSession();
+        session.set("USER_ID",user.getId());
+
+        if(userLoginVO.getRememberMe()){
+            tokenInfo.setTokenTimeout(3600 * 24 * 7);
+        }
+        return Result.success(tokenInfo);
+    }
+
+    @Override
+    public Result checkUsername(RegisterVO request) {
+
+        LambdaQueryWrapper<User> q = new LambdaQueryWrapper<>();
+        q.eq(User::getUsername,request.getUsername());
+        Long l = userMapper.selectCount(q);
+        System.out.println(l);
+        return l > 0 ? Result.fail(EnumReturn.USERNAME_EXITS) : Result.success(true);
+    }
 
 
 }

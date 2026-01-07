@@ -24,13 +24,16 @@ public enum EnumReturn {
 
         USERNAME_PASSWORD_ERROR(2004, "账号或密码错误"),
         USERNAME_PASSWORD_EMPTY(2005, "账号或密码不能为空"),
+        USERNAME_EMAIL_EMPTY(2005, "用户名或邮箱不能为空"),
+        USERNAME_IS_EMPTY(2005, "用户名不能为空"),
+        USERNAME_EXITS(2005, "用户名已存在"),
 
         PASSWORD_ERROR(2006, "密码错误"),
 
         EMAIL_ALREADY_REGISTERED(2007,"邮箱已被注册"),
         REGISTER_FAIL(2008, "注册失败"),
 
-        USER_DISABLED(2009, "账号已被禁用"),
+        USER_DISABLED(2009, "账号已被禁用或未激活"),
 
 
         VERIFICATION_CODE_FREQUENT(2011, "验证码发送频繁，请稍后再试"),

@@ -2,6 +2,7 @@ package com.fzg.controller.app;
 
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.UserService;
 import com.fzg.vo.*;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,9 +48,17 @@ public class UserController {
     @PostMapping("/login")
     public Result login(@RequestBody UserLoginVO userLoginVO) {
 
+        //用户名 / 邮箱 密码登录
+        return userService.login(userLoginVO);
 
-        return userService.accountLogin(userLoginVO);
+    }
 
+    @PostMapping("/checkUsername")
+    public Result checkUsername(@RequestBody RegisterVO request) {
+        if(StringUtils.isEmpty(request.getUsername())){
+            return Result.fail(EnumReturn.USERNAME_IS_EMPTY);
+        }
+        return userService.checkUsername(request);
     }
 
 

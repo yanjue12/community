@@ -1,5 +1,6 @@
 package com.fzg.vo;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
@@ -18,17 +19,19 @@ public class UserLoginVO {
 
     private String username;
 
-    private String account;
-
     private String email;
+
+    private String condition;
 
     @NotBlank(groups = {UserLoginVO.UserLoginVOValidated.class},message = "密码不能为空")
     @Size(min = 6,max = 20,groups = {UserLoginVO.UserLoginVOValidated.class},message = "密码长度为6-20位")
     private String password;
 
     //状态 0-正常 1-禁用
-    @NotNull(message = "状态不能为空 1-正常 2-禁用")
-    private  Short states;
+    private  String status;
+
+    @Schema(description = "记住我 默认为false")
+    private Boolean rememberMe = false;
 
 
 }

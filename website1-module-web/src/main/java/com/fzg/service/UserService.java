@@ -22,4 +22,8 @@ public interface UserService extends IService<User> {
     Result updatePassword(Integer userId, UpdatePasswordVO updatePasswordVO);
 
     Result forgetPassword(ForgetPasswordVO forgetPasswordVO);
+
+    Result login(UserLoginVO userLoginVO);
+
+    Result checkUsername(RegisterVO request);
 }
