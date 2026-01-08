@@ -1,10 +1,11 @@
 package com.fzg.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.Favorite;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface Favoritemapper {
+public interface Favoritemapper extends BaseMapper<Favorite> {
     int deleteByPrimaryKey(Long id);
 
     int insert(Favorite record);

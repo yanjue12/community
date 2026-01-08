@@ -1,10 +1,11 @@
 package com.fzg.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.Article;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface Articlemapper {
+public interface Articlemapper extends BaseMapper<Article> {
     int deleteByPrimaryKey(Long id);
 
     int insert(Article record);

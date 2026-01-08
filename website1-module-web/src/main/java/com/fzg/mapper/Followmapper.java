@@ -1,10 +1,11 @@
 package com.fzg.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.Follow;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface Followmapper {
+public interface Followmapper extends BaseMapper<Follow> {
     int deleteByPrimaryKey(Long id);
 
     int insert(Follow record);

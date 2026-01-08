@@ -1,19 +1,10 @@
 package com.fzg.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.UserRole;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UserRolemapper {
-    int deleteByPrimaryKey(Long id);
+public interface UserRolemapper extends BaseMapper<UserRole> {
 
-    int insert(UserRole record);
-
-    int insertSelective(UserRole record);
-
-    UserRole selectByPrimaryKey(Long id);
-
-    int updateByPrimaryKeySelective(UserRole record);
-
-    int updateByPrimaryKey(UserRole record);
 }

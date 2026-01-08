@@ -1,87 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.fzg.mapper.SearchHotmapper">
-  <resultMap id="BaseResultMap" type="com.fzg.model.SearchHot">
-    <id column="id" jdbcType="INTEGER" property="id" />
-    <result column="search_term" jdbcType="VARCHAR" property="search_term" />
-    <result column="search_count" jdbcType="INTEGER" property="search_count" />
-    <result column="updated_at" jdbcType="TIMESTAMP" property="updated_at" />
-    <result column="created_at" jdbcType="TIMESTAMP" property="created_at" />
-  </resultMap>
-  <sql id="Base_Column_List">
-    id, search_term, search_count, updated_at, created_at
-  </sql>
-  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
-    select 
-    <include refid="Base_Column_List" />
-    from search_hot
-    where id = #{id,jdbcType=INTEGER}
-  </select>
-  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
-    delete from search_hot
-    where id = #{id,jdbcType=INTEGER}
-  </delete>
-  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.SearchHot" useGeneratedKeys="true">
-    insert into search_hot (search_term, search_count, updated_at, 
-      created_at)
-    values (#{search_term,jdbcType=VARCHAR}, #{search_count,jdbcType=INTEGER}, #{updated_at,jdbcType=TIMESTAMP}, 
-      #{created_at,jdbcType=TIMESTAMP})
-  </insert>
-  <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.SearchHot" useGeneratedKeys="true">
-    insert into search_hot
-    <trim prefix="(" suffix=")" suffixOverrides=",">
-      <if test="search_term != null">
-        search_term,
-      </if>
-      <if test="search_count != null">
-        search_count,
-      </if>
-      <if test="updated_at != null">
-        updated_at,
-      </if>
-      <if test="created_at != null">
-        created_at,
-      </if>
-    </trim>
-    <trim prefix="values (" suffix=")" suffixOverrides=",">
-      <if test="search_term != null">
-        #{search_term,jdbcType=VARCHAR},
-      </if>
-      <if test="search_count != null">
-        #{search_count,jdbcType=INTEGER},
-      </if>
-      <if test="updated_at != null">
-        #{updated_at,jdbcType=TIMESTAMP},
-      </if>
-      <if test="created_at != null">
-        #{created_at,jdbcType=TIMESTAMP},
-      </if>
-    </trim>
-  </insert>
-  <update id="updateByPrimaryKeySelective" parameterType="com.fzg.model.SearchHot">
-    update search_hot
-    <set>
-      <if test="search_term != null">
-        search_term = #{search_term,jdbcType=VARCHAR},
-      </if>
-      <if test="search_count != null">
-        search_count = #{search_count,jdbcType=INTEGER},
-      </if>
-      <if test="updated_at != null">
-        updated_at = #{updated_at,jdbcType=TIMESTAMP},
-      </if>
-      <if test="created_at != null">
-        created_at = #{created_at,jdbcType=TIMESTAMP},
-      </if>
-    </set>
-    where id = #{id,jdbcType=INTEGER}
-  </update>
-  <update id="updateByPrimaryKey" parameterType="com.fzg.model.SearchHot">
-    update search_hot
-    set search_term = #{search_term,jdbcType=VARCHAR},
-      search_count = #{search_count,jdbcType=INTEGER},
-      updated_at = #{updated_at,jdbcType=TIMESTAMP},
-      created_at = #{created_at,jdbcType=TIMESTAMP}
-    where id = #{id,jdbcType=INTEGER}
-  </update>
+
+    <select id="queryHot" resultType="com.fzg.model.SearchHot">
+        SELECT
+        search_term,search_count,
+        -- 计算有效热度分数
+        search_count / POWER(1.5,
+        CASE
+        WHEN DATEDIFF(NOW(), updated_at) &lt;= 15 THEN 0
+        ELSE DATEDIFF(NOW(), updated_at) - 15
+        END
+        ) as hot_score
+        FROM search_hot
+        WHERE updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        AND search_count >= 10  -- 最小搜索次数限制
+        ORDER BY hot_score DESC
+        limit 10;
+    </select>
+
 </mapper>

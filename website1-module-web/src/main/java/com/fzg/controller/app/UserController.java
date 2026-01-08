@@ -72,20 +72,6 @@ public class UserController {
 
 
     /**
-     * 修改用户名
-     * @param updateUsernameVO 包含新用户名的请求对象
-     * @return 操作结果
-     */
-    @Operation(summary = "修改用户名接口")
-    @PostMapping("/updateUsername")
-    public Result updateUsername(@RequestBody UpdateUsernameVO updateUsernameVO) {
-        Integer userId = (Integer) StpUtil.getLoginId();
-        return userService.updateUsername(userId,updateUsernameVO);
-    }
-
-
-
-    /**
      * 修改密码
      * @param updatePasswordVO 包含旧密码和新密码的请求对象
      * @return 操作结果

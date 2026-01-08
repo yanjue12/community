@@ -1,10 +1,11 @@
 package com.fzg.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.Notification;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface Notificationmapper {
+public interface Notificationmapper extends BaseMapper<Notification> {
     int deleteByPrimaryKey(Long id);
 
     int insert(Notification record);

@@ -1,19 +1,11 @@
 package com.fzg.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.fzg.model.Article;
 import com.fzg.model.ArticleTagRelation;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ArticleTagRelationmapper {
-    int deleteByPrimaryKey(Long id);
+public interface ArticleTagRelationmapper extends BaseMapper<ArticleTagRelation> {
 
-    int insert(ArticleTagRelation record);
-
-    int insertSelective(ArticleTagRelation record);
-
-    ArticleTagRelation selectByPrimaryKey(Long id);
-
-    int updateByPrimaryKeySelective(ArticleTagRelation record);
-
-    int updateByPrimaryKey(ArticleTagRelation record);
 }

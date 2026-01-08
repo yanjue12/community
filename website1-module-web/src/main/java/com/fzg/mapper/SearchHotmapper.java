@@ -1,19 +1,14 @@
 package com.fzg.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.SearchHot;
-import org.springframework.stereotype.Repository;
+import org.apache.ibatis.annotations.Mapper;
 
-@Repository
-public interface SearchHotmapper {
-    int deleteByPrimaryKey(Integer id);
+import java.util.List;
 
-    int insert(SearchHot record);
+@Mapper
+public interface SearchHotmapper extends BaseMapper<SearchHot> {
 
-    int insertSelective(SearchHot record);
 
-    SearchHot selectByPrimaryKey(Integer id);
-
-    int updateByPrimaryKeySelective(SearchHot record);
-
-    int updateByPrimaryKey(SearchHot record);
+    List<SearchHot> queryHot();
 }

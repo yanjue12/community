@@ -1,19 +1,10 @@
 package com.fzg.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.ArticleTag;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ArticleTagMapper {
-    int deleteByPrimaryKey(Long id);
+public interface ArticleTagMapper extends BaseMapper<ArticleTag> {
 
-    int insert(ArticleTag record);
-
-    int insertSelective(ArticleTag record);
-
-    ArticleTag selectByPrimaryKey(Long id);
-
-    int updateByPrimaryKeySelective(ArticleTag record);
-
-    int updateByPrimaryKey(ArticleTag record);
 }

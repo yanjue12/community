@@ -1,10 +1,11 @@
 package com.fzg.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.Category;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface Categorymapper {
+public interface Categorymapper extends BaseMapper<Category> {
     int deleteByPrimaryKey(Long id);
 
     int insert(Category record);
