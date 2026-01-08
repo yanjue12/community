@@ -18,53 +18,54 @@ public enum EnumReturn {
         STATUS_NAME_REPETITION(1001, "数据重复"),
 
         // 2000 用户操作
-        USERNAME_NOT_EXISTS(2001, "用户名不存在或错误，需要注册"),
-        ACCOUNT_NOT_EXISTS(2002, "账号不存在或错误，需要注册"),
-        EMAIL_NOT_EXISTS(2003, "邮箱不存在或错误，需要注册"),
+        USERNAME_NOT_EXISTS(2000, "用户名不存在或错误，需要注册"),
+        ACCOUNT_NOT_EXISTS(2000, "账号不存在或错误，需要注册"),
+        EMAIL_NOT_EXISTS(2000, "邮箱不存在或错误，需要注册"),
 
-        USERNAME_PASSWORD_ERROR(2004, "账号或密码错误"),
-        USERNAME_PASSWORD_EMPTY(2005, "账号或密码不能为空"),
-        USERNAME_EMAIL_EMPTY(2005, "用户名或邮箱不能为空"),
-        USERNAME_IS_EMPTY(2005, "用户名不能为空"),
-        USERNAME_EXITS(2005, "用户名已存在"),
+        USERNAME_PASSWORD_ERROR(2000, "账号或密码错误"),
+        USERNAME_PASSWORD_EMPTY(2000, "账号或密码不能为空"),
+        USERNAME_EMAIL_EMPTY(2000, "用户名或邮箱不能为空"),
+        USERNAME_IS_EMPTY(2000, "用户名不能为空"),
+        USERNAME_EXITS(2000, "用户名已存在"),
+        CODE_IS_EMPTY(2000, "验证码不能为空"),
 
-        PASSWORD_ERROR(2006, "密码错误"),
+        PASSWORD_ERROR(2000, "密码错误"),
 
-        EMAIL_ALREADY_REGISTERED(2007,"邮箱已被注册"),
-        REGISTER_FAIL(2008, "注册失败"),
+        EMAIL_ALREADY_REGISTERED(2000,"邮箱已被注册"),
+        REGISTER_FAIL(2000, "注册失败"),
 
-        USER_DISABLED(2009, "账号已被禁用或未激活"),
-
-
-        VERIFICATION_CODE_FREQUENT(2011, "验证码发送频繁，请稍后再试"),
-        VERIFICATION_CODE_ERROR(2012, "验证码错误"),
-
-        NEWS_NOT_EXIST(2021, "新闻不存在"),
-        NEWS_DETAIL_NOT_FOUND(2022, "新闻详情不存在"),
-        NEWS_LIST_EMPTY(2023, "新闻列表为空"),
-        NEWS_CREATE_ERROR(2024, "创建新闻失败"),
-        NEWS_DELETE_ERROR(2025, "删除新闻失败"),
-        NEWS_UPDATE_ERROR(2026, "更新新闻失败"),
-        NEWS_CONTENT_EMPTY(2027, "新闻内容不能为空"),
-
-        UN_LOGIN_OR_TOKEN_INVAID(2027, "未登录或token失效"),
-
-        CONTENT_NOT_EXISTS(2031, "内容不能为空"),
-        NAME_NOT_EXISTS(2032, "姓名不能为空"),
+        USER_DISABLED(2000, "账号已被禁用或未激活"),
 
 
-        PARAMS_EMPTY(2041, "参数不能为空"),
-        SOLUTIONS_SAVE_ERROR(2042, "解决方案保存失败"),
-        SOLUTIONS_NOT_FOUND(2043, "解决方案不存在"),
-        SOLUTIONS_UPDATE_ERROR(2044, "解决方案更新失败"),
-        SOLUTIONS_DELETE_ERROR(2045, "解决方案删除失败"),
-        SOLUTIONS_LIST_ERROR(2046, "解决方案列表获取失败"),
-        CONTACTUS_NOT_EXISTS(2047, "联系我们不存在"),
-        SOLUTIONS_UPDATE_ERROR_FOR_IMAGE(2048, "解决方案更新失败，图片更新失败"),
-        SOLUTIONS_DELETE_ERROR_FOR_IMAGE(2049, "解决方案删除失败，图片删除失败"),
-        SOLUTIONS_SUBTITLES_SAVE_ERROR(2050, "解决方案子标题保存失败"),
+        VERIFICATION_CODE_FREQUENT(2000, "验证码发送频繁，请稍后再试"),
+        VERIFICATION_CODE_ERROR(2000, "验证码错误"),
 
-        OPERATION_SUCCESS(2999,"操作成功"),
+        NEWS_NOT_EXIST(2000, "新闻不存在"),
+        NEWS_DETAIL_NOT_FOUND(2000, "新闻详情不存在"),
+        NEWS_LIST_EMPTY(2000, "新闻列表为空"),
+        NEWS_CREATE_ERROR(2000, "创建新闻失败"),
+        NEWS_DELETE_ERROR(2000, "删除新闻失败"),
+        NEWS_UPDATE_ERROR(2000, "更新新闻失败"),
+        NEWS_CONTENT_EMPTY(2000, "新闻内容不能为空"),
+
+        UN_LOGIN_OR_TOKEN_INVAID(2000, "未登录或token失效"),
+
+        CONTENT_NOT_EXISTS(2000, "内容不能为空"),
+        NAME_NOT_EXISTS(2000, "姓名不能为空"),
+
+
+        PARAMS_EMPTY(2000, "参数不能为空"),
+        SOLUTIONS_SAVE_ERROR(2000, "解决方案保存失败"),
+        SOLUTIONS_NOT_FOUND(2000, "解决方案不存在"),
+        SOLUTIONS_UPDATE_ERROR(2000, "解决方案更新失败"),
+        SOLUTIONS_DELETE_ERROR(2000, "解决方案删除失败"),
+        SOLUTIONS_LIST_ERROR(2000, "解决方案列表获取失败"),
+        CONTACTUS_NOT_EXISTS(2000, "联系我们不存在"),
+        SOLUTIONS_UPDATE_ERROR_FOR_IMAGE(2000, "解决方案更新失败，图片更新失败"),
+        SOLUTIONS_DELETE_ERROR_FOR_IMAGE(2000, "解决方案删除失败，图片删除失败"),
+        SOLUTIONS_SUBTITLES_SAVE_ERROR(2000, "解决方案子标题保存失败"),
+
+        OPERATION_SUCCESS(2000,"操作成功"),
 
         // 4000 权限相关
         UN_AUTHORIZATION(401,"未授权"),

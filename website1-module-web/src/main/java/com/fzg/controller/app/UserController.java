@@ -2,6 +2,7 @@ package com.fzg.controller.app;
 
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.model.User;
@@ -12,6 +13,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +27,9 @@ public class UserController {
 
     private final UserService userService;
 
+    @Autowired
+    private RedisTemplate redisTemplate;
+
 
     @Operation(summary = "用户注册接口")
     @PostMapping("/register")
@@ -32,7 +38,7 @@ public class UserController {
         return userService.register(registerVO);
     }
 
-    @Operation(summary = "用户发送验证码接口")
+    @Operation(summary = "用户发送验证码接口（注册）")
     @PostMapping("/send-code")
     public Result sendVerificationCode(@RequestBody RegisterVO registerVO) {
 
@@ -103,6 +109,30 @@ public class UserController {
         String loginId = (String) StpUtil.getLoginId();
         User user = userService.getById(Long.valueOf(loginId));
         return Result.success(user);
+    }
+
+    @Operation(summary = "用户发送验证码接口（修改邮箱）")
+    @PostMapping("/send-code")
+    public Result sendCode(@RequestBody RegisterVO registerVO) {
+
+        return userService.sendCode(registerVO);
+    }
+
+    @PostMapping("/verifyCode")
+    public Result verifyCode(@RequestBody RegisterVO verifyCodeVO) {
+        if(StringUtils.isEmpty(verifyCodeVO.getCode())){
+            return Result.fail(EnumReturn.CODE_IS_EMPTY);
+        }
+
+        //从redis中获取验证码
+        String verificationCode = (String) redisTemplate.opsForValue()
+                .get(RedisVerificationKey.getVerificationCodeKey(verifyCodeVO.getEmail()));
+
+        if(verificationCode == null || !verificationCode.equals(verifyCodeVO.getCode())){
+            return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+        }
+
+        return Result.success(true);
     }
 
 

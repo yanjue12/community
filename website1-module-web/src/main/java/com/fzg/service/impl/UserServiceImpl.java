@@ -17,6 +17,7 @@ import com.fzg.service.UserService;
 import com.fzg.mapper.UserMapper;
 import com.fzg.util.UserUtil;
 import com.fzg.vo.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,82 +52,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
 
 
-
-    @Override
-    public Result accountLogin(UserLoginVO userLoginVO) {
-//        if (null == userLoginVO) {
-//            return Result.fail(EnumReturn.USERNAME_PASSWORD_EMPTY);
-//        }
-//
-//        User user = null;
-//
-//        String username = userLoginVO.getUsername();
-//        String password = userLoginVO.getPassword();
-//
-//        if(StrUtil.isNotEmpty(username)){
-//            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-//            queryWrapper.eq("username",username);
-//            user = this.getOne(queryWrapper);
-//            if(null == user){
-//                return Result.fail(EnumReturn.USERNAME_NOT_EXISTS);
-//            }
-//        }
-//        if(StrUtil.isNotEmpty(userLoginVO.getAccount())){
-//            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-//            queryWrapper.eq("account",userLoginVO.getAccount());
-//            user = this.getOne(queryWrapper);
-//            if(null == user){
-//                return Result.fail(EnumReturn.ACCOUNT_NOT_EXISTS);
-//            }
-//        }
-//
-//        if(StrUtil.isNotEmpty(userLoginVO.getEmail())){
-//            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-//            queryWrapper.eq("email",userLoginVO.getEmail());
-//            user = this.getOne(queryWrapper);
-//            if(null == user){
-//                return Result.fail(EnumReturn.EMAIL_NOT_EXISTS);}
-//        }
-//
-//        if("2".equals(user.getStatus())){
-//            return Result.fail(EnumReturn.USER_DISABLED);
-//        }
-//
-//
-//        String encryptPwd = UserUtil.getUserEncryptPassword(user.getAccount(), password);
-//        if(!user.getPassword().equals(encryptPwd)){
-//            return Result.fail(EnumReturn.PASSWORD_ERROR);
-//        }
-//
-//
-//
-//
-//
-//        //登录成功，记录token
-//        StpUtil.login(user.getId());
-//        SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-//        tokenInfo.setTokenTimeout(3600);
-//        SaSession session = StpUtil.getSession();
-//        session.set("USER_ID",user.getId());
-//        session.set("role",user.getRole());
-//
-//
-//
-//        Map<String,Object> response = new HashMap<>();
-//        response.put("role",user.getRole());
-//        response.put("tokenInfo",tokenInfo);
-
-
-        return Result.success("chenggong");
-
-    }
-
-
-
-
-
-
-
     /**
      * 注册 校验验证码 密码 邮箱
      * @param registerVO
@@ -150,8 +75,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(verificationCode == null || !verificationCode.equals(registerVO.getCode())){
             return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
         }
-
-
 
         //密码加密
         String encryptPwd = UserUtil.getUserEncryptPassword(email, registerVO.getPassword());
@@ -183,6 +106,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
 
     @Override
+    @Schema(description = "注册发送")
     public Result sendVerificationCode(RegisterVO registerVO) {
         String email = registerVO.getEmail();
         //邮箱已被注册过
@@ -373,6 +297,58 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         Long l = userMapper.selectCount(q);
         System.out.println(l);
         return l > 0 ? Result.fail(EnumReturn.USERNAME_EXITS) : Result.success(true);
+    }
+
+
+    @Override
+    @Schema(description = "修改邮箱验证")
+    public Result sendCode(RegisterVO registerVO) {
+        String email = registerVO.getEmail();
+
+        String verificationCode = RandomUtil.randomNumbers(6);
+        String vCodeKey = RedisVerificationKey.getVerificationCodeKey(email);
+
+
+        //检查是否频繁
+        Long expire = redisTemplate.getExpire(vCodeKey);
+        if(expire != null && expire >= 240){
+            return Result.fail(EnumReturn.VERIFICATION_CODE_FREQUENT);
+        }
+
+        //保存到redis
+        redisTemplate.opsForValue().set(vCodeKey ,verificationCode,5, TimeUnit.MINUTES);
+
+
+
+        StringBuilder emailContent = new StringBuilder();
+        emailContent.append("<html>")
+                .append("<body>")
+                .append("<h2 style='color: #4CAF50;'>邮箱更改确认</h2>")
+                .append("<p>亲爱的用户，</p>")
+                .append("<p>您已请求更改您的注册邮箱。</p>")
+                .append("<p>请使用以下验证码确认您的新邮箱地址：<strong style='font-size: 24px; color: #FF5722;'>")
+                .append(verificationCode)
+                .append("</strong></p>")
+                .append("<p>此验证码有效期为 5 分钟，请及时使用。</p>")
+                .append("<p>如果您没有进行此操作，请忽略此邮件。</p>")
+                .append("<p style='margin-top: 20px;'>感谢您的配合！</p>")
+                .append("<p>程序员社区团队</p>")
+                .append("</body>")
+                .append("</html>");
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("yanjue2024@163.com");
+        message.setSubject("邮箱更改 - 验证码");
+        message.setTo(email);
+        message.setText(emailContent.toString());  // 发送 HTML 格式的内容
+
+        try {
+            javaMailSender.send(message);
+            return Result.success("邮件成功发送");
+        } catch (Exception e) {
+            log.error(" 邮件发送失败：{},邮箱：{}", e.getMessage(), email);
+            return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+        }
     }
 
 

@@ -11,7 +11,6 @@ import com.fzg.vo.*;
 * @createDate 2025-07-09 17:09:29
 */
 public interface UserService extends IService<User> {
-    Result accountLogin(UserLoginVO userLoginVO);
 
     Result register(RegisterVO registerVO);
 
@@ -26,4 +25,6 @@ public interface UserService extends IService<User> {
     Result login(UserLoginVO userLoginVO);
 
     Result checkUsername(RegisterVO request);
+
+    Result sendCode(RegisterVO registerVO);
 }
