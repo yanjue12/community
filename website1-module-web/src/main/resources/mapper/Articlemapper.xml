@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.Articlemapper">
+  <resultMap id="BaseResultMap" type="com.fzg.model.Article">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="user_id" jdbcType="BIGINT" property="userId" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="summary" jdbcType="VARCHAR" property="summary" />
+    <result column="content" jdbcType="VARCHAR" property="content" />
+    <result column="content_html" jdbcType="VARCHAR" property="contentHtml" />
+    <result column="cover_image" jdbcType="VARCHAR" property="coverImage" />
+    <result column="category_id" jdbcType="BIGINT" property="categoryId" />
+    <result column="type" jdbcType="VARCHAR" property="type" />
+    <result column="format" jdbcType="VARCHAR" property="format" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="visibility" jdbcType="VARCHAR" property="visibility" />
+    <result column="is_top" jdbcType="VARCHAR" property="isTop" />
+    <result column="is_recommend" jdbcType="VARCHAR" property="isRecommend" />
+    <result column="is_original" jdbcType="VARCHAR" property="isOriginal" />
+    <result column="is_commentable" jdbcType="VARCHAR" property="isCommentable" />
+    <result column="view_count" jdbcType="INTEGER" property="viewCount" />
+    <result column="like_count" jdbcType="INTEGER" property="likeCount" />
+    <result column="comment_count" jdbcType="INTEGER" property="commentCount" />
+    <result column="collect_count" jdbcType="INTEGER" property="collectCount" />
+    <result column="share_count" jdbcType="INTEGER" property="shareCount" />
+    <result column="word_count" jdbcType="INTEGER" property="wordCount" />
+    <result column="reading_time" jdbcType="INTEGER" property="readingTime" />
+    <result column="last_comment_time" jdbcType="TIMESTAMP" property="lastCommentTime" />
+    <result column="published_at" jdbcType="TIMESTAMP" property="publishedAt" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, user_id, title, summary, content, content_html, cover_image, category_id, `type`, 
+    format, `status`, visibility, is_top, is_recommend, is_original, is_commentable, 
+    view_count, like_count, comment_count, collect_count, share_count, word_count, reading_time, 
+    last_comment_time, published_at, created_at, updated_at
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from article
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from article
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.Article" useGeneratedKeys="true">
+    insert into article (user_id, title, summary, 
+      content, content_html, cover_image, 
+      category_id, `type`, format, 
+      `status`, visibility, is_top, 
+      is_recommend, is_original, is_commentable, 
+      view_count, like_count, comment_count, 
+      collect_count, share_count, word_count, 
+      reading_time, last_comment_time, published_at, 
+      created_at, updated_at)
+    values (#{userId,jdbcType=BIGINT}, #{title,jdbcType=VARCHAR}, #{summary,jdbcType=VARCHAR}, 
+      #{content,jdbcType=VARCHAR}, #{contentHtml,jdbcType=VARCHAR}, #{coverImage,jdbcType=VARCHAR}, 
+      #{categoryId,jdbcType=BIGINT}, #{type,jdbcType=VARCHAR}, #{format,jdbcType=VARCHAR}, 
+      #{status,jdbcType=VARCHAR}, #{visibility,jdbcType=VARCHAR}, #{isTop,jdbcType=VARCHAR}, 
+      #{isRecommend,jdbcType=VARCHAR}, #{isOriginal,jdbcType=VARCHAR}, #{isCommentable,jdbcType=VARCHAR}, 
+      #{viewCount,jdbcType=INTEGER}, #{likeCount,jdbcType=INTEGER}, #{commentCount,jdbcType=INTEGER}, 
+      #{collectCount,jdbcType=INTEGER}, #{shareCount,jdbcType=INTEGER}, #{wordCount,jdbcType=INTEGER}, 
+      #{readingTime,jdbcType=INTEGER}, #{lastCommentTime,jdbcType=TIMESTAMP}, #{publishedAt,jdbcType=TIMESTAMP}, 
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.Article" useGeneratedKeys="true">
+    insert into article
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="userId != null">
+        user_id,
+      </if>
+      <if test="title != null">
+        title,
+      </if>
+      <if test="summary != null">
+        summary,
+      </if>
+      <if test="content != null">
+        content,
+      </if>
+      <if test="contentHtml != null">
+        content_html,
+      </if>
+      <if test="coverImage != null">
+        cover_image,
+      </if>
+      <if test="categoryId != null">
+        category_id,
+      </if>
+      <if test="type != null">
+        `type`,
+      </if>
+      <if test="format != null">
+        format,
+      </if>
+      <if test="status != null">
+        `status`,
+      </if>
+      <if test="visibility != null">
+        visibility,
+      </if>
+      <if test="isTop != null">
+        is_top,
+      </if>
+      <if test="isRecommend != null">
+        is_recommend,
+      </if>
+      <if test="isOriginal != null">
+        is_original,
+      </if>
+      <if test="isCommentable != null">
+        is_commentable,
+      </if>
+      <if test="viewCount != null">
+        view_count,
+      </if>
+      <if test="likeCount != null">
+        like_count,
+      </if>
+      <if test="commentCount != null">
+        comment_count,
+      </if>
+      <if test="collectCount != null">
+        collect_count,
+      </if>
+      <if test="shareCount != null">
+        share_count,
+      </if>
+      <if test="wordCount != null">
+        word_count,
+      </if>
+      <if test="readingTime != null">
+        reading_time,
+      </if>
+      <if test="lastCommentTime != null">
+        last_comment_time,
+      </if>
+      <if test="publishedAt != null">
+        published_at,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="userId != null">
+        #{userId,jdbcType=BIGINT},
+      </if>
+      <if test="title != null">
+        #{title,jdbcType=VARCHAR},
+      </if>
+      <if test="summary != null">
+        #{summary,jdbcType=VARCHAR},
+      </if>
+      <if test="content != null">
+        #{content,jdbcType=VARCHAR},
+      </if>
+      <if test="contentHtml != null">
+        #{contentHtml,jdbcType=VARCHAR},
+      </if>
+      <if test="coverImage != null">
+        #{coverImage,jdbcType=VARCHAR},
+      </if>
+      <if test="categoryId != null">
+        #{categoryId,jdbcType=BIGINT},
+      </if>
+      <if test="type != null">
+        #{type,jdbcType=VARCHAR},
+      </if>
+      <if test="format != null">
+        #{format,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="visibility != null">
+        #{visibility,jdbcType=VARCHAR},
+      </if>
+      <if test="isTop != null">
+        #{isTop,jdbcType=VARCHAR},
+      </if>
+      <if test="isRecommend != null">
+        #{isRecommend,jdbcType=VARCHAR},
+      </if>
+      <if test="isOriginal != null">
+        #{isOriginal,jdbcType=VARCHAR},
+      </if>
+      <if test="isCommentable != null">
+        #{isCommentable,jdbcType=VARCHAR},
+      </if>
+      <if test="viewCount != null">
+        #{viewCount,jdbcType=INTEGER},
+      </if>
+      <if test="likeCount != null">
+        #{likeCount,jdbcType=INTEGER},
+      </if>
+      <if test="commentCount != null">
+        #{commentCount,jdbcType=INTEGER},
+      </if>
+      <if test="collectCount != null">
+        #{collectCount,jdbcType=INTEGER},
+      </if>
+      <if test="shareCount != null">
+        #{shareCount,jdbcType=INTEGER},
+      </if>
+      <if test="wordCount != null">
+        #{wordCount,jdbcType=INTEGER},
+      </if>
+      <if test="readingTime != null">
+        #{readingTime,jdbcType=INTEGER},
+      </if>
+      <if test="lastCommentTime != null">
+        #{lastCommentTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="publishedAt != null">
+        #{publishedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.fzg.model.Article">
+    update article
+    <set>
+      <if test="userId != null">
+        user_id = #{userId,jdbcType=BIGINT},
+      </if>
+      <if test="title != null">
+        title = #{title,jdbcType=VARCHAR},
+      </if>
+      <if test="summary != null">
+        summary = #{summary,jdbcType=VARCHAR},
+      </if>
+      <if test="content != null">
+        content = #{content,jdbcType=VARCHAR},
+      </if>
+      <if test="contentHtml != null">
+        content_html = #{contentHtml,jdbcType=VARCHAR},
+      </if>
+      <if test="coverImage != null">
+        cover_image = #{coverImage,jdbcType=VARCHAR},
+      </if>
+      <if test="categoryId != null">
+        category_id = #{categoryId,jdbcType=BIGINT},
+      </if>
+      <if test="type != null">
+        `type` = #{type,jdbcType=VARCHAR},
+      </if>
+      <if test="format != null">
+        format = #{format,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        `status` = #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="visibility != null">
+        visibility = #{visibility,jdbcType=VARCHAR},
+      </if>
+      <if test="isTop != null">
+        is_top = #{isTop,jdbcType=VARCHAR},
+      </if>
+      <if test="isRecommend != null">
+        is_recommend = #{isRecommend,jdbcType=VARCHAR},
+      </if>
+      <if test="isOriginal != null">
+        is_original = #{isOriginal,jdbcType=VARCHAR},
+      </if>
+      <if test="isCommentable != null">
+        is_commentable = #{isCommentable,jdbcType=VARCHAR},
+      </if>
+      <if test="viewCount != null">
+        view_count = #{viewCount,jdbcType=INTEGER},
+      </if>
+      <if test="likeCount != null">
+        like_count = #{likeCount,jdbcType=INTEGER},
+      </if>
+      <if test="commentCount != null">
+        comment_count = #{commentCount,jdbcType=INTEGER},
+      </if>
+      <if test="collectCount != null">
+        collect_count = #{collectCount,jdbcType=INTEGER},
+      </if>
+      <if test="shareCount != null">
+        share_count = #{shareCount,jdbcType=INTEGER},
+      </if>
+      <if test="wordCount != null">
+        word_count = #{wordCount,jdbcType=INTEGER},
+      </if>
+      <if test="readingTime != null">
+        reading_time = #{readingTime,jdbcType=INTEGER},
+      </if>
+      <if test="lastCommentTime != null">
+        last_comment_time = #{lastCommentTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="publishedAt != null">
+        published_at = #{publishedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.fzg.model.Article">
+    update article
+    set user_id = #{userId,jdbcType=BIGINT},
+      title = #{title,jdbcType=VARCHAR},
+      summary = #{summary,jdbcType=VARCHAR},
+      content = #{content,jdbcType=VARCHAR},
+      content_html = #{contentHtml,jdbcType=VARCHAR},
+      cover_image = #{coverImage,jdbcType=VARCHAR},
+      category_id = #{categoryId,jdbcType=BIGINT},
+      `type` = #{type,jdbcType=VARCHAR},
+      format = #{format,jdbcType=VARCHAR},
+      `status` = #{status,jdbcType=VARCHAR},
+      visibility = #{visibility,jdbcType=VARCHAR},
+      is_top = #{isTop,jdbcType=VARCHAR},
+      is_recommend = #{isRecommend,jdbcType=VARCHAR},
+      is_original = #{isOriginal,jdbcType=VARCHAR},
+      is_commentable = #{isCommentable,jdbcType=VARCHAR},
+      view_count = #{viewCount,jdbcType=INTEGER},
+      like_count = #{likeCount,jdbcType=INTEGER},
+      comment_count = #{commentCount,jdbcType=INTEGER},
+      collect_count = #{collectCount,jdbcType=INTEGER},
+      share_count = #{shareCount,jdbcType=INTEGER},
+      word_count = #{wordCount,jdbcType=INTEGER},
+      reading_time = #{readingTime,jdbcType=INTEGER},
+      last_comment_time = #{lastCommentTime,jdbcType=TIMESTAMP},
+      published_at = #{publishedAt,jdbcType=TIMESTAMP},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+</mapper>

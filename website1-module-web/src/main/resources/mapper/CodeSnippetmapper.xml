@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.CodeSnippetmapper">
+  <resultMap id="BaseResultMap" type="com.fzg.model.CodeSnippet">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="user_id" jdbcType="BIGINT" property="user_id" />
+    <result column="title" jdbcType="VARCHAR" property="title" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="code" jdbcType="VARCHAR" property="code" />
+    <result column="language" jdbcType="VARCHAR" property="language" />
+    <result column="tags" jdbcType="VARCHAR" property="tags" />
+    <result column="filename" jdbcType="VARCHAR" property="filename" />
+    <result column="visibility" jdbcType="VARCHAR" property="visibility" />
+    <result column="is_fork" jdbcType="VARCHAR" property="is_fork" />
+    <result column="fork_from_id" jdbcType="BIGINT" property="fork_from_id" />
+    <result column="view_count" jdbcType="INTEGER" property="view_count" />
+    <result column="run_count" jdbcType="INTEGER" property="run_count" />
+    <result column="fork_count" jdbcType="INTEGER" property="fork_count" />
+    <result column="like_count" jdbcType="INTEGER" property="like_count" />
+    <result column="comment_count" jdbcType="INTEGER" property="comment_count" />
+    <result column="code_size" jdbcType="INTEGER" property="code_size" />
+    <result column="line_count" jdbcType="INTEGER" property="line_count" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="created_at" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updated_at" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, user_id, title, description, code, `language`, tags, filename, visibility, is_fork, 
+    fork_from_id, view_count, run_count, fork_count, like_count, comment_count, code_size, 
+    line_count, created_at, updated_at
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from code_snippet
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from code_snippet
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.CodeSnippet" useGeneratedKeys="true">
+    insert into code_snippet (user_id, title, description, 
+      code, `language`, tags, 
+      filename, visibility, is_fork, 
+      fork_from_id, view_count, run_count, 
+      fork_count, like_count, comment_count, 
+      code_size, line_count, created_at, 
+      updated_at)
+    values (#{user_id,jdbcType=BIGINT}, #{title,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, 
+      #{code,jdbcType=VARCHAR}, #{language,jdbcType=VARCHAR}, #{tags,jdbcType=VARCHAR}, 
+      #{filename,jdbcType=VARCHAR}, #{visibility,jdbcType=VARCHAR}, #{is_fork,jdbcType=VARCHAR}, 
+      #{fork_from_id,jdbcType=BIGINT}, #{view_count,jdbcType=INTEGER}, #{run_count,jdbcType=INTEGER}, 
+      #{fork_count,jdbcType=INTEGER}, #{like_count,jdbcType=INTEGER}, #{comment_count,jdbcType=INTEGER}, 
+      #{code_size,jdbcType=INTEGER}, #{line_count,jdbcType=INTEGER}, #{created_at,jdbcType=TIMESTAMP}, 
+      #{updated_at,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.CodeSnippet" useGeneratedKeys="true">
+    insert into code_snippet
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="user_id != null">
+        user_id,
+      </if>
+      <if test="title != null">
+        title,
+      </if>
+      <if test="description != null">
+        description,
+      </if>
+      <if test="code != null">
+        code,
+      </if>
+      <if test="language != null">
+        `language`,
+      </if>
+      <if test="tags != null">
+        tags,
+      </if>
+      <if test="filename != null">
+        filename,
+      </if>
+      <if test="visibility != null">
+        visibility,
+      </if>
+      <if test="is_fork != null">
+        is_fork,
+      </if>
+      <if test="fork_from_id != null">
+        fork_from_id,
+      </if>
+      <if test="view_count != null">
+        view_count,
+      </if>
+      <if test="run_count != null">
+        run_count,
+      </if>
+      <if test="fork_count != null">
+        fork_count,
+      </if>
+      <if test="like_count != null">
+        like_count,
+      </if>
+      <if test="comment_count != null">
+        comment_count,
+      </if>
+      <if test="code_size != null">
+        code_size,
+      </if>
+      <if test="line_count != null">
+        line_count,
+      </if>
+      <if test="created_at != null">
+        created_at,
+      </if>
+      <if test="updated_at != null">
+        updated_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="user_id != null">
+        #{user_id,jdbcType=BIGINT},
+      </if>
+      <if test="title != null">
+        #{title,jdbcType=VARCHAR},
+      </if>
+      <if test="description != null">
+        #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="code != null">
+        #{code,jdbcType=VARCHAR},
+      </if>
+      <if test="language != null">
+        #{language,jdbcType=VARCHAR},
+      </if>
+      <if test="tags != null">
+        #{tags,jdbcType=VARCHAR},
+      </if>
+      <if test="filename != null">
+        #{filename,jdbcType=VARCHAR},
+      </if>
+      <if test="visibility != null">
+        #{visibility,jdbcType=VARCHAR},
+      </if>
+      <if test="is_fork != null">
+        #{is_fork,jdbcType=VARCHAR},
+      </if>
+      <if test="fork_from_id != null">
+        #{fork_from_id,jdbcType=BIGINT},
+      </if>
+      <if test="view_count != null">
+        #{view_count,jdbcType=INTEGER},
+      </if>
+      <if test="run_count != null">
+        #{run_count,jdbcType=INTEGER},
+      </if>
+      <if test="fork_count != null">
+        #{fork_count,jdbcType=INTEGER},
+      </if>
+      <if test="like_count != null">
+        #{like_count,jdbcType=INTEGER},
+      </if>
+      <if test="comment_count != null">
+        #{comment_count,jdbcType=INTEGER},
+      </if>
+      <if test="code_size != null">
+        #{code_size,jdbcType=INTEGER},
+      </if>
+      <if test="line_count != null">
+        #{line_count,jdbcType=INTEGER},
+      </if>
+      <if test="created_at != null">
+        #{created_at,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updated_at != null">
+        #{updated_at,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.fzg.model.CodeSnippet">
+    update code_snippet
+    <set>
+      <if test="user_id != null">
+        user_id = #{user_id,jdbcType=BIGINT},
+      </if>
+      <if test="title != null">
+        title = #{title,jdbcType=VARCHAR},
+      </if>
+      <if test="description != null">
+        description = #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="code != null">
+        code = #{code,jdbcType=VARCHAR},
+      </if>
+      <if test="language != null">
+        `language` = #{language,jdbcType=VARCHAR},
+      </if>
+      <if test="tags != null">
+        tags = #{tags,jdbcType=VARCHAR},
+      </if>
+      <if test="filename != null">
+        filename = #{filename,jdbcType=VARCHAR},
+      </if>
+      <if test="visibility != null">
+        visibility = #{visibility,jdbcType=VARCHAR},
+      </if>
+      <if test="is_fork != null">
+        is_fork = #{is_fork,jdbcType=VARCHAR},
+      </if>
+      <if test="fork_from_id != null">
+        fork_from_id = #{fork_from_id,jdbcType=BIGINT},
+      </if>
+      <if test="view_count != null">
+        view_count = #{view_count,jdbcType=INTEGER},
+      </if>
+      <if test="run_count != null">
+        run_count = #{run_count,jdbcType=INTEGER},
+      </if>
+      <if test="fork_count != null">
+        fork_count = #{fork_count,jdbcType=INTEGER},
+      </if>
+      <if test="like_count != null">
+        like_count = #{like_count,jdbcType=INTEGER},
+      </if>
+      <if test="comment_count != null">
+        comment_count = #{comment_count,jdbcType=INTEGER},
+      </if>
+      <if test="code_size != null">
+        code_size = #{code_size,jdbcType=INTEGER},
+      </if>
+      <if test="line_count != null">
+        line_count = #{line_count,jdbcType=INTEGER},
+      </if>
+      <if test="created_at != null">
+        created_at = #{created_at,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updated_at != null">
+        updated_at = #{updated_at,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.fzg.model.CodeSnippet">
+    update code_snippet
+    set user_id = #{user_id,jdbcType=BIGINT},
+      title = #{title,jdbcType=VARCHAR},
+      description = #{description,jdbcType=VARCHAR},
+      code = #{code,jdbcType=VARCHAR},
+      `language` = #{language,jdbcType=VARCHAR},
+      tags = #{tags,jdbcType=VARCHAR},
+      filename = #{filename,jdbcType=VARCHAR},
+      visibility = #{visibility,jdbcType=VARCHAR},
+      is_fork = #{is_fork,jdbcType=VARCHAR},
+      fork_from_id = #{fork_from_id,jdbcType=BIGINT},
+      view_count = #{view_count,jdbcType=INTEGER},
+      run_count = #{run_count,jdbcType=INTEGER},
+      fork_count = #{fork_count,jdbcType=INTEGER},
+      like_count = #{like_count,jdbcType=INTEGER},
+      comment_count = #{comment_count,jdbcType=INTEGER},
+      code_size = #{code_size,jdbcType=INTEGER},
+      line_count = #{line_count,jdbcType=INTEGER},
+      created_at = #{created_at,jdbcType=TIMESTAMP},
+      updated_at = #{updated_at,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+</mapper>

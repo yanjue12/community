@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.SignInLogmapper">
+  <resultMap id="BaseResultMap" type="com.fzg.model.SignInLog">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="user_id" jdbcType="BIGINT" property="user_id" />
+    <result column="date" jdbcType="DATE" property="date" />
+    <result column="continuous_days" jdbcType="INTEGER" property="continuous_days" />
+    <result column="score_award" jdbcType="INTEGER" property="score_award" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="created_at" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, user_id, `date`, continuous_days, score_award, created_at
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sign_in_log
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from sign_in_log
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.SignInLog" useGeneratedKeys="true">
+    insert into sign_in_log (user_id, `date`, continuous_days, 
+      score_award, created_at)
+    values (#{user_id,jdbcType=BIGINT}, #{date,jdbcType=DATE}, #{continuous_days,jdbcType=INTEGER}, 
+      #{score_award,jdbcType=INTEGER}, #{created_at,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.SignInLog" useGeneratedKeys="true">
+    insert into sign_in_log
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="user_id != null">
+        user_id,
+      </if>
+      <if test="date != null">
+        `date`,
+      </if>
+      <if test="continuous_days != null">
+        continuous_days,
+      </if>
+      <if test="score_award != null">
+        score_award,
+      </if>
+      <if test="created_at != null">
+        created_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="user_id != null">
+        #{user_id,jdbcType=BIGINT},
+      </if>
+      <if test="date != null">
+        #{date,jdbcType=DATE},
+      </if>
+      <if test="continuous_days != null">
+        #{continuous_days,jdbcType=INTEGER},
+      </if>
+      <if test="score_award != null">
+        #{score_award,jdbcType=INTEGER},
+      </if>
+      <if test="created_at != null">
+        #{created_at,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.fzg.model.SignInLog">
+    update sign_in_log
+    <set>
+      <if test="user_id != null">
+        user_id = #{user_id,jdbcType=BIGINT},
+      </if>
+      <if test="date != null">
+        `date` = #{date,jdbcType=DATE},
+      </if>
+      <if test="continuous_days != null">
+        continuous_days = #{continuous_days,jdbcType=INTEGER},
+      </if>
+      <if test="score_award != null">
+        score_award = #{score_award,jdbcType=INTEGER},
+      </if>
+      <if test="created_at != null">
+        created_at = #{created_at,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.fzg.model.SignInLog">
+    update sign_in_log
+    set user_id = #{user_id,jdbcType=BIGINT},
+      `date` = #{date,jdbcType=DATE},
+      continuous_days = #{continuous_days,jdbcType=INTEGER},
+      score_award = #{score_award,jdbcType=INTEGER},
+      created_at = #{created_at,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+</mapper>

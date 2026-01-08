@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.Followmapper">
+  <resultMap id="BaseResultMap" type="com.fzg.model.Follow">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="follower_id" jdbcType="BIGINT" property="follower_id" />
+    <result column="following_id" jdbcType="BIGINT" property="following_id" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="created_at" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    id, follower_id, following_id, created_at
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from follow
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from follow
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.Follow" useGeneratedKeys="true">
+    insert into follow (follower_id, following_id, created_at
+      )
+    values (#{follower_id,jdbcType=BIGINT}, #{following_id,jdbcType=BIGINT}, #{created_at,jdbcType=TIMESTAMP}
+      )
+  </insert>
+  <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.fzg.model.Follow" useGeneratedKeys="true">
+    insert into follow
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="follower_id != null">
+        follower_id,
+      </if>
+      <if test="following_id != null">
+        following_id,
+      </if>
+      <if test="created_at != null">
+        created_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="follower_id != null">
+        #{follower_id,jdbcType=BIGINT},
+      </if>
+      <if test="following_id != null">
+        #{following_id,jdbcType=BIGINT},
+      </if>
+      <if test="created_at != null">
+        #{created_at,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.fzg.model.Follow">
+    update follow
+    <set>
+      <if test="follower_id != null">
+        follower_id = #{follower_id,jdbcType=BIGINT},
+      </if>
+      <if test="following_id != null">
+        following_id = #{following_id,jdbcType=BIGINT},
+      </if>
+      <if test="created_at != null">
+        created_at = #{created_at,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.fzg.model.Follow">
+    update follow
+    set follower_id = #{follower_id,jdbcType=BIGINT},
+      following_id = #{following_id,jdbcType=BIGINT},
+      created_at = #{created_at,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+</mapper>
