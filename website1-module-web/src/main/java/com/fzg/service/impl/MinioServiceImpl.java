@@ -34,7 +34,7 @@ public class MinioServiceImpl implements MinioService {
             fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
         String uniqueObjectName = UUID.randomUUID().toString()  + fileExtension;
-
+        log.info("文件名：{}",uniqueObjectName);
 
         try {
             if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {

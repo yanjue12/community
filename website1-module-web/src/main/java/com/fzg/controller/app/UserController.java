@@ -4,6 +4,7 @@ package com.fzg.controller.app;
 import cn.dev33.satoken.stp.StpUtil;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
+import com.fzg.model.User;
 import com.fzg.service.UserService;
 import com.fzg.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,7 +40,6 @@ public class UserController {
     }
 
 
-
     /**
      * 用户名密码登录
      * @return
@@ -54,6 +54,7 @@ public class UserController {
     }
 
     @PostMapping("/checkUsername")
+    @Schema(name = "用户模块", description = "检查用户名是否可用")
     public Result checkUsername(@RequestBody RegisterVO request) {
         if(StringUtils.isEmpty(request.getUsername())){
             return Result.fail(EnumReturn.USERNAME_IS_EMPTY);
@@ -97,7 +98,12 @@ public class UserController {
     }
 
 
-
+    @PostMapping("/queryUserInfo")
+    public Result queryUserInfo() {
+        String loginId = (String) StpUtil.getLoginId();
+        User user = userService.getById(Long.valueOf(loginId));
+        return Result.success(user);
+    }
 
 
 }

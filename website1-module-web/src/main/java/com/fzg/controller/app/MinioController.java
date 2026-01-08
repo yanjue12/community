@@ -4,6 +4,7 @@ import com.fzg.service.MinioService;
 import io.minio.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -15,10 +16,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.InputStream;
 
 
+@Slf4j
 @RestController
 @RequestMapping("/minio")
 @RequiredArgsConstructor
-//@SaCheckLogin
 @Schema(name = "MinioController", description = "Minio文件管理")
 public class MinioController {
 
@@ -36,27 +37,11 @@ public class MinioController {
      * @throws  Exception 异常
      */
     @PostMapping("/upload")
-    //@SaCheckRole("admin")
     public String uploadFile(@RequestParam MultipartFile file){
+        log.info("MinioController.uploadFile开始");
 
         return minioService.upload(file, bucketName, minioClient);
 
-       /* if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
-            minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
-        }
-
-        InputStream inputStream = file.getInputStream();
-        minioClient.putObject(
-                PutObjectArgs.builder()
-                        .bucket(bucketName)
-                        .object(objectName)
-                        .stream(inputStream, file.getSize(), -1)
-                        .contentType(file.getContentType())
-                        .build());
-
-        inputStream.close();
-
-        return minioClient.getObjectUrl(bucketName, objectName);*/
     }
 
 
