@@ -2,17 +2,19 @@ package com.fzg.service.impl;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
+import cn.dev33.satoken.stp.StpInterface;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.constant.RedisVerificationKey;
-import com.fzg.dao.UserMapper;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.model.User;
 import com.fzg.service.UserService;
+import com.fzg.mapper.UserMapper;
 import com.fzg.util.UserUtil;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
