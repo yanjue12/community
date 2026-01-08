@@ -66,6 +66,7 @@ public class UserController {
     public Result logout() {
 
         StpUtil.logout();
+        log.info("用户登出成功");
         return Result.success("退出成功");
 
     }
