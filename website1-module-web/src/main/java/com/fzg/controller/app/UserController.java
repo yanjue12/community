@@ -26,14 +26,14 @@ public class UserController {
 
     @Operation(summary = "用户注册接口")
     @PostMapping("/register")
-    public Result register(@Validated (RegisterVO.RegisterVOValidated.class) @RequestBody RegisterVO registerVO) {
+    public Result register(@RequestBody RegisterVO registerVO) {
 
         return userService.register(registerVO);
     }
 
     @Operation(summary = "用户发送验证码接口")
     @PostMapping("/send-code")
-    public Result sendVerificationCode(@Validated (RegisterVO.RegisterVOValidated.class) @RequestBody RegisterVO registerVO) {
+    public Result sendVerificationCode(@RequestBody RegisterVO registerVO) {
 
         return userService.sendVerificationCode(registerVO);
     }
