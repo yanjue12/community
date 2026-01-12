@@ -2,6 +2,7 @@ package com.fzg.controller.app;
 
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
@@ -17,6 +18,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Date;
 
 @RestController
 @RequestMapping("/auth")
@@ -111,11 +116,11 @@ public class UserController {
         return Result.success(user);
     }
 
-    @Operation(summary = "用户发送验证码接口（修改邮箱）")
-    @PostMapping("/send-code")
-    public Result sendCode(@RequestBody RegisterVO registerVO) {
+    @Operation(summary = "用户发送验证码接口（非注册）")
+    @PostMapping("/UpEmailByCode")
+    public Result sendCode(@RequestBody EmailRequest emailRequest) {
 
-        return userService.sendCode(registerVO);
+        return userService.sendCode(emailRequest);
     }
 
     @PostMapping("/verifyCode")
@@ -133,6 +138,57 @@ public class UserController {
         }
 
         return Result.success(true);
+    }
+
+    @PostMapping("/UpEmailEnd")
+    public Result editEmail(@RequestBody EmailRequest emailRequest) {
+        if(null == emailRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        if(StringUtils.isEmpty(emailRequest.getEmail())){
+            return Result.fail(EnumReturn.EMAIL_IS_EMPTY);
+        }
+        if(StringUtils.isEmpty(emailRequest.getCode())){
+            return Result.fail(EnumReturn.CODE_IS_EMPTY);
+        }
+        try {
+            //从redis中获取验证码
+            String verificationCode = (String) redisTemplate.opsForValue()
+                    .get(RedisVerificationKey.getVerificationCodeKey(emailRequest.getEmail()));
+
+            if(verificationCode == null || !verificationCode.equals(emailRequest.getCode())){
+                return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+            }
+
+            String loginId =(String) StpUtil.getLoginId();
+            User user = userService.getById(Long.valueOf(loginId));
+            user.setEmail(emailRequest.getEmail());
+            user.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+            userService.update(user, new QueryWrapper<>());
+        }catch (Exception e){
+            log.info("修改邮箱异常:{}",e);
+            throw new RuntimeException("修改邮箱异常");
+        }
+        return Result.success(true);
+    }
+
+
+    @PostMapping("/editInfo")
+    @Schema(name = "用户模块", description = "用户修改个人信息")
+    public Result editInfo(@RequestBody User user) {
+        String userId = (String) StpUtil.getLoginId();
+        boolean result = false;
+        try{
+            user.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+            result = userService.update(user, new QueryWrapper<User>().eq("id", Long.valueOf(userId)));
+        }catch (Exception e){
+            log.info("更新用户信息异常:{}",e);
+        }
+        if(result){
+            return Result.success(true);
+        }else{
+            return Result.fail(EnumReturn.UPDATE_USER_INFO_ERROR);
+        }
     }
 
 

@@ -26,5 +26,5 @@ public interface UserService extends IService<User> {
 
     Result checkUsername(RegisterVO request);
 
-    Result sendCode(RegisterVO registerVO);
+    Result sendCode(EmailRequest emailRequest);
 }

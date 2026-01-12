@@ -40,18 +40,15 @@ public enum EnumReturn {
         VERIFICATION_CODE_FREQUENT(2000, "验证码发送频繁，请稍后再试"),
         VERIFICATION_CODE_ERROR(2000, "验证码错误"),
 
-        NEWS_NOT_EXIST(2000, "新闻不存在"),
-        NEWS_DETAIL_NOT_FOUND(2000, "新闻详情不存在"),
-        NEWS_LIST_EMPTY(2000, "新闻列表为空"),
-        NEWS_CREATE_ERROR(2000, "创建新闻失败"),
-        NEWS_DELETE_ERROR(2000, "删除新闻失败"),
-        NEWS_UPDATE_ERROR(2000, "更新新闻失败"),
-        NEWS_CONTENT_EMPTY(2000, "新闻内容不能为空"),
+        UPDATE_USER_INFO_ERROR(9999, "更新用户信息失败"),
 
         UN_LOGIN_OR_TOKEN_INVAID(2000, "未登录或token失效"),
 
         CONTENT_NOT_EXISTS(2000, "内容不能为空"),
         NAME_NOT_EXISTS(2000, "姓名不能为空"),
+        REQUSET_IS_EMPTY(2000, "请求参数不能为空"),
+        EMAIL_IS_EMPTY(2000, "邮箱不能为空"),
+
 
 
         PARAMS_EMPTY(2000, "参数不能为空"),

@@ -24,11 +24,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
+import javax.mail.internet.MimeMessage;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -79,11 +84,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //密码加密
         String encryptPwd = UserUtil.getUserEncryptPassword(email, registerVO.getPassword());
 
-        //TODO 设置默认头像
         User user = new User();
         user.setEmail(email);
         user.setUsername(registerVO.getUsername());
         user.setPassword(encryptPwd);
+        user.setAvatar("http://127.0.0.1:9000/website/908470.jpg");
 
         if(this.save(user)){
             StpUtil.login(user.getId());
@@ -161,7 +166,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             log.error(" 邮件发送失败：{},邮箱：{}",e.getMessage(),email);
             return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
         }
-
 
     }
 
@@ -286,6 +290,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(userLoginVO.getRememberMe()){
             tokenInfo.setTokenTimeout(3600 * 24 * 7);
         }
+
+        //保存登录时间和登录ip TODO
+        user.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+        this.update(user,new LambdaQueryWrapper<>());
         return Result.success(tokenInfo);
     }
 
@@ -301,13 +309,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
 
     @Override
-    @Schema(description = "修改邮箱验证")
-    public Result sendCode(RegisterVO registerVO) {
-        String email = registerVO.getEmail();
+    @Schema(description = "发送邮箱验证码")
+    public Result sendCode(EmailRequest emailRequest) {
+        String email = emailRequest.getEmail();
 
         String verificationCode = RandomUtil.randomNumbers(6);
         String vCodeKey = RedisVerificationKey.getVerificationCodeKey(email);
-
 
         //检查是否频繁
         Long expire = redisTemplate.getExpire(vCodeKey);
@@ -318,31 +325,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //保存到redis
         redisTemplate.opsForValue().set(vCodeKey ,verificationCode,5, TimeUnit.MINUTES);
 
-
-
-        StringBuilder emailContent = new StringBuilder();
-        emailContent.append("<html>")
-                .append("<body>")
-                .append("<h2 style='color: #4CAF50;'>邮箱更改确认</h2>")
-                .append("<p>亲爱的用户，</p>")
-                .append("<p>您已请求更改您的注册邮箱。</p>")
-                .append("<p>请使用以下验证码确认您的新邮箱地址：<strong style='font-size: 24px; color: #FF5722;'>")
-                .append(verificationCode)
-                .append("</strong></p>")
-                .append("<p>此验证码有效期为 5 分钟，请及时使用。</p>")
-                .append("<p>如果您没有进行此操作，请忽略此邮件。</p>")
-                .append("<p style='margin-top: 20px;'>感谢您的配合！</p>")
-                .append("<p>程序员社区团队</p>")
-                .append("</body>")
-                .append("</html>");
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("yanjue2024@163.com");
-        message.setSubject("邮箱更改 - 验证码");
-        message.setTo(email);
-        message.setText(emailContent.toString());  // 发送 HTML 格式的内容
-
+        String emailContent = generateEmailContent(emailRequest.getPurpose(), verificationCode);
         try {
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true); // true表示multipart
+
+            helper.setFrom("yanjue2024@163.com");
+            helper.setTo(email);
+            helper.setSubject(emailRequest.getPurpose().equals("changeEmail") ? "邮箱更改 - 验证码" : "密码更改 - 验证码");
+            helper.setText(emailContent, true); // 第二个参数表示内容为HTML
+
             javaMailSender.send(message);
             return Result.success("邮件成功发送");
         } catch (Exception e) {
@@ -351,6 +343,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
     }
 
+    // 生成邮件内容的函数
+    private String generateEmailContent(String purpose, String verificationCode) {
+        StringBuilder content = new StringBuilder();
+        content.append("<html>")
+                .append("<body>")
+                .append("<h2 style='color: #4CAF50;'>验证码确认</h2>")
+                .append("<p>亲爱的用户，</p>")
+                .append("<p>您已请求").append(purpose.equals("changeEmail") ? "更改您的注册邮箱" : "重置您的密码").append("。</p>")
+                .append("<p>请使用以下验证码确认您的操作：<strong style='font-size: 24px; color: #FF5722;'>")
+                .append(verificationCode)
+                .append("</strong></p>")
+                .append("<p>此验证码有效期为 5 分钟，请及时使用。</p>")
+                .append("<p>如果您没有进行此操作，请忽略此邮件。</p>")
+                .append("<p style='margin-top: 20px;'>感谢您的配合！</p>")
+                .append("<p>程序员社区团队</p>")
+                .append("</body>")
+                .append("</html>");
+        return content.toString();
+    }
 
 }
 
