@@ -49,19 +49,7 @@ public enum EnumReturn {
         REQUSET_IS_EMPTY(2000, "请求参数不能为空"),
         EMAIL_IS_EMPTY(2000, "邮箱不能为空"),
         EMAIL_SEND_FAIL(2000, "邮箱发送失败"),
-
-
-
-        PARAMS_EMPTY(2000, "参数不能为空"),
-        SOLUTIONS_SAVE_ERROR(2000, "解决方案保存失败"),
-        SOLUTIONS_NOT_FOUND(2000, "解决方案不存在"),
-        SOLUTIONS_UPDATE_ERROR(2000, "解决方案更新失败"),
-        SOLUTIONS_DELETE_ERROR(2000, "解决方案删除失败"),
-        SOLUTIONS_LIST_ERROR(2000, "解决方案列表获取失败"),
-        CONTACTUS_NOT_EXISTS(2000, "联系我们不存在"),
-        SOLUTIONS_UPDATE_ERROR_FOR_IMAGE(2000, "解决方案更新失败，图片更新失败"),
-        SOLUTIONS_DELETE_ERROR_FOR_IMAGE(2000, "解决方案删除失败，图片删除失败"),
-        SOLUTIONS_SUBTITLES_SAVE_ERROR(2000, "解决方案子标题保存失败"),
+        MENU_TYPE_IS_EMPTY(2000, "菜单类型不能为空"),
 
         OPERATION_SUCCESS(2000,"操作成功"),
 

@@ -1,8 +1,11 @@
 package com.fzg.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.springframework.data.annotation.Id;
 
 import java.util.Date;
 
@@ -11,6 +14,7 @@ import java.util.Date;
 @Schema(name = "用户表", description = "用户表")
 public class User {
 
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;                // 用户ID
     private String username;        // 用户名
     private String password;        // 密码

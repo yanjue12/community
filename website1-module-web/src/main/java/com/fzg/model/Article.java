@@ -2,6 +2,9 @@ package com.fzg.model;
 
 import java.io.Serializable;
 import java.util.Date;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
 
 /**
@@ -13,6 +16,7 @@ public class Article implements Serializable {
     /**
      * 文章ID
      */
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
