@@ -2,6 +2,7 @@ package com.fzg.vo;
 
 import lombok.Data;
 
+import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
@@ -15,4 +16,9 @@ public class UpdatePasswordVO {
     @NotBlank(message = "新密码不能为空")
     @Size(min = 6, max = 20, groups = {UpdateUsernameVO.UpdateUsernameVOValidated.class})
     private String newPassword;
+
+    private String code;
+
+    @Email
+    private String email;
 }

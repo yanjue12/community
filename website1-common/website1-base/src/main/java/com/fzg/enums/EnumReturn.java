@@ -48,6 +48,7 @@ public enum EnumReturn {
         NAME_NOT_EXISTS(2000, "姓名不能为空"),
         REQUSET_IS_EMPTY(2000, "请求参数不能为空"),
         EMAIL_IS_EMPTY(2000, "邮箱不能为空"),
+        EMAIL_SEND_FAIL(2000, "邮箱发送失败"),
 
 
 

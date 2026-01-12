@@ -91,8 +91,21 @@ public class UserController {
     @Operation(summary = "修改密码接口")
     @PostMapping("/updatePassword")
     public Result updatePassword(@RequestBody UpdatePasswordVO updatePasswordVO) {
-        Integer userId = (Integer) StpUtil.getLoginId();
-        return userService.updatePassword(userId,updatePasswordVO);
+        //判断验证码是否正确
+        if(StringUtils.isEmpty(updatePasswordVO.getCode())){
+            return Result.fail(EnumReturn.CODE_IS_EMPTY);
+        }
+
+        //从redis中获取验证码
+        String verificationCode = (String) redisTemplate.opsForValue()
+                .get(RedisVerificationKey.getVerificationCodeKey(updatePasswordVO.getEmail()));
+
+        if(verificationCode == null || !verificationCode.equals(updatePasswordVO.getCode())){
+            return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+        }
+
+        String userId = (String) StpUtil.getLoginId();
+        return userService.updatePassword(Long.valueOf(userId),updatePasswordVO);
     }
 
 
@@ -123,6 +136,11 @@ public class UserController {
         return userService.sendCode(emailRequest);
     }
 
+    /**
+     * 验证验证码接口
+     * @param verifyCodeVO
+     * @return
+     */
     @PostMapping("/verifyCode")
     public Result verifyCode(@RequestBody RegisterVO verifyCodeVO) {
         if(StringUtils.isEmpty(verifyCodeVO.getCode())){
@@ -140,6 +158,11 @@ public class UserController {
         return Result.success(true);
     }
 
+    /**
+     * 修改邮箱，最后提交接口
+     * @param emailRequest
+     * @return
+     */
     @PostMapping("/UpEmailEnd")
     public Result editEmail(@RequestBody EmailRequest emailRequest) {
         if(null == emailRequest){
@@ -173,6 +196,11 @@ public class UserController {
     }
 
 
+    /**
+     * 修改用户个人信息接口
+     * @param user
+     * @return
+     */
     @PostMapping("/editInfo")
     @Schema(name = "用户模块", description = "用户修改个人信息")
     public Result editInfo(@RequestBody User user) {

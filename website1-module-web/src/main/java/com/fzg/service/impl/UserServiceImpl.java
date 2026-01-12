@@ -192,24 +192,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public Result updatePassword(Integer userId, UpdatePasswordVO updatePasswordVO) {
-//        User user = this.getById(userId);
-//        String oldPassword = updatePasswordVO.getOldPassword();
-//        String newPassword = updatePasswordVO.getNewPassword();
-//        //密码加密之后验证。
-//        String userOldEncryptPassword = UserUtil.getUserEncryptPassword(user.getAccount(), oldPassword);
-//
-//        if(!user.getPassword().equals(userOldEncryptPassword)){
-//            return  Result.fail(EnumReturn.PASSWORD_ERROR);
-//        }
-//
-//        //新密码加密
-//        String newEncryptPassword = UserUtil.getUserEncryptPassword(user.getAccount(), newPassword);
-//        user.setPassword(newEncryptPassword);
-//        if(this.updateById(user)){
-//            return Result.success(EnumReturn.OPERATION_SUCCESS);
-//        }
+    public Result updatePassword(Long userId, UpdatePasswordVO updatePasswordVO) {
+        User user = this.getById(userId);
+        String oldPassword = updatePasswordVO.getOldPassword();
+        String newPassword = updatePasswordVO.getNewPassword();
+        //密码加密之后验证。
+        String userOldEncryptPassword = UserUtil.getUserEncryptPassword(user.getEmail(), oldPassword);
+
+        if(!user.getPassword().equals(userOldEncryptPassword)){
+            return  Result.fail(EnumReturn.PASSWORD_ERROR);
+        }
+
+        //新密码加密
+        String newEncryptPassword = UserUtil.getUserEncryptPassword(user.getEmail(), newPassword);
+        user.setPassword(newEncryptPassword);
+        user.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+        if(this.updateById(user)){
+            return Result.success(EnumReturn.OPERATION_SUCCESS);
+        }
         return Result.fail(EnumReturn.OPERATION_FAIL);
     }
 
@@ -339,7 +339,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return Result.success("邮件成功发送");
         } catch (Exception e) {
             log.error(" 邮件发送失败：{},邮箱：{}", e.getMessage(), email);
-            return Result.fail(EnumReturn.VERIFICATION_CODE_ERROR);
+            return Result.fail(EnumReturn.EMAIL_SEND_FAIL);
         }
     }
 
