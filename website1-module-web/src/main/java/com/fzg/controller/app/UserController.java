@@ -36,6 +36,17 @@ public class UserController {
     private RedisTemplate redisTemplate;
 
 
+    @GetMapping("/active")
+    public Result queryActiveUser(@RequestParam(required = false,defaultValue = "7") Integer days,
+                                  @RequestParam(required = false,defaultValue = "10") Integer size){
+
+        return Result.success(userService.queryActiveUser(days,size));
+    }
+
+
+
+
+
     @Operation(summary = "用户注册接口")
     @PostMapping("/register")
     public Result register(@RequestBody RegisterVO registerVO) {

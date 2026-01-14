@@ -4,8 +4,10 @@ import com.alibaba.fastjson2.JSON;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.ArticleService;
+import com.fzg.service.LikeRecordService;
 import com.fzg.vo.ArticlePageVO;
 import com.fzg.vo.ArticleRequest;
+import com.fzg.vo.LikeRequest;
 import com.fzg.vo.ResultSearchVO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -25,6 +27,8 @@ public class ArticleController {
 
     @Autowired
     private ArticleService articleService;
+    @Autowired
+    private LikeRecordService likeRecordService;
 
 
     /**
@@ -77,6 +81,24 @@ public class ArticleController {
         log.info("搜索框内随机内容展示成功:{}", JSON.toJSONString(searchSuggestions));
 
         return Result.success(searchSuggestions);
+    }
+
+
+
+    @PostMapping("/like")
+    public Result like(@RequestBody LikeRequest likeRequest){
+        if(null == likeRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        if(StringUtils.isEmpty(likeRequest.getType())){
+            return Result.fail(EnumReturn.QUERY_PARAM_EMPTY);
+        }
+        if(null == likeRequest.getArticleId() || null == likeRequest.getUserId() ||
+        null == likeRequest.getActionLike()){
+            return Result.fail(EnumReturn.QUERY_PARAM_EMPTY);
+        }
+
+        return likeRecordService.articleLike(likeRequest);
     }
 
 }

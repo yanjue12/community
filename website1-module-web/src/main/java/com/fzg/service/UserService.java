@@ -5,6 +5,8 @@ import com.fzg.model.User;
 import com.fzg.model.Result;
 import com.fzg.vo.*;
 
+import java.util.List;
+
 /**
 * @author yanju
 * @description 针对表【user(用户表)】的数据库操作Service
@@ -27,4 +29,6 @@ public interface UserService extends IService<User> {
     Result checkUsername(RegisterVO request);
 
     Result sendCode(EmailRequest emailRequest);
+
+    List<UserVO> queryActiveUser(Integer days, Integer size);
 }

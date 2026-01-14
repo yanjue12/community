@@ -56,6 +56,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private UserMapper userMapper;
 
 
+    /**
+     * 查活跃用户
+     * @param days
+     * @param size
+     * @return
+     */
+    @Override
+    public List<UserVO> queryActiveUser(Integer days, Integer size) {
+        if(null == days || days <= 0){
+            days = 7;
+        }
+        if(null == size || size <= 0){
+            size = 10;
+        }
+        return baseMapper.selectActiveUser(days,size);
+    }
+
+
+
+
+
+
+
+
 
     /**
      * 注册 校验验证码 密码 邮箱
@@ -342,6 +366,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return Result.fail(EnumReturn.EMAIL_SEND_FAIL);
         }
     }
+
+
 
     // 生成邮件内容的函数
     private String generateEmailContent(String purpose, String verificationCode) {

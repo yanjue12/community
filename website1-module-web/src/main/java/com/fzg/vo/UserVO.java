@@ -16,5 +16,7 @@ public class UserVO {
     private Integer followingCount;//关注数
     private Integer collectionCount;
 
+    private Integer activeScore;//活跃度
+
 
 }
