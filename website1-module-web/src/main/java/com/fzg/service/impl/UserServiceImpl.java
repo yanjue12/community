@@ -293,7 +293,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         //保存登录时间和登录ip TODO
         user.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
-        this.update(user,new LambdaQueryWrapper<>());
+        this.updateById(user);
         return Result.success(tokenInfo);
     }
 

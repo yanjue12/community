@@ -132,11 +132,7 @@
                 <version>${website1-core.version}</version>
             </dependency>
             <!--阿里云OSS-->
-            <dependency>
-                <groupId>com.aliyun.oss</groupId>
-                <artifactId>aliyun-sdk-oss</artifactId>
-                <version>${aliyun-sdk-oss.version}</version>
-            </dependency>
+
 
         </dependencies>
     </dependencyManagement>

@@ -50,6 +50,7 @@ public enum EnumReturn {
         EMAIL_IS_EMPTY(2000, "邮箱不能为空"),
         EMAIL_SEND_FAIL(2000, "邮箱发送失败"),
         MENU_TYPE_IS_EMPTY(2000, "菜单类型不能为空"),
+        QUERY_PARAM_EMPTY(2000, "查询条件不能为空"),
 
         OPERATION_SUCCESS(2000,"操作成功"),
 

@@ -3,7 +3,6 @@ package com.fzg.controller.app;
 import com.fzg.mapper.ArticleTagMapper;
 import com.fzg.model.ArticleTag;
 import com.fzg.model.Result;
-import com.fzg.service.ArticleTagService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

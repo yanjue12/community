@@ -1,12 +1,16 @@
 package com.fzg.controller.app;
 
+import com.alibaba.fastjson2.JSON;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.ArticleService;
+import com.fzg.vo.ArticlePageVO;
 import com.fzg.vo.ArticleRequest;
-import com.fzg.vo.ArticleVO;
+import com.fzg.vo.ResultSearchVO;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Slf4j
 @RestController()
 @RequestMapping("/article")
 public class ArticleController {
@@ -35,12 +40,13 @@ public class ArticleController {
         if(StringUtils.isEmpty(articleRequest.getType())){
             return Result.fail(EnumReturn.MENU_TYPE_IS_EMPTY);
         }
-        List<ArticleVO> articleVOList = articleService.queryListByArticleType(articleRequest);
+
+        ArticlePageVO articleVOList = articleService.queryListByArticleType(articleRequest);
         return Result.success(articleVOList);
     }
 
     /**
-     * 首页搜索  文章标题模糊，，用户昵称模糊，结果分组后返回，type为条件
+     * 首页搜索：文章标题模糊，，用户昵称模糊，标签模糊，结果分组后返回，type为条件
      * @param
      * @return
      */
@@ -49,8 +55,28 @@ public class ArticleController {
         if(null == searchRequset){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
+        if(StringUtils.isEmpty(searchRequset.getType())){
+            return Result.fail(EnumReturn.QUERY_PARAM_EMPTY);
+        }
+        ResultSearchVO searchVO = articleService.search(searchRequset);
 
-        return Result.success(true);
+        return Result.success(searchVO);
+    }
+
+    /**
+     * 搜索框内随机内容展示
+     * @return
+     */
+    @PostMapping("search/suggestions")
+    public Result searchSuggestions(){
+
+        List<String> searchSuggestions = articleService.searchSuggestions();
+        if(CollectionUtils.isEmpty(searchSuggestions)){
+            return Result.fail(EnumReturn.OPERATION_FAIL);
+        }
+        log.info("搜索框内随机内容展示成功:{}", JSON.toJSONString(searchSuggestions));
+
+        return Result.success(searchSuggestions);
     }
 
 }

@@ -56,6 +56,122 @@
         order by a.published_at desc
       </if>
     </if>
-      limit #{pageSize} offset #{pageNum}
+      limit #{pageSize} offset #{offset}
   </select>
+  <select id="queryListCount" resultType="java.lang.Integer">
+    select count(*) as total
+    from article a
+    left join user u on a.user_id = u.id
+    left join category c on a.category_id = c.id
+    left join (
+    select
+    atr.article_id,
+    GROUP_CONCAT(at.name SEPARATOR ', ') AS tagsName
+    from article_tag at
+    join article_tag_relation atr on at.id = atr.tag_id
+    group by atr.article_id
+    ) tt on tt.article_id = a.id
+
+    -- 关注类型接关注表
+    <if test='request.type != null and request.type == "2" and request.userId != null'>
+      left join follow f on f.following_id = a.user_id and f.follower_id = #{request.userId}
+    </if>
+
+    where a.visibility = 0 -- 0:公开
+    and a.status = 1 -- 1:已发布
+    and a.published_at is not null -- 已发布的文章
+
+    <if test="request.type != null and request.type != ''">
+      <if test="request.type =='0' ">
+        <!-- 热榜：按综合热度排序 -->
+        <!-- 热度计算公式：浏览数*1 + 点赞数*10 + 评论数*5 + 收藏数*3 -->
+        order by (a.view_count + a.like_count * 10 + a.comment_count * 5 + a.collect_count * 3) desc,
+        a.published_at desc
+      </if>
+      <if test='request.type == "1"'>
+        <!-- 推荐：推荐的文章，可以置顶的优先 -->
+        and a.is_recommend = 1
+      </if>
+      <if test='request.type == "2"'>
+        <!-- 关注：只显示关注的人的文章 -->
+        and f.id is not null
+        order by a.published_at desc
+      </if>
+    </if>
+
+  </select>
+    <select id="searchSuggestions" resultType="java.lang.String">
+        <!-- 获取多个推荐词（比如12个，可以播放2分钟） -->
+      SELECT keyword FROM (
+                            <!-- 热门搜索词（40%） -->
+                            (SELECT search_term as keyword, 40 as weight
+                            FROM search_hot
+                            WHERE search_count > 100
+                            ORDER BY RAND() * search_count DESC
+                              LIMIT 8)
+
+                            UNION ALL
+
+                            <!-- 热门标签（35%） -->
+                            (SELECT name as keyword, 35 as weight
+                            FROM article_tag
+                            WHERE article_count > 5
+                            ORDER BY RAND() * article_count DESC
+                              LIMIT 7)
+
+                            UNION ALL
+
+                            <!-- 文章标题（25%） -->
+                            (SELECT title as keyword, 25 as weight
+                            FROM article
+                            WHERE status = '1' AND visibility = '0'
+                            ORDER BY RAND()
+                              LIMIT 5)
+                          ) temp
+      ORDER BY RAND() * weight DESC
+        LIMIT 20;
+    </select>
+
+    <select id="searchByTitle" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+               a.type,a.updated_at as updatedTime,a.view_count as viewCount,
+               a.like_count as likeCount,a.comment_count as commentCount,
+               a.share_count as shareCount
+        from article a
+        where (a.title like concat('%',#{keyword},'%')
+           or a.summary like concat('%',#{keyword},'%'))
+        and a.status = '1'
+        and a.visibility = '0'
+            order by a.updated_at desc
+        limit #{pageSize} offset #{offset}
+    </select>
+
+    <select id="searchByTag" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+               a.type,a.updated_at as updatedTime,a.view_count as viewCount,
+               a.like_count as likeCount,a.comment_count as commentCount,
+               a.share_count as shareCount
+        from article a
+        join article_tag_relation atr on a.id = atr.article_id
+        join article_tag at on atr.tag_id = at.id
+        where a.status = '1'
+          and a.visibility = '0'
+          and at.name like concat('%',#{keyword},'%')
+        order by a.updated_at desc
+        limit #{pageSize} offset #{offset}
+    </select>
+
+    <select id="searchByName" resultType="com.fzg.vo.UserVO">
+        select u.id as userId,u.nickname,u.avatar,u.signature,u.location,
+               u.topic_count as topicCount,u.comment_count as commentCount,
+               u.follower_count as followCount,u.following_count as followingCount,
+               u.collection_count as collectionCount
+        from user u
+        where u.nickname like concat('%',#{keyword},'%')
+           or u.username like concat('%',#{keyword},'%')
+           or u.signature like concat('%',#{keyword},'%')
+        limit #{pageSize} offset #{offset}
+    </select>
+
+
 </mapper>
