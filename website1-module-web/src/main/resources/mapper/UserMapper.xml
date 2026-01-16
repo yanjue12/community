@@ -14,7 +14,7 @@
     </select>
 
     <select id="selectActiveUser" resultType="com.fzg.vo.UserVO">
-        select u.id as userId,u.nickname,u.avatar
+        select u.id as userId,u.nickname,u.avatar,
             (COUNT(a.id) * 10
                 + CASE
                     WHEN u.last_login_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)

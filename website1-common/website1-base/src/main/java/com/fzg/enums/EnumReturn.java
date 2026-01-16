@@ -28,6 +28,7 @@ public enum EnumReturn {
         USERNAME_IS_EMPTY(2000, "用户名不能为空"),
         USERNAME_EXITS(2000, "用户名已存在"),
         CODE_IS_EMPTY(2000, "验证码不能为空"),
+        OPERATION_TOO_FREQUENTLY(2000, "操作过于频繁，请稍后再试"),
 
         PASSWORD_ERROR(2000, "密码错误"),
 

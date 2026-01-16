@@ -28,5 +28,6 @@ public class ArticleVO {
     private String tagName;//多个逗号分割
 
     private String hotScore;//热度分
+    private Boolean liked;
 
 }

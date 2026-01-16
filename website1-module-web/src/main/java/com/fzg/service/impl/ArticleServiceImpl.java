@@ -1,47 +1,90 @@
 package com.fzg.service.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fzg.constant.RedisLikeArticleKey;
 import com.fzg.mapper.Articlemapper;
+import com.fzg.mapper.LikeRecordMapper;
 import com.fzg.model.Article;
 import com.fzg.service.ArticleService;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> implements ArticleService {
 
+    @Autowired
+    private RedisTemplate redisTemplate;
+    @Autowired
+    private LikeRecordMapper likeRecordMapper;
 
 
 
     /**
      * 查首页帖子信息
      *
-     * @param articleRequest
+     * @param
      * @return
      */
     @Override
     public ArticlePageVO queryListByArticleType(ArticleRequest articleRequest) {
         log.info("queryListByArticleType入参:{}",articleRequest);
+        Long userId = articleRequest.getUserId();
         Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
         Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
         ArticlePageVO articlePageVO = new ArticlePageVO();
         try {
             List<ArticleVO> articleVOList = baseMapper.queryListByArticleType(articleRequest,pageSize,(pageNum-1)  * pageSize);
-            Integer total = baseMapper.queryListCount(articleRequest);
-            articlePageVO.setTotal(total);
+            //判断当前用户有没有对这些文章进行点赞 批量
+            if(CollectionUtils.isEmpty(articleVOList)){
+                log.error("首页查询出数据为空");
+                return new ArticlePageVO();
+            }
+            List<Long> articleIds = articleVOList.stream().map(ArticleVO::getId).collect(Collectors.toList());
+
+            //优先从redis获取点赞状态
+            Set< Long> likedArticleIds = new HashSet<>();
+            for (Long articleId : articleIds) {
+                String cacheKey = RedisLikeArticleKey.getLikeArticleStatusKey(userId, articleId);
+                Boolean hasLiked = redisTemplate.hasKey(cacheKey);
+                if (Boolean.TRUE.equals(hasLiked)) {
+                    likedArticleIds.add(articleId);
+                }
+            }
+            // 如果缓存未命中，从数据库查询并回填缓存
+            if (likedArticleIds.isEmpty()) {
+                List<Long> likedList = likeRecordMapper.queryLikedByUserBatch(userId, articleIds);
+                likedArticleIds =
+                    null == likedList ? Collections.emptySet() : new HashSet<>(likedList);
+            }
+            log.info("likedArticleIds:{}",likedArticleIds);
+
+            //设置点赞状态
+            for (ArticleVO articleVO : articleVOList) {
+                articleVO.setLiked(likedArticleIds.contains(articleVO.getId()));
+            }
+
+
             articlePageVO.setArticleVOList(articleVOList);
-            log.info("查询文章数据成功,总数：{},数据：{}",total, JSON.toJSONString(articleVOList));
         }catch (Exception e){
             log.info("查询异常:{}",e);
             throw new RuntimeException(e);
         }
         return articlePageVO;
     }
+
+
+
+
+
 
     /**
      * 查询搜索提示词

@@ -12,7 +12,7 @@ public class LikeRecord {
     private Long userId;
     private Long articleId;
     private String articleType;
-    private String likeType;
-    private Date createdAt;
-    private Date updatedAt;
+    private String status;
+    private Date createAt;
+    private Date updateAt;
 }
