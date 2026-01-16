@@ -10,9 +10,9 @@ import java.util.concurrent.TimeUnit;
 public class LikeRateLimit {
 
     @Autowired
-    private static RedisTemplate redisTemplate;
+    private RedisTemplate redisTemplate;
 
-    public static boolean checkUserRateLimit(Long userId) {
+    public boolean checkUserRateLimit(Long userId) {
         String key = "like:rate:user:" + userId;
         long now = System.currentTimeMillis();
 
@@ -32,7 +32,7 @@ public class LikeRateLimit {
         return true;
     }
 
-    public static boolean checkIpRateLimit(String ip) {
+    public boolean checkIpRateLimit(String ip) {
         String key = "like:rate:ip:" + ip;
         Long count = redisTemplate.opsForValue().increment(key);
         if (count == 1) {
@@ -41,7 +41,7 @@ public class LikeRateLimit {
         return count <= 20;
     }
 
-    public static boolean checkUserArticleLimit(Long userId, Long articleId) {
+    public  boolean checkUserArticleLimit(Long userId, Long articleId) {
         String key = "like:rate:user_article:" + userId + ":" + articleId;
         Long count = redisTemplate.opsForValue().increment(key);
         if (count == 1) {
@@ -50,7 +50,7 @@ public class LikeRateLimit {
         return count <= 3;
     }
 
-    public static boolean checkRisk(Long userId) {
+    public  boolean checkRisk(Long userId) {
         String key = "like:risk:user:" + userId;
         Integer score = (Integer) redisTemplate.opsForValue().get(key);
         return score == null || score < 10;

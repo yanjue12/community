@@ -28,7 +28,7 @@
 
     <select id="queryListByArticleType" resultType="com.fzg.vo.ArticleVO">
     select a.id,a.title,a.summary,a.cover_image as coverImage,
-           a.type,a.updated_at as updatedTime,a.view_count as viewCount,
+           a.type,a.published_at as updatedTime,a.view_count as viewCount,
            a.like_count as likeCount,a.comment_count as commentCount,
            a.share_count as shareCount,
            u.id as userId, u.nickname as nickName,

@@ -46,7 +46,7 @@ public class User {
     private String lastLoginIp;     // 最后登录IP
     private Date createdAt;         // 创建时间
     private Date updatedAt;         // 更新时间
-
+    private String coverImages;
 
 
 }

@@ -26,6 +26,7 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
 
     private final RedisTemplate<String, String> redisTemplate;
     private final Articlemapper articlemapper;
+    private final LikeRateLimit likeRateLimit; // 注入 LikeRateLimit
 
 
     @Override
@@ -35,7 +36,7 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
         Long userId = likeRequest.getUserId();
         Long articleId = likeRequest.getArticleId();
 
-        if(!LikeRateLimit.checkUserRateLimit(userId)){
+        if(!likeRateLimit.checkUserRateLimit(userId)){
             return Result.fail(EnumReturn.OPERATION_TOO_FREQUENTLY);
         }
 

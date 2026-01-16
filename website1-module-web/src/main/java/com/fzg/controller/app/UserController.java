@@ -45,6 +45,13 @@ public class UserController {
 
 
 
+    @PostMapping("/queryUserInfo")
+    public Result queryUserInfo(@RequestBody UserVO userVO) {
+        User user = userService.getById(Long.valueOf(userVO.getUserId()));
+        return Result.success(user);
+    }
+
+
 
 
     @Operation(summary = "用户注册接口")
@@ -133,7 +140,7 @@ public class UserController {
     }
 
 
-    @PostMapping("/queryUserInfo")
+    @PostMapping("/queryCurLoginUserInfo")
     public Result queryUserInfo() {
         String loginId = (String) StpUtil.getLoginId();
         User user = userService.getById(Long.valueOf(loginId));
