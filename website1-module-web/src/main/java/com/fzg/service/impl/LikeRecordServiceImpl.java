@@ -8,6 +8,7 @@ import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.LikeRecordMapper;
 import com.fzg.model.LikeRecord;
 import com.fzg.model.Result;
+import com.fzg.ratelimit.LikeRateLimit;
 import com.fzg.service.LikeRecordService;
 import com.fzg.vo.LikeRequest;
 import lombok.RequiredArgsConstructor;
@@ -34,9 +35,14 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
         Long userId = likeRequest.getUserId();
         Long articleId = likeRequest.getArticleId();
 
+        if(!LikeRateLimit.checkUserRateLimit(userId)){
+            return Result.fail(EnumReturn.OPERATION_TOO_FREQUENTLY);
+        }
+
+
         String lockKey = RedisLikeArticleKey.getLikeArticleLockKey(userId, articleId);
         Boolean locked = redisTemplate.opsForValue()
-                .setIfAbsent(lockKey, "1", 1, TimeUnit.SECONDS);
+                .setIfAbsent(lockKey, "1", 3, TimeUnit.SECONDS);
         if (Boolean.FALSE.equals(locked)) {
             return Result.success(true);
         }
@@ -93,26 +99,5 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
         }
         return Result.success(true);
     }
-
-    public boolean checkUserRateLimit(Long userId) {
-        String key = "like:rate:user:" + userId;
-        long now = System.currentTimeMillis();
-
-        // 1. 移除 10 秒前的记录
-        redisTemplate.opsForZSet().removeRangeByScore(key, 0, now - 10_000);
-
-        // 2. 当前次数
-        Long count = redisTemplate.opsForZSet().zCard(key);
-        if (count != null && count >= 20) {
-            return false;
-        }
-
-        // 3. 记录本次请求
-        redisTemplate.opsForZSet().add(key, String.valueOf(now), now);
-        redisTemplate.expire(key, 15, TimeUnit.SECONDS);
-
-        return true;
-    }
-
 
 }
