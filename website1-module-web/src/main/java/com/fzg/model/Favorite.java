@@ -38,11 +38,13 @@ public class Favorite implements Serializable {
      * 收藏夹ID
      */
     private Long folderId;
+    private String status;
 
     /**
      * 创建时间
      */
     private Date createdAt;
+    private Date updatedAt;
 
     private static final long serialVersionUID = 1L;
 }

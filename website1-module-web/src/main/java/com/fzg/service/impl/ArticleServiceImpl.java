@@ -1,8 +1,10 @@
 package com.fzg.service.impl;
 
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fzg.constant.RedisLikeArticleKey;
+import com.fzg.constant.RedisArticleKey;
 import com.fzg.mapper.Articlemapper;
+import com.fzg.mapper.Favoritemapper;
 import com.fzg.mapper.LikeRecordMapper;
 import com.fzg.model.Article;
 import com.fzg.service.ArticleService;
@@ -14,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +26,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private RedisTemplate redisTemplate;
     @Autowired
     private LikeRecordMapper likeRecordMapper;
+    @Autowired
+    private Favoritemapper favoritemapper;
 
 
 
@@ -50,26 +53,38 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             }
             List<Long> articleIds = articleVOList.stream().map(ArticleVO::getId).collect(Collectors.toList());
 
-            //优先从redis获取点赞状态
+            //优先从redis获取点赞 收藏 状态
             Set< Long> likedArticleIds = new HashSet<>();
+            Set<Long> favoriteArticleIds = new HashSet<>();
             for (Long articleId : articleIds) {
-                String cacheKey = RedisLikeArticleKey.getLikeArticleStatusKey(userId, articleId);
-                Boolean hasLiked = redisTemplate.hasKey(cacheKey);
+                String likeKey = RedisArticleKey.getLikeArticleStatusKey(userId, articleId);
+                Boolean hasLiked = redisTemplate.hasKey(likeKey);
                 if (Boolean.TRUE.equals(hasLiked)) {
                     likedArticleIds.add(articleId);
                 }
+                String favoriteKey = RedisArticleKey.getFavoriteArticleStatusKey(userId, articleId);
+                Boolean hasFavorite = redisTemplate.hasKey(favoriteKey);
+                if (Boolean.TRUE.equals(hasFavorite)) {
+                    favoriteArticleIds.add(articleId);
+                }
             }
-            // 如果缓存未命中，从数据库查询并回填缓存
+            // 如果缓存未命中，从数据库查询
             if (likedArticleIds.isEmpty()) {
                 List<Long> likedList = likeRecordMapper.queryLikedByUserBatch(userId, articleIds);
                 likedArticleIds =
                     null == likedList ? Collections.emptySet() : new HashSet<>(likedList);
+            }
+            if(favoriteArticleIds.isEmpty()){
+                List<Long> favoriteList = favoritemapper.queryFavoriteByUserBatch(userId, articleIds);
+                favoriteArticleIds =
+                    null == favoriteList ? Collections.emptySet() : new HashSet<>(favoriteList);
             }
             log.info("likedArticleIds:{}",likedArticleIds);
 
             //设置点赞状态
             for (ArticleVO articleVO : articleVOList) {
                 articleVO.setLiked(likedArticleIds.contains(articleVO.getId()));
+                articleVO.setFavorited(favoriteArticleIds.contains(articleVO.getId()));
             }
 
 
@@ -78,6 +93,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             log.info("查询异常:{}",e);
             throw new RuntimeException(e);
         }
+        log.info("articlePageVO:{}", JSON.toJSON(articlePageVO));
         return articlePageVO;
     }
 
@@ -101,7 +117,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         String keyword = searchRequset.getType();
         Integer pageNum = searchRequset.getPageNum() == null ? 1 : searchRequset.getPageNum();
         Integer pageSize = searchRequset.getPageSize() == null ? 10 : searchRequset.getPageSize();
-
+        Long userId = searchRequset.getUserId();
         //分组 三个维度 文章：标题和简介，，用户：昵称和用户名，，标签：标签名并反查文章
         ResultSearchVO resultSearchVO = new ResultSearchVO();
         //文章标题和简介
@@ -117,7 +133,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         log.info("根据文章标签查询出数据个数：{}",articlesByTag.size());
 
         //用户昵称
-        List<UserVO> users = baseMapper.searchByName(keyword, pageSize, (pageNum-1)  * pageSize);
+        List<UserVO> users = baseMapper.searchByName(keyword,userId, pageSize, (pageNum-1)  * pageSize);
         resultSearchVO.setUsers(users);
         log.info("根据用户昵称查询出数据个数：{}",users.size());
 

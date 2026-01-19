@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.ArticleService;
+import com.fzg.service.FavoriteService;
 import com.fzg.service.LikeRecordService;
 import com.fzg.vo.ArticlePageVO;
 import com.fzg.vo.ArticleRequest;
@@ -29,6 +30,8 @@ public class ArticleController {
     private ArticleService articleService;
     @Autowired
     private LikeRecordService likeRecordService;
+    @Autowired
+    private FavoriteService favoriteService;
 
 
     /**
@@ -99,6 +102,24 @@ public class ArticleController {
         }
 
         return likeRecordService.articleLike(likeRequest);
+    }
+
+
+    @PostMapping("/favorite")
+    public Result collect(@RequestBody LikeRequest likeRequest){
+        if(null == likeRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        if(StringUtils.isEmpty(likeRequest.getType())){
+            return Result.fail(EnumReturn.QUERY_PARAM_EMPTY);
+        }
+        if(null == likeRequest.getArticleId() || null == likeRequest.getUserId() ||
+                null == likeRequest.getActionLike()){
+            return Result.fail(EnumReturn.QUERY_PARAM_EMPTY);
+        }
+
+        return favoriteService.articleCollect(likeRequest);
+
     }
 
 }

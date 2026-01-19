@@ -19,5 +19,7 @@ public class UserVO {
 
     private Integer activeScore;//活跃度
 
+    private String followStatus;//是否关注 1：已关注 0：未关注
+
 
 }

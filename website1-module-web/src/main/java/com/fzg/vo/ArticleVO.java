@@ -29,5 +29,6 @@ public class ArticleVO {
 
     private String hotScore;//热度分
     private Boolean liked;
+    private Boolean favorited;
 
 }

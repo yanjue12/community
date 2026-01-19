@@ -12,6 +12,28 @@ public class LikeRateLimit {
     @Autowired
     private RedisTemplate redisTemplate;
 
+
+    public boolean checkUserFavoriteRateLimit(Long userId) {
+        String key = "favorite:rate:user:" + userId;
+        long now = System.currentTimeMillis();
+
+        // 1. 移除 10 秒前的记录
+        redisTemplate.opsForZSet().removeRangeByScore(key, 0, now - 10_000);
+
+        // 2. 当前次数
+        Long count = redisTemplate.opsForZSet().zCard(key);
+        if (count != null && count >= 20) {
+            return false;
+        }
+
+        // 3. 记录本次请求
+        redisTemplate.opsForZSet().add(key, String.valueOf(now), now);
+        redisTemplate.expire(key, 15, TimeUnit.SECONDS);
+
+        return true;
+    }
+
+
     public boolean checkUserRateLimit(Long userId) {
         String key = "like:rate:user:" + userId;
         long now = System.currentTimeMillis();

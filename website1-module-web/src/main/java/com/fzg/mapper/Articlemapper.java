@@ -26,10 +26,10 @@ public interface Articlemapper extends BaseMapper<Article> {
 
     List<ArticleVO> searchByTag(@Param("keyword") String keyword, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
 
-    List<UserVO> searchByName(@Param("keyword") String keyword, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
+    List<UserVO> searchByName(@Param("keyword") String keyword,@Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
 
 
     void batchUpdateLikeCount(@Param("list") List<ArticleLikeVO> batchList);
 
-    void upArticleLikeCount(@Param("articleId") Long articleId, @Param("actionLike") Integer actionLike);
+    void upArticleLikeCount(@Param("articleId") Long articleId, @Param("actionLike") Integer actionLike,@Param("type") String type);
 }

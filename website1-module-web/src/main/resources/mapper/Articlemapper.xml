@@ -17,10 +17,20 @@
     <update id="upArticleLikeCount">
             update article
             <if test="actionLike == 1">
-                set like_count = like_count + 1
+                <if test="type == 'like'">
+                    set like_count = like_count + 1
+                </if>
+                <if test="type == 'favorite'">
+                    set collect_count = collect_count + 1
+                </if>
             </if>
             <if test="actionLike == 0">
-                set like_count = like_count - 1
+                <if test="type == 'like'">
+                    set like_count = like_count - 1
+                </if>
+                <if test="type == 'favorite'">
+                    set collect_count = collect_count - 1
+                </if>
             </if>
             where id = #{articleId}
     </update>
@@ -30,7 +40,17 @@
     select a.id,a.title,a.summary,a.cover_image as coverImage,
            a.type,a.published_at as updatedTime,a.view_count as viewCount,
            a.like_count as likeCount,a.comment_count as commentCount,
+           a.share_count as shareCount,a.collect_count as collectCount,
            a.share_count as shareCount,
+           a.is_recommend as isRecommend,
+           a.is_top as isTop,
+           a.view_count as viewCount,
+           a.like_count as likeCount,
+           a.comment_count as commentCount,
+           a.collect_count as collectCount,
+           a.share_count as shareCount,
+           a.is_recommend as isRecommend,
+           a.is_top as isTop,
            u.id as userId, u.nickname as nickName,
     u.avatar as avatar,u.id as userId,u.nickname as nickName,
     c.name as categoryName,
@@ -160,8 +180,10 @@
         select a.id,a.title,a.summary,a.cover_image as coverImage,
                a.type,a.updated_at as updatedTime,a.view_count as viewCount,
                a.like_count as likeCount,a.comment_count as commentCount,
-               a.share_count as shareCount
+               a.share_count as shareCount,a.collect_count as collectCount,
+               u.id as userId,u.avatar,u.nickname as nickName
         from article a
+        join user u on a.user_id = u.id
         where (a.title like concat('%',#{keyword},'%')
            or a.summary like concat('%',#{keyword},'%'))
         and a.status = '1'
@@ -174,8 +196,10 @@
         select a.id,a.title,a.summary,a.cover_image as coverImage,
                a.type,a.updated_at as updatedTime,a.view_count as viewCount,
                a.like_count as likeCount,a.comment_count as commentCount,
-               a.share_count as shareCount
-        from article a
+               a.share_count as shareCount,a.collect_count as collectCount,
+               u.id as userId,u.avatar,u.nickname as nickName
+            from article a
+            join user u on a.user_id = u.id
         join article_tag_relation atr on a.id = atr.article_id
         join article_tag at on atr.tag_id = at.id
         where a.status = '1'
@@ -185,12 +209,15 @@
         limit #{pageSize} offset #{offset}
     </select>
 
+
     <select id="searchByName" resultType="com.fzg.vo.UserVO">
         select u.id as userId,u.nickname,u.avatar,u.signature,u.location,
                u.topic_count as topicCount,u.comment_count as commentCount,
                u.follower_count as followCount,u.following_count as followingCount,
                u.collection_count as collectionCount
         from user u
+        left join follow f on f.follower_id = #{userId}
+            and f.following_id = u.id
         where u.nickname like concat('%',#{keyword},'%')
            or u.username like concat('%',#{keyword},'%')
            or u.signature like concat('%',#{keyword},'%')

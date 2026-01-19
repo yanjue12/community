@@ -1,6 +1,6 @@
 package com.fzg.job;
 
-import com.fzg.constant.RedisLikeArticleKey;
+import com.fzg.constant.RedisArticleKey;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.vo.ArticleLikeVO;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +36,7 @@ public class LikeArticleJob {
         // 1️⃣ 分批 pop dirty set（O(1)，不会阻塞 Redis）
         while (true) {
             List<String> batchIds = redisTemplate.opsForSet()
-                    .pop(RedisLikeArticleKey.DIRTY_SET, REDIS_POP_SIZE);
+                    .pop(RedisArticleKey.DIRTY_SET, REDIS_POP_SIZE);
 
             if (batchIds == null || batchIds.isEmpty()) {
                 break;
@@ -44,7 +44,7 @@ public class LikeArticleJob {
 
             for (String idStr : batchIds) {
                 Long articleId = Long.valueOf(idStr);
-                String countKey = RedisLikeArticleKey.getLikeArticleCountKey(articleId);
+                String countKey = RedisArticleKey.getLikeArticleCountKey(articleId);
                 String redisCount = (String) redisTemplate.opsForValue().get(countKey);
 
                 // Redis 过期 / 丢失，跳过（DB 仍然是最终值）
@@ -71,7 +71,7 @@ public class LikeArticleJob {
 
         //DB 成功后，安全删除 Redis 点赞缓存
         List<String> deleteKeys = allList.stream()
-                .map(vo -> RedisLikeArticleKey.getLikeArticleCountKey(vo.getArticleId()))
+                .map(vo -> RedisArticleKey.getLikeArticleCountKey(vo.getArticleId()))
                 .collect(Collectors.toList());
 
         redisTemplate.delete(deleteKeys);
