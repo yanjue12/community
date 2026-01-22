@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.service.ArticleService;
+import com.fzg.service.DraftService;
 import com.fzg.service.FavoriteService;
 import com.fzg.service.LikeRecordService;
 import com.fzg.vo.ArticlePageVO;
@@ -32,6 +33,8 @@ public class ArticleController {
     private LikeRecordService likeRecordService;
     @Autowired
     private FavoriteService favoriteService;
+    @Autowired
+    private DraftService draftService;
 
 
     /**
@@ -122,4 +125,8 @@ public class ArticleController {
 
     }
 
-}
+
+
+
+    }
+
