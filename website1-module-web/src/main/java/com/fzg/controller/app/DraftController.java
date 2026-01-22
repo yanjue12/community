@@ -1,6 +1,7 @@
 package com.fzg.controller.app;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.DraftMapper;
 import com.fzg.model.Draft;
@@ -54,9 +55,12 @@ public class DraftController {
         if (null == articleRequest.getUserId()) {
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
+        Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
+        Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
         LambdaQueryWrapper<Draft> q = new LambdaQueryWrapper<>();
         q.eq(Draft::getUserId,articleRequest.getUserId());
-        List<Draft> drafts = draftMapper.selectList(q);
+        Page page = new Page(pageNum,pageSize);
+        Page drafts = draftMapper.selectPage(page,q);
         return Result.success(drafts);
     }
 }

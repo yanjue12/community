@@ -17,7 +17,7 @@ public class ArticleRequest {
 
     private String summary;//摘要
 
-    private String contentHeml;
+    private String contentHtml;
 
     private String categoryName;
 

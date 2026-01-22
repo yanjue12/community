@@ -1,6 +1,7 @@
 package com.fzg.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.fzg.model.Article;
 import com.fzg.model.User;
 import com.fzg.model.Result;
 import com.fzg.vo.*;
@@ -31,4 +32,8 @@ public interface UserService extends IService<User> {
     Result sendCode(EmailRequest emailRequest);
 
     List<UserVO> queryActiveUser(Integer days, Integer size);
+
+    Boolean publishArticle(Article articleVO);
+
+    Boolean updateArticle(Article articleVO);
 }

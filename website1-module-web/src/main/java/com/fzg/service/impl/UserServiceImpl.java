@@ -11,6 +11,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
+import com.fzg.mapper.Articlemapper;
+import com.fzg.model.Article;
 import com.fzg.model.Result;
 import com.fzg.model.User;
 import com.fzg.service.UserService;
@@ -54,6 +56,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private Articlemapper articlemapper;
+
+
+    @Override
+    public Boolean publishArticle(Article articleVO) {
+        log.info("UserServiceImpl.publishArticle开始发布文章");
+        articleVO.setContentHtml(articleVO.getContent());
+        articleVO.setStatus("2");
+        int insert = articlemapper.insert(articleVO);
+        return insert > 0;
+    }
+
+    @Override
+    public Boolean updateArticle(Article articleVO) {
+        log.info("UserServiceImpl.publishArticle开始修改文章");
+        articleVO.setContentHtml(articleVO.getContent());
+        articleVO.setStatus("2");
+        articleVO.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+        articleVO.setPublishedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+        int i = articlemapper.updateById(articleVO);
+        return i > 0;
+    }
 
 
     /**
@@ -72,12 +97,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         return baseMapper.selectActiveUser(days,size);
     }
-
-
-
-
-
-
 
 
 

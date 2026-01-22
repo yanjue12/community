@@ -36,12 +36,18 @@ public class DraftServiceImpl extends ServiceImpl<DraftMapper, Draft> implements
                 LambdaQueryWrapper<Category> q = new LambdaQueryWrapper<>();
                 q.eq(Category::getName, categoryName);
                 Category category = categorymapper.selectOne(q);
-                draft.setCategoryId(category.getId());
+                if(null == category){
+                    draft.setCategoryId(0L);
+                }else{
+                    draft.setCategoryId(category.getId());
+                }
+
             }
             draft.setTags(articleRequest.getTag());
             draft.setVisibility("1");//私密
+            draft.setModuleType("1");//文章，TODO 这里需要完善
 
-            if(null == articleRequest.getDraftId()){
+            if(null == articleRequest.getDraftId() || "".equals(articleRequest.getDraftId())){
                 baseMapper.insert(draft);
             } else {
                 draft.setId(articleRequest.getDraftId());

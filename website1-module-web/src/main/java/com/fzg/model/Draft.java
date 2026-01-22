@@ -15,12 +15,12 @@ import lombok.Data;
 @Data
 @TableName("draft")
 public class Draft implements Serializable {
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
      * 用户ID
      */
-    @TableId(value = "id", type = IdType.AUTO)
     private Long userId;
 
     /**

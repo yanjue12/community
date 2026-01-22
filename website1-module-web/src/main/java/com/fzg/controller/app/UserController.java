@@ -5,6 +5,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
+import com.fzg.model.Article;
 import com.fzg.model.Result;
 import com.fzg.model.User;
 import com.fzg.service.UserService;
@@ -34,6 +35,51 @@ public class UserController {
 
     @Autowired
     private RedisTemplate redisTemplate;
+
+
+    /**
+     * 发布文章
+     * @param articleVO
+     * @return
+     */
+    @PostMapping("/publishArticle")
+    public Result publishArticle(@Validated @RequestBody Article articleVO){
+        if(null == articleVO){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        if(StringUtils.isEmpty(articleVO.getTitle()) ||
+                StringUtils.isEmpty(articleVO.getContent())
+                || null == articleVO.getCategoryId()||
+                null == articleVO.getUserId()
+                || StringUtils.isEmpty(articleVO.getType())){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+
+        Boolean b = userService.publishArticle(articleVO);
+
+        return b ? Result.success("发布成功") : Result.fail(EnumReturn.valueOf("发布失败"));
+
+    }
+
+
+    @PostMapping("/updateArticle")
+    public Result updateArticle(@Validated @RequestBody Article articleVO){
+        if(null == articleVO){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        if(StringUtils.isEmpty(articleVO.getTitle()) || StringUtils.isEmpty(articleVO.getContent())
+                || StringUtils.isEmpty(articleVO.getContentHtml()) || null == articleVO.getCategoryId()
+                || null == articleVO.getUserId() || StringUtils.isEmpty(articleVO.getType())){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+
+        Boolean b = userService.updateArticle(articleVO);
+
+        return b ? Result.success("修改成功") : Result.fail(EnumReturn.valueOf("修改失败"));
+    }
+
+
+
 
 
     @GetMapping("/active")
