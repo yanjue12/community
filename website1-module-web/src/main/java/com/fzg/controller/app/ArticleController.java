@@ -2,15 +2,14 @@ package com.fzg.controller.app;
 
 import com.alibaba.fastjson2.JSON;
 import com.fzg.enums.EnumReturn;
+import com.fzg.mapper.Articlemapper;
+import com.fzg.model.Article;
 import com.fzg.model.Result;
 import com.fzg.service.ArticleService;
 import com.fzg.service.DraftService;
 import com.fzg.service.FavoriteService;
 import com.fzg.service.LikeRecordService;
-import com.fzg.vo.ArticlePageVO;
-import com.fzg.vo.ArticleRequest;
-import com.fzg.vo.LikeRequest;
-import com.fzg.vo.ResultSearchVO;
+import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +33,39 @@ public class ArticleController {
     @Autowired
     private FavoriteService favoriteService;
     @Autowired
-    private DraftService draftService;
+    private Articlemapper articlemapper;
+
+
+
+    @PostMapping("/detail")
+    public Result details(@RequestBody ArticleRequest articleRequest){
+        if(null == articleRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        ArticleDetailVO article = articleService.queryArticleDetails(articleRequest.getArticleId());
+        return Result.success(article);
+    }
+
+
+
+    /**
+     * 查询当前登录人发布的文章
+     * @param articleRequest
+     * @return
+     */
+    @PostMapping("/queryArticleById")
+    public Result queryArticleById(@RequestBody ArticleRequest articleRequest){
+        if(null == articleRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+
+        Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
+        Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
+
+        List<ArticleVO> articleVOList = articlemapper.queryArticleByUserId(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+
+        return Result.success(articleVOList);
+    }
 
 
 

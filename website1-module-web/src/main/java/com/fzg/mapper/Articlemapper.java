@@ -2,10 +2,7 @@ package com.fzg.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.Article;
-import com.fzg.vo.ArticleLikeVO;
-import com.fzg.vo.ArticleRequest;
-import com.fzg.vo.ArticleVO;
-import com.fzg.vo.UserVO;
+import com.fzg.vo.*;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
@@ -32,4 +29,10 @@ public interface Articlemapper extends BaseMapper<Article> {
     void batchUpdateLikeCount(@Param("list") List<ArticleLikeVO> batchList);
 
     void upArticleLikeCount(@Param("articleId") Long articleId, @Param("actionLike") Integer actionLike,@Param("type") String type);
+
+    List<ArticleVO> queryArticleByUserId(@Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer i);
+
+    int updateBatchById(@Param("userIds") List<Long> articleUserIds);
+
+    ArticleDetailVO queryArticleDetails(@Param("articleId") Long articleId);
 }

@@ -34,6 +34,14 @@
             </if>
             where id = #{articleId}
     </update>
+    <update id="updateBatchById">
+        update article
+        set visibility = '1'
+        where user_id in
+        <foreach collection="userIds" item="item" separator=",">
+            #{item}
+        </foreach>
+    </update>
 
 
     <select id="queryListByArticleType" resultType="com.fzg.vo.ArticleVO">
@@ -52,8 +60,8 @@
            a.is_recommend as isRecommend,
            a.is_top as isTop,
            u.id as userId, u.nickname as nickName,
-    u.avatar as avatar,u.id as userId,u.nickname as nickName,
-    c.name as categoryName,
+            u.avatar as avatar,
+            c.name as categoryName,
     tt.tagsName as tagName,
     -- 计算热度得分（用于热榜排序）
     (a.view_count + a.like_count * 10 + a.comment_count * 5 + a.collect_count * 3) as hotScore
@@ -82,7 +90,7 @@
       <if test="request.type =='0' ">
         <!-- 热榜：按综合热度排序 -->
         <!-- 热度计算公式：浏览数*1 + 点赞数*10 + 评论数*5 + 收藏数*3 -->
-        order by (a.view_count + a.like_count * 10 + a.comment_count * 5 + a.collect_count * 3) desc,
+        order by hotScore desc,
         a.published_at desc
       </if>
       <if test='request.type == "1"'>
@@ -222,6 +230,55 @@
            or u.username like concat('%',#{keyword},'%')
            or u.signature like concat('%',#{keyword},'%')
         limit #{pageSize} offset #{offset}
+    </select>
+    <select id="queryArticleByUserId" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+               a.type,a.published_at as updatedTime,a.view_count as viewCount,
+               a.like_count as likeCount,a.comment_count as commentCount,
+               a.share_count as shareCount,a.collect_count as collectCount,
+               a.share_count as shareCount,
+               a.is_recommend as isRecommend,
+               a.is_top as isTop,
+               a.view_count as viewCount,
+               a.like_count as likeCount,
+               a.comment_count as commentCount,
+               a.collect_count as collectCount,
+               a.share_count as shareCount,
+               a.is_recommend as isRecommend,
+               a.is_top as isTop,
+               u.id as userId, u.nickname as nickName,
+               u.avatar as avatar,
+               c.name as categoryName,
+               tt.tagsName as tagName,
+               -- 计算热度得分（用于热榜排序）
+               (a.view_count + a.like_count * 10 + a.comment_count * 5 + a.collect_count * 3) as hotScore
+        from article a
+                 left join user u on a.user_id = u.id
+                 left join category c on a.category_id = c.id
+                 left join (
+            select
+                atr.article_id,
+                GROUP_CONCAT(at.name SEPARATOR ', ') AS tagsName
+            from article_tag at
+        join article_tag_relation atr on at.id = atr.tag_id
+            group by atr.article_id
+        ) tt on tt.article_id = a.id
+        where a.status = '1'
+        and a.user_id = #{userId}
+        and a.visibility = '0'
+        limit #{pageSize} offset #{offset}
+
+    </select>
+    <select id="queryArticleDetails" resultType="com.fzg.vo.ArticleDetailVO">
+        select a.id as articleId,a.title,a.content,a.summary,a.content_html,
+               a.published_at as publishAt,a.is_original as isOriginal,
+               a.like_count as likeCount,a.collect_count as collectCount,
+               a.comment_count as commentCount,a.view_count as viewCount,
+               a.share_count as shareCount,a.word_count as wordCount,
+               a.type,a.published_at as publishAt,
+               u.nickname,u.avatar,u.signature,u.location from article a
+            left join user u on a.user_id = u.id
+            where a.id = #{articleId}
     </select>
 
 

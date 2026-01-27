@@ -36,4 +36,6 @@ public interface UserService extends IService<User> {
     Boolean publishArticle(Article articleVO);
 
     Boolean updateArticle(Article articleVO);
+
+    Boolean updatePrivateSetting(UpdatePrivateSettingVO upPriSetVO);
 }

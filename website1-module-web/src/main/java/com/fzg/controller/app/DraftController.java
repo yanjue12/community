@@ -8,6 +8,7 @@ import com.fzg.model.Draft;
 import com.fzg.model.Result;
 import com.fzg.service.DraftService;
 import com.fzg.vo.ArticleRequest;
+import com.fzg.vo.DraftVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -57,10 +58,9 @@ public class DraftController {
         }
         Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
         Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
-        LambdaQueryWrapper<Draft> q = new LambdaQueryWrapper<>();
-        q.eq(Draft::getUserId,articleRequest.getUserId());
-        Page page = new Page(pageNum,pageSize);
-        Page drafts = draftMapper.selectPage(page,q);
+
+        List<DraftVO> drafts = draftService.queryArticleDraft(articleRequest.getUserId(), pageNum, pageSize);
+
         return Result.success(drafts);
     }
 }

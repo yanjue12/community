@@ -10,9 +10,12 @@ import com.fzg.model.Draft;
 import com.fzg.model.Result;
 import com.fzg.service.DraftService;
 import com.fzg.vo.ArticleRequest;
+import com.fzg.vo.DraftVO;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class DraftServiceImpl extends ServiceImpl<DraftMapper, Draft> implements DraftService {
@@ -58,5 +61,11 @@ public class DraftServiceImpl extends ServiceImpl<DraftMapper, Draft> implements
             throw new RuntimeException(e);
         }
         return Result.success("保存成功");
+    }
+
+    @Override
+    public List<DraftVO> queryArticleDraft(Long userId, Integer pageNum, Integer pageSize) {
+        List<DraftVO> drafts = baseMapper.queryArticleDraft(userId, pageSize, (pageNum - 1) * pageSize);
+        return drafts;
     }
 }

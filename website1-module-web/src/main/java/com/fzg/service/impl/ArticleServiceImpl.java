@@ -1,15 +1,19 @@
 package com.fzg.service.impl;
 
 import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.constant.RedisArticleKey;
 import com.fzg.mapper.Articlemapper;
+import com.fzg.mapper.Commentmapper;
 import com.fzg.mapper.Favoritemapper;
 import com.fzg.mapper.LikeRecordMapper;
 import com.fzg.model.Article;
+import com.fzg.model.Comment;
 import com.fzg.service.ArticleService;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -28,6 +32,37 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private LikeRecordMapper likeRecordMapper;
     @Autowired
     private Favoritemapper favoritemapper;
+    @Autowired
+    private Commentmapper commentmapper;
+
+
+
+
+    @Override
+    public ArticleDetailVO queryArticleDetails(Long articleId) {
+
+        ArticleDetailVO article = baseMapper.queryArticleDetails(articleId);
+        LambdaQueryWrapper<Comment> q = new LambdaQueryWrapper<>();
+        q.eq(Comment::getArticleId,articleId);
+        List<Comment> comments = commentmapper.selectList(q);
+        List<CommentVO> commentVOList = new ArrayList<>();
+        for (Comment comment : comments) {
+            CommentVO commentVO = new CommentVO();
+            BeanUtils.copyProperties(comment,commentVO);
+            commentVOList.add(commentVO);
+        }
+
+        article.setCommnet(commentVOList);
+
+        return article;
+    }
+
+
+
+
+
+
+
 
 
 
@@ -139,4 +174,5 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         return resultSearchVO;
     }
+
 }

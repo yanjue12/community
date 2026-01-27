@@ -39,7 +39,7 @@
         <fastjson.version>2.0.0</fastjson.version>
         <website1-core.version>0.0.1-SNAPSHOT</website1-core.version>
         <aliyun-sdk-oss.version>3.17.4</aliyun-sdk-oss.version>
-
+        <elasticsearch.version>7.17.9</elasticsearch.version>
 
     </properties>
 
@@ -95,6 +95,12 @@
                 <artifactId>druid-spring-boot-starter</artifactId>
                 <version>${druid.version}</version>
             </dependency>
+            <!-- Spring Data Elasticsearch -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+            </dependency>
+
             <!--第三方工具类库hutool-->
             <dependency>
                 <groupId>cn.hutool</groupId>

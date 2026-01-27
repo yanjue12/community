@@ -37,6 +37,24 @@ public class UserController {
     private RedisTemplate redisTemplate;
 
 
+
+    @PostMapping("/updatePrivateSetting")
+    @Schema(name = "用户模块", description = "用户修改隐私设置")
+    public Result updatePrivateSetting(@RequestBody UpdatePrivateSettingVO upPriSetVO){
+        if(null == upPriSetVO){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        if(null == upPriSetVO.getUserId() || StringUtils.isEmpty(upPriSetVO.getVisibility())||
+        StringUtils.isEmpty(upPriSetVO.getIsCommentable()) || StringUtils.isEmpty(upPriSetVO.getAllArticle())){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        Boolean b = userService.updatePrivateSetting(upPriSetVO);
+        return b ? Result.success(true) : Result.fail(EnumReturn.valueOf("修改失败"));
+    }
+
+
+
+
     /**
      * 发布文章
      * @param articleVO
