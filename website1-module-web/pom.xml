@@ -89,7 +89,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>2.6.3</version> <!-- 根据需要选择版本 -->
+                <version>2.6.3</version>
                 <executions>
                     <execution>
                         <goals>
@@ -100,7 +100,6 @@
                 <configuration>
                     <mainClass>com.fzg.Website1ModuleWebApplication</mainClass>
                     <fork>true</fork>
-                    <!--增加此行，可以解决打包时，找不到jar包的问题-->
                     <addResources>true</addResources>
                     <includeSystemScope>true</includeSystemScope>
                 </configuration>
