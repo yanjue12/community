@@ -23,7 +23,6 @@ public class SearchHotServiceImpl extends ServiceImpl<SearchHotmapper,SearchHot>
     public List<SearchHot> selectList() {
         //查点击量前十的数据
         List<SearchHot> list = searchHotMapper.queryHot();
-        log.info("查询成功数据：{}", JSON.toJSON(list));
         return list;
     }
 }

@@ -43,6 +43,12 @@
         </foreach>
     </update>
 
+    <update id="incrViewCount">
+        update article
+        set view_count = view_count + 1
+        where id = #{articleId}
+    </update>
+
 
     <select id="queryListByArticleType" resultType="com.fzg.vo.ArticleVO">
     select a.id,a.title,a.summary,a.cover_image as coverImage,
@@ -276,7 +282,7 @@
                a.comment_count as commentCount,a.view_count as viewCount,
                a.share_count as shareCount,a.word_count as wordCount,
                a.type,a.published_at as publishAt,
-               u.nickname,u.avatar,u.signature,u.location from article a
+               u.nickname,u.avatar,u.signature,u.location,u.id as authorId from article a
             left join user u on a.user_id = u.id
             where a.id = #{articleId}
     </select>

@@ -5,10 +5,13 @@ import lombok.Data;
 @Data
 public class ArticleRequest {
     private Long articleId;
+    //当前登录人的id
     private Long userId;
     private Long draftId;
+    private Long authorId;
     //获取帖子类型 0：热榜 1：推荐 2：关注 3：最新
     private String type;
+    private String ip;
 
     private String title;
 

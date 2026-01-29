@@ -28,4 +28,29 @@ public class RedisArticleKey {
     public static String getFavoriteArticleCountKey(Long articleId) {
         return String.format("article:favorite:count:%d", articleId);
     }
+
+    /**
+     * 登录用户文章阅读浏览量
+     */
+    public static String getArtViewCountKeyId(Long articleId,Long userId) {
+        return String.format("article:view:count:%d:%d", articleId, userId);
+    }
+
+    /**
+     *游客文章阅读浏览量
+     */
+    public static String getArtViewCountKeyIp(String ip,Long articleId) {
+        return String.format("article:view:count:%d:%s",articleId, ip);
+    }
+
+
+    public static String readTimeUid(Long articleId, Long userId){
+        return String.format("art:read:uid:%d:%d", articleId, userId);
+    }
+
+    public static String readTimeIp(Long articleId, String ip){
+        return String.format("art:read:ip:%d:%s", articleId, ip);
+    }
+
+
 }

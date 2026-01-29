@@ -3,6 +3,7 @@ package com.fzg.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.constant.RedisArticleKey;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.Commentmapper;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,8 +41,10 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
 
     @Override
-    public ArticleDetailVO queryArticleDetails(Long articleId) {
+    @ArticleViewTrack
+    public ArticleDetailVO queryArticleDetails(ArticleRequest articleRequest) {
 
+        Long articleId = articleRequest.getArticleId();
         ArticleDetailVO article = baseMapper.queryArticleDetails(articleId);
         LambdaQueryWrapper<Comment> q = new LambdaQueryWrapper<>();
         q.eq(Comment::getArticleId,articleId);
@@ -53,6 +57,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         }
 
         article.setCommnet(commentVOList);
+
+        //文章浏览量 + 1，，如果同一id短时间多次访问，浏览量只 + 1
 
         return article;
     }
@@ -114,7 +120,6 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 favoriteArticleIds =
                     null == favoriteList ? Collections.emptySet() : new HashSet<>(favoriteList);
             }
-            log.info("likedArticleIds:{}",likedArticleIds);
 
             //设置点赞状态
             for (ArticleVO articleVO : articleVOList) {
@@ -128,7 +133,6 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             log.info("查询异常:{}",e);
             throw new RuntimeException(e);
         }
-        log.info("articlePageVO:{}", JSON.toJSON(articlePageVO));
         return articlePageVO;
     }
 

@@ -25,7 +25,7 @@ public class ArticleDetailVO{
     private Integer wordCount;
     private Date publishAt;
 
-    private Long userId;
+    private Long authorId;
     private String nickName;
     private String avatar;
     private String introduction;

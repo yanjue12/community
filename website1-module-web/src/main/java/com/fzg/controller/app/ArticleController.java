@@ -1,14 +1,12 @@
 package com.fzg.controller.app;
 
 import com.alibaba.fastjson2.JSON;
+import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.model.Article;
 import com.fzg.model.Result;
-import com.fzg.service.ArticleService;
-import com.fzg.service.DraftService;
-import com.fzg.service.FavoriteService;
-import com.fzg.service.LikeRecordService;
+import com.fzg.service.*;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -34,15 +32,28 @@ public class ArticleController {
     private FavoriteService favoriteService;
     @Autowired
     private Articlemapper articlemapper;
+    @Autowired
+    private ArticleStatService articleStatService;
 
+
+    @PostMapping("/readTime")
+    public void recordReadTime(@RequestBody ReadTimeRequest req) {
+        articleStatService.recordReadTime(
+                req.getArticleId(),
+                req.getUserId(),
+                req.getDuration(),
+                req.getIp()
+        );
+    }
 
 
     @PostMapping("/detail")
     public Result details(@RequestBody ArticleRequest articleRequest){
-        if(null == articleRequest){
+        if(null == articleRequest || StringUtils.isEmpty(articleRequest.getIp())
+        || null == articleRequest.getArticleId()){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
-        ArticleDetailVO article = articleService.queryArticleDetails(articleRequest.getArticleId());
+        ArticleDetailVO article = articleService.queryArticleDetails(articleRequest);
         return Result.success(article);
     }
 

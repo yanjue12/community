@@ -26,5 +26,5 @@ public interface ArticleService extends IService<Article> {
 
     ResultSearchVO search(ArticleRequest searchRequset);
 
-    ArticleDetailVO queryArticleDetails(Long articleId);
+    ArticleDetailVO queryArticleDetails(ArticleRequest articleRequest);
 }

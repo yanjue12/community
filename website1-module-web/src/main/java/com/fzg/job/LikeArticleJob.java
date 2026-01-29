@@ -6,7 +6,6 @@ import com.fzg.vo.ArticleLikeVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +22,7 @@ public class LikeArticleJob {
     @Autowired
     private Articlemapper articleMapper;
 
-    @Scheduled(cron = "0 */1 * * * ?") // 每分钟
+    //@Scheduled(cron = "0 */1 * * * ?") // 每分钟
     @Transactional
     public void syncArticleLikeCountBatch() {
         log.info("开始执行点赞数同步任务");

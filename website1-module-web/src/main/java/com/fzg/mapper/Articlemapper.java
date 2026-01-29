@@ -35,4 +35,6 @@ public interface Articlemapper extends BaseMapper<Article> {
     int updateBatchById(@Param("userIds") List<Long> articleUserIds);
 
     ArticleDetailVO queryArticleDetails(@Param("articleId") Long articleId);
+
+    void incrViewCount(@Param("articleId") Long articleId);
 }
