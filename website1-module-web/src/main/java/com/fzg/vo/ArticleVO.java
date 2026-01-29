@@ -11,7 +11,8 @@ public class ArticleVO {
     private String summary;//摘要
     private String coverImage;//封面图片
     private String type;//文章类型
-    private Date updatedTime;
+    private Date updatedAt;
+    private Date publishedAt;
 
     private String categoryName;
 

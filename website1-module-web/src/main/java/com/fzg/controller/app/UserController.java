@@ -91,10 +91,13 @@ public class UserController {
                 || StringUtils.isEmpty(articleVO.getType())){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
+        if(null == articleVO.getId() || articleVO.getId() <= 0){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
 
         Boolean b = userService.updateArticle(articleVO);
 
-        return b ? Result.success("修改成功") : Result.fail(EnumReturn.valueOf("修改失败"));
+        return b ? Result.success("修改成功") : Result.fail(EnumReturn.OPERATION_FAIL);
     }
 
 

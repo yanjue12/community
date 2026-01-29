@@ -242,16 +242,6 @@
                a.type,a.published_at as updatedTime,a.view_count as viewCount,
                a.like_count as likeCount,a.comment_count as commentCount,
                a.share_count as shareCount,a.collect_count as collectCount,
-               a.share_count as shareCount,
-               a.is_recommend as isRecommend,
-               a.is_top as isTop,
-               a.view_count as viewCount,
-               a.like_count as likeCount,
-               a.comment_count as commentCount,
-               a.collect_count as collectCount,
-               a.share_count as shareCount,
-               a.is_recommend as isRecommend,
-               a.is_top as isTop,
                u.id as userId, u.nickname as nickName,
                u.avatar as avatar,
                c.name as categoryName,
@@ -285,6 +275,27 @@
                u.nickname,u.avatar,u.signature,u.location,u.id as authorId from article a
             left join user u on a.user_id = u.id
             where a.id = #{articleId}
+    </select>
+    <select id="queryArtLikeById" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+               a.type,a.published_at as publishedAt,a.view_count as viewCount,
+               a.like_count as likeCount,a.comment_count as commentCount,
+               a.share_count as shareCount,a.collect_count as collectCount,
+               u.id as userId, u.nickname as nickName,
+               u.avatar as avatar,
+               c.name as categoryName,
+               -- 计算热度得分（用于热榜排序）
+               (a.view_count + a.like_count * 10 + a.comment_count * 5 + a.collect_count * 3) as hotScore
+        from article a
+                 left join user u on a.user_id = u.id
+                 left join category c on a.category_id = c.id
+                 left join like_record lr on a.id = lr.article_id
+        where a.status = '1'
+          and a.visibility = '0'
+          and lr.user_id = #{userId}
+          and lr.status = '1'
+            limit #{pageSize} offset #{offset}
+
     </select>
 
 

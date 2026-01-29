@@ -36,6 +36,10 @@ public class ArticleController {
     private ArticleStatService articleStatService;
 
 
+    /**
+     * 统计阅读时间，获取当天热点值，参与主页热点数据排序
+     * @param req
+     */
     @PostMapping("/readTime")
     public void recordReadTime(@RequestBody ReadTimeRequest req) {
         log.info("recordReadTime开始执行");
@@ -60,8 +64,13 @@ public class ArticleController {
 
 
 
-    /**
-     * 查询当前登录人发布的文章
+    /** @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        * @@@@@@@@@@@           个人主页数据请求            @@@@@@@@@@@@@@@@@@@@
+        * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+     * 查询当前登录人发布的文章 个人主页作品展示
      * @param articleRequest
      * @return
      */
@@ -78,6 +87,38 @@ public class ArticleController {
 
         return Result.success(articleVOList);
     }
+
+    /**
+     * 查询用户喜欢列表
+     * @param articleRequest
+     * @return
+     */
+    @PostMapping("queryLikeArtById")
+    public Result queryArtLikeById(@RequestBody ArticleRequest articleRequest){
+        if(null == articleRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+
+        Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
+        Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
+
+        List<ArticleVO> articleVOList = articlemapper.queryArtLikeById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+
+        return Result.success(articleVOList);
+    }
+
+
+
+
+
+
+    /** @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+     * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+     * @@@@@@@@@@@           个人主页数据请求结束            @@@@@@@@@@@@@@@@@@@@
+     * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+     * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+     * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+     */
 
 
 

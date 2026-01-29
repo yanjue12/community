@@ -110,11 +110,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public Boolean updateArticle(Article articleVO) {
         log.info("UserServiceImpl.publishArticle开始修改文章");
-        articleVO.setContent(articleVO.getContent());
-        articleVO.setStatus("2");
-        articleVO.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
-        articleVO.setPublishedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
-        int i = articlemapper.updateById(articleVO);
+        int i = 0;
+        try {
+            articleVO.setContent(articleVO.getContent());
+            articleVO.setStatus("2");
+            articleVO.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+            articleVO.setPublishedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+            i = articlemapper.updateById(articleVO);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        log.info("UserServiceImpl.updateArticle结束修改文章,i={}",i);
         return i > 0;
     }
 
