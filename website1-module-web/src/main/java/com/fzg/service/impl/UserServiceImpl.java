@@ -102,7 +102,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public Boolean publishArticle(Article articleVO) {
         log.info("UserServiceImpl.publishArticle开始发布文章");
-        articleVO.setContentHtml(articleVO.getContent());
         articleVO.setStatus("2");
         int insert = articlemapper.insert(articleVO);
         return insert > 0;
@@ -111,7 +110,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public Boolean updateArticle(Article articleVO) {
         log.info("UserServiceImpl.publishArticle开始修改文章");
-        articleVO.setContentHtml(articleVO.getContent());
+        articleVO.setContent(articleVO.getContent());
         articleVO.setStatus("2");
         articleVO.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
         articleVO.setPublishedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));

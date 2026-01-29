@@ -86,8 +86,9 @@ public class UserController {
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
         if(StringUtils.isEmpty(articleVO.getTitle()) || StringUtils.isEmpty(articleVO.getContent())
-                || StringUtils.isEmpty(articleVO.getContentHtml()) || null == articleVO.getCategoryId()
-                || null == articleVO.getUserId() || StringUtils.isEmpty(articleVO.getType())){
+                || null == articleVO.getCategoryId()
+                || null == articleVO.getUserId()
+                || StringUtils.isEmpty(articleVO.getType())){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
 
