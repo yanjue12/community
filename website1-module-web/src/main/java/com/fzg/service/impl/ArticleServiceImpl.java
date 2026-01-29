@@ -80,7 +80,6 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
      */
     @Override
     public ArticlePageVO queryListByArticleType(ArticleRequest articleRequest) {
-        log.info("queryListByArticleType入参:{}",articleRequest);
         Long userId = articleRequest.getUserId();
         Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
         Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
@@ -163,18 +162,15 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         List<ArticleVO> articlesByTitle =
                 baseMapper.searchByTitle(keyword, pageSize, (pageNum-1)  * pageSize);
         resultSearchVO.setArticles(articlesByTitle);
-        log.info("根据文章标题和简介查询出数据个数：{}",articlesByTitle.size());
 
         //文章：标签命中（反查文章）
         List<ArticleVO> articlesByTag =
                 baseMapper.searchByTag(keyword, pageSize, (pageNum-1)  * pageSize);
         resultSearchVO.setArticlesByTag(articlesByTag);
-        log.info("根据文章标签查询出数据个数：{}",articlesByTag.size());
 
         //用户昵称
         List<UserVO> users = baseMapper.searchByName(keyword,userId, pageSize, (pageNum-1)  * pageSize);
         resultSearchVO.setUsers(users);
-        log.info("根据用户昵称查询出数据个数：{}",users.size());
 
         return resultSearchVO;
     }

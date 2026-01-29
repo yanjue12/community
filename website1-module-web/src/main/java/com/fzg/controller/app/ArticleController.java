@@ -38,6 +38,7 @@ public class ArticleController {
 
     @PostMapping("/readTime")
     public void recordReadTime(@RequestBody ReadTimeRequest req) {
+        log.info("recordReadTime开始执行");
         articleStatService.recordReadTime(
                 req.getArticleId(),
                 req.getUserId(),

@@ -55,7 +55,6 @@ public class ArticleStatServiceImpl implements ArticleStatService {
         String key = (userId != null)
                 ? RedisArticleKey.getArtViewCountKeyId(articleId, userId)
                 : RedisArticleKey.getArtViewCountKeyIp(ip, articleId);
-
         // 累加阅读时长
         redisTemplate.opsForValue().increment(key, duration);
 
