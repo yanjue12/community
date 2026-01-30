@@ -7,6 +7,7 @@
         select d.*,c.name as categoryName from draft d
         left join category c on d.category_id = c.id
         where user_id = #{userId}
+        order by d.last_modified_at desc
         limit #{pageSize} offset #{offset}
     </select>
 </mapper>

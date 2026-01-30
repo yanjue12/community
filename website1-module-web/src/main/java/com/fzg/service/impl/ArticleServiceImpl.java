@@ -3,23 +3,26 @@ package com.fzg.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.BeanProperty;
 import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.constant.RedisArticleKey;
-import com.fzg.mapper.Articlemapper;
-import com.fzg.mapper.Commentmapper;
-import com.fzg.mapper.Favoritemapper;
-import com.fzg.mapper.LikeRecordMapper;
+import com.fzg.mapper.*;
 import com.fzg.model.Article;
 import com.fzg.model.Comment;
+import com.fzg.model.Draft;
 import com.fzg.service.ArticleService;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -36,8 +39,46 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private Favoritemapper favoritemapper;
     @Autowired
     private Commentmapper commentmapper;
+    @Autowired
+    private Articlemapper articlemapper;
+    @Autowired
+    private DraftMapper draftmapper;
 
 
+    /**
+     * 撤回待审核的文章
+     * @param articleRequest
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean recallPendingArticles(ArticleRequest articleRequest) {
+        if(null == articleRequest.getArticleId() || articleRequest.getUserId() == null){
+            log.error("recallPendingArticles 参数校失败");
+            return false;
+        }
+
+        try {
+            Article article = articlemapper.selectById(articleRequest.getArticleId());
+            article.setStatus("5");
+            articlemapper.updateById(article);
+
+            //添加草稿箱
+            Draft draft = new Draft();
+            BeanUtils.copyProperties(article,draft);
+            draft.setId(null);
+            log.info("添加草稿箱的实体：{}",JSON.toJSONString(draft));
+            draft.setModuleType(article.getType());
+            draft.setCreatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+            draft.setLastModifiedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+            draftmapper.insert(draft);
+        } catch (BeansException e) {
+            log.error("recallPendingArticles 撤回审核内容失败发送异常:{}",e);
+            throw new RuntimeException(e);
+        }
+
+        return true;
+    }
 
 
     @Override
@@ -62,12 +103,6 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         return article;
     }
-
-
-
-
-
-
 
 
 

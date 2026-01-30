@@ -27,4 +27,7 @@ public interface ArticleService extends IService<Article> {
     ResultSearchVO search(ArticleRequest searchRequset);
 
     ArticleDetailVO queryArticleDetails(ArticleRequest articleRequest);
+
+    //撤回待审核内容
+    Boolean recallPendingArticles(ArticleRequest articleRequest);
 }

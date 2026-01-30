@@ -126,6 +126,22 @@ public class ArticleController {
 
     }
 
+    /**
+     * 撤回待审核内容 撤回后保存到草稿箱
+     * @param articleRequest
+     * @return
+     */
+    @PostMapping("/recallPendingArticles")
+    public Result recallPendingArticles(@RequestBody ArticleRequest articleRequest){
+        if(null == articleRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+
+        Boolean b = articleService.recallPendingArticles(articleRequest);
+
+        return b ? Result.success(true) : Result.fail(EnumReturn.OPERATION_FAIL);
+    }
+
 
 
 
