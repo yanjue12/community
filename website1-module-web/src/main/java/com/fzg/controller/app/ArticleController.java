@@ -107,6 +107,25 @@ public class ArticleController {
         return Result.success(articleVOList);
     }
 
+    /**
+     * 查询待审核内容
+     * @param articleRequest
+     * @return
+     */
+    @PostMapping("/queryPendingArticles")
+    public Result queryPendingArticles(@RequestBody ArticleRequest articleRequest){
+        if(null == articleRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+
+        Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
+        Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
+
+        List<ArticleVO> articleVOList = articlemapper.queryArtPendingById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+        return Result.success(articleVOList);
+
+    }
+
 
 
 

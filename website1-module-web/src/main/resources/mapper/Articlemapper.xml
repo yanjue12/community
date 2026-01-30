@@ -297,6 +297,35 @@
             limit #{pageSize} offset #{offset}
 
     </select>
+    <select id="queryArtPendingById" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+               a.type,a.published_at as updatedTime,a.view_count as viewCount,
+               a.like_count as likeCount,a.comment_count as commentCount,
+               a.share_count as shareCount,a.collect_count as collectCount,
+               u.id as userId, u.nickname as nickName,
+               u.avatar as avatar,
+               c.name as categoryName,
+               tt.tagsName as tagName,
+               -- 计算热度得分（用于热榜排序）
+               (a.view_count + a.like_count * 10 + a.comment_count * 5 + a.collect_count * 3) as hotScore
+        from article a
+                 left join user u on a.user_id = u.id
+                 left join category c on a.category_id = c.id
+                 left join (
+            select
+                atr.article_id,
+                GROUP_CONCAT(at.name SEPARATOR ', ') AS tagsName
+            from article_tag at
+        join article_tag_relation atr on at.id = atr.tag_id
+            group by atr.article_id
+        ) tt on tt.article_id = a.id
+        where
+             a.user_id = #{userId}
+            and a.visibility = '0'
+            and a.status in('2','3')
+            order by a.updated_at desc
+            limit #{pageSize} offset #{offset}
+    </select>
 
 
 </mapper>

@@ -39,4 +39,6 @@ public interface Articlemapper extends BaseMapper<Article> {
     void incrViewCount(@Param("articleId") Long articleId);
 
     List<ArticleVO> queryArtLikeById(@Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
+
+    List<ArticleVO> queryArtPendingById(@Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
 }
