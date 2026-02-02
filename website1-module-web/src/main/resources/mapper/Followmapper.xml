@@ -2,4 +2,12 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.fzg.mapper.Followmapper">
 
+  <select id="queryFolList" resultType="com.fzg.vo.UserVO">
+    select u.nickname,u.avatar,u.id as userId,u.introduction,f.created_at as createdAt
+    from follow f
+    left join user u on u.id = f.following_id
+    where f.following_id = #{followerId}
+    order by f.created_at desc
+    limit #{pageSize} offset #{offset}
+  </select>
 </mapper>

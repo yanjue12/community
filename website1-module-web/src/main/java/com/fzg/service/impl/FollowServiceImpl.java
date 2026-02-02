@@ -6,14 +6,17 @@ import com.fzg.constant.RedisFollowKey;
 import com.fzg.mapper.Followmapper;
 import com.fzg.mapper.UserMapper;
 import com.fzg.model.Follow;
+import com.fzg.model.User;
 import com.fzg.service.FollowService;
 import com.fzg.vo.FollowVO;
+import com.fzg.vo.UserVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -36,9 +39,7 @@ public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> impleme
             return false;
         }
         String redisKey = RedisFollowKey.getFollowLockKey(followerId, followingId);
-        log.info("获取锁-------redisKey:{}",redisKey);
         Boolean locked = redisTemplate.opsForValue().setIfAbsent(redisKey, "1",3, TimeUnit.SECONDS);
-        log.info("获取锁结果：{}",locked);
         if (Boolean.FALSE.equals(locked)) {
             return true;
         }
@@ -62,18 +63,15 @@ public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> impleme
                     // 计数变更
                     userMapper.updateFolCount(followerId, followingId,1);
                     userMapper.updateFolingCount(followerId, followingId,1);
-                    log.info("技术变更，-------1-11");
 
                     redisTemplate.opsForSet().add(
                             RedisFollowKey.followingSet(followerId),
                             String.valueOf(followingId)
                     );
-                    log.info("技术变更，-------1-12");
                     redisTemplate.opsForSet().add(
                             RedisFollowKey.followerSet(followingId),
                             String.valueOf(followerId)
                     );
-                    log.info("技术变更，-------1-13");
 
                     // 缓存关注状态
                     redisTemplate.opsForValue().set(
@@ -81,7 +79,6 @@ public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> impleme
                             "1",
                             7, TimeUnit.DAYS
                     );
-                    log.info("技术变更，-------1-14");
                 }
                 // 取消关注但本来就没关注 → 直接成功
                 return true;
@@ -94,18 +91,15 @@ public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> impleme
 
                 userMapper.updateFolCount(followerId, followingId,-1);
                 userMapper.updateFolingCount(followerId, followingId,-1);
-                log.info("技术变更，-------3-11");
 
                 redisTemplate.opsForSet().remove(
                         RedisFollowKey.followingSet(followerId),
                         String.valueOf(followingId)
                 );
-                log.info("技术变更，-------3-12");
                 redisTemplate.opsForSet().remove(
                         RedisFollowKey.followerSet(followingId),
                         String.valueOf(followerId)
                 );
-                log.info("技术变更，-------3-13");
 
                 redisTemplate.delete(
                         RedisFollowKey.getFollowStatusKey(followerId, followingId)
@@ -121,5 +115,15 @@ public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> impleme
         } finally {
             redisTemplate.delete(redisKey);
         }
+    }
+
+
+    @Override
+    public List<UserVO> queryFolList(FollowVO request) {
+        Integer pageNum = request.getPageNum() == null ? 1 : request.getPageNum();
+        Integer pageSize = request.getPageSize() == null ? 10 : request.getPageSize();
+
+        List<UserVO> userList = baseMapper.queryFolList(request.getFollowerId(),pageSize,(pageNum-1)*pageSize);
+        return userList;
     }
 }

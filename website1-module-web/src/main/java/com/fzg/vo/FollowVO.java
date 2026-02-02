@@ -21,4 +21,7 @@ public class FollowVO {
      */
     private Date createdAt;
     private Integer actionFollow;//1 关注 0 取消关注
+
+    private Integer pageNum;
+    private Integer pageSize;
 }
