@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.fzg.mapper.UserMapper">
+    <update id="updateFolCount">
+        update user
+            set following_count = following_count + #{flag}
+            where id = #{followerId}
+    </update>
+    <update id="updateFolingCount">
+        update user
+            set follower_count = follower_count + #{flag}
+            where id = #{followingId}
+    </update>
 
 
     <select id="selectByCondition" resultType="com.fzg.model.User">

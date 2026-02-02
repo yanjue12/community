@@ -2,10 +2,7 @@ package com.fzg.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fzg.model.Article;
-import com.fzg.vo.ArticleDetailVO;
-import com.fzg.vo.ArticlePageVO;
-import com.fzg.vo.ArticleRequest;
-import com.fzg.vo.ResultSearchVO;
+import com.fzg.vo.*;
 
 import java.util.List;
 
@@ -30,4 +27,8 @@ public interface ArticleService extends IService<Article> {
 
     //撤回待审核内容
     Boolean recallPendingArticles(ArticleRequest articleRequest);
+
+    List<ArticleVO> queryArtLikeById(Long userId, Integer pageSize, Integer offset);
+
+    List<ArticleVO> queryFavoriteArtById(Long userId, Integer pageSize, Integer offset);
 }

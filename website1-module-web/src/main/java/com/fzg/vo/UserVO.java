@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 @Data
 public class UserVO {
+    private Long curUserId;
     private String userId;
     private String nickname;
     private String avatar;
@@ -19,7 +20,7 @@ public class UserVO {
 
     private Integer activeScore;//活跃度
 
-    private String followStatus;//是否关注 1：已关注 0：未关注
+    private Boolean followStatus;//是否关注
 
 
 }

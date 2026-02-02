@@ -20,6 +20,10 @@ public interface UserMapper extends BaseMapper<User> {
     List<User> selectByCondition(@Param("condition") String condition);
 
     List<UserVO> selectActiveUser(@Param("days") Integer days, @Param("size") Integer size);
+
+    void updateFolCount(@Param("followerId") Long followerId, @Param("followingId") Long followingId, @Param("flag") Integer flag);
+
+    void updateFolingCount(@Param("followerId") Long followerId, @Param("followingId") Long followingId, @Param("flag") Integer flag);
 }
 
 

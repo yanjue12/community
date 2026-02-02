@@ -5,13 +5,14 @@ import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
  * 关注关系表
  * follow
  */
-@Data
+@TableName("follow")
 public class Follow implements Serializable {
     /**
      * ID
@@ -33,6 +34,38 @@ public class Follow implements Serializable {
      * 创建时间
      */
     private Date createdAt;
+
+    public Date getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Long getFollowerId() {
+        return followerId;
+    }
+
+    public void setFollowerId(Long followerId) {
+        this.followerId = followerId;
+    }
+
+    public Long getFollowingId() {
+        return followingId;
+    }
+
+    public void setFollowingId(Long followingId) {
+        this.followingId = followingId;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     private static final long serialVersionUID = 1L;
 }

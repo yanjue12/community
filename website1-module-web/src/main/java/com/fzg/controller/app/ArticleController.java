@@ -1,5 +1,7 @@
 package com.fzg.controller.app;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.stp.StpUtil;
 import com.alibaba.fastjson2.JSON;
 import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.enums.EnumReturn;
@@ -64,13 +66,15 @@ public class ArticleController {
 
 
 
-    /** @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        * @@@@@@@@@@@           个人主页数据请求            @@@@@@@@@@@@@@@@@@@@
-        * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-     * 查询当前登录人发布的文章 个人主页作品展示
+        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        // @@@@@@@@@@@           个人主页数据请求            @@@@@@@@@@@@@@@@@@@@
+        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+     /* 查询当前登录人发布的文章 个人主页作品展示
      * @param articleRequest
      * @return
      */
@@ -101,8 +105,26 @@ public class ArticleController {
 
         Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
         Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
+        List<ArticleVO> articleVOList = articleService.queryArtLikeById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
 
-        List<ArticleVO> articleVOList = articlemapper.queryArtLikeById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+
+        return Result.success(articleVOList);
+    }
+
+    /**
+     * 查询收藏列表
+     * @param articleRequest
+     * @return
+     */
+    @PostMapping("queryFavArtById")
+    public Result queryFavoriteArtById(@RequestBody ArticleRequest articleRequest){
+        if(null == articleRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
+        Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
+
+        List<ArticleVO> articleVOList = articleService.queryFavoriteArtById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
 
         return Result.success(articleVOList);
     }
@@ -140,6 +162,18 @@ public class ArticleController {
         Boolean b = articleService.recallPendingArticles(articleRequest);
 
         return b ? Result.success(true) : Result.fail(EnumReturn.OPERATION_FAIL);
+    }
+
+    @PostMapping("deleteArt")
+    public Result deleteArt(@RequestBody ArticleRequest articleRequest){
+        //StpUtil.checkLogin();
+        if(null == articleRequest){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+
+        int b = articlemapper.deleteById(articleRequest.getArticleId());
+
+        return b > 0 ? Result.success(true) : Result.fail(EnumReturn.OPERATION_FAIL);
     }
 
 

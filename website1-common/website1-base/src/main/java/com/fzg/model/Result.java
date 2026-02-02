@@ -59,9 +59,9 @@ public class Result<T> {
      * @param flag
      * @return
      */
-    public static Result<String> handle(Boolean flag) {
+    public static Result handle(Boolean flag) {
         if (flag){
-            return Result.success(null);
+            return Result.success(true);
         }
         return Result.fail(EnumReturn.OPERATION_FAIL);
     }

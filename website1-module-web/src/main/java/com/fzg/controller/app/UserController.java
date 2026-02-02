@@ -3,6 +3,7 @@ package com.fzg.controller.app;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fzg.constant.RedisFollowKey;
 import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Article;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.validation.annotation.Validated;
@@ -116,7 +118,21 @@ public class UserController {
     @PostMapping("/queryUserInfo")
     public Result queryUserInfo(@RequestBody UserVO userVO) {
         User user = userService.getById(Long.valueOf(userVO.getUserId()));
-        return Result.success(user);
+        userVO.setNickname(user.getNickname());
+        userVO.setAvatar(user.getAvatar());
+        userVO.setSignature(user.getSignature());
+        userVO.setLocation(user.getLocation());
+        userVO.setTopicCount(user.getTopicCount());
+        userVO.setCommentCount(user.getCommentCount());
+        userVO.setFollowCount(user.getFollowerCount());
+        userVO.setFollowingCount(user.getFollowingCount());
+        userVO.setCollectionCount(user.getCollectionCount());
+        userVO.setCoverImages(user.getCoverImages());
+        Boolean b = redisTemplate.opsForSet().isMember(
+                RedisFollowKey.followingSet(userVO.getCurUserId()),
+                String.valueOf(userVO.getUserId()));
+        userVO.setFollowStatus(b);
+        return Result.success(userVO);
     }
 
 

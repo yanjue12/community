@@ -326,6 +326,26 @@
             order by a.updated_at desc
             limit #{pageSize} offset #{offset}
     </select>
+    <select id="queryArtFavById" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+               a.type,a.published_at as publishedAt,a.view_count as viewCount,
+               a.like_count as likeCount,a.comment_count as commentCount,
+               a.share_count as shareCount,a.collect_count as collectCount,
+               u.id as userId, u.nickname as nickName,
+               u.avatar as avatar,
+               c.name as categoryName,
+               -- 计算热度得分（用于热榜排序）
+               (a.view_count + a.like_count * 10 + a.comment_count * 5 + a.collect_count * 3) as hotScore
+        from article a
+                 left join user u on a.user_id = u.id
+                 left join category c on a.category_id = c.id
+                 left join favorite f on a.id = f.target_id
+        where a.status = '1'
+          and a.visibility = '0'
+          and f.user_id = #{userId}
+          and f.status = '1'
+            limit #{pageSize} offset #{offset}
+    </select>
 
 
 </mapper>
