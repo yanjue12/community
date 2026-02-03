@@ -26,10 +26,10 @@ public class ArticleDetailVO{
     private Date publishAt;
 
     private Long authorId;
-    private String nickName;
+    private String nickname;
     private String avatar;
     private String introduction;
-
-    private List<CommentVO> commnet;
+    private String canComment;
+    private List<Comment> comment;
 
 }

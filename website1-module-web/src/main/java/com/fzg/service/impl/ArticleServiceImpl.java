@@ -7,9 +7,7 @@ import com.fasterxml.jackson.databind.BeanProperty;
 import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.constant.RedisArticleKey;
 import com.fzg.mapper.*;
-import com.fzg.model.Article;
-import com.fzg.model.Comment;
-import com.fzg.model.Draft;
+import com.fzg.model.*;
 import com.fzg.service.ArticleService;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +41,10 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private Articlemapper articlemapper;
     @Autowired
     private DraftMapper draftmapper;
+    @Autowired
+    private UserPrivacyMapper  userPrivacyMapper;
+    @Autowired
+    private Followmapper followmapper;
 
 
     /**
@@ -149,19 +151,57 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         Long articleId = articleRequest.getArticleId();
         ArticleDetailVO article = baseMapper.queryArticleDetails(articleId);
+        log.info("查询文章详细--------------");
+        log.info("文章详细：{}",JSON.toJSONString( article));
         LambdaQueryWrapper<Comment> q = new LambdaQueryWrapper<>();
         q.eq(Comment::getArticleId,articleId);
         List<Comment> comments = commentmapper.selectList(q);
-        List<CommentVO> commentVOList = new ArrayList<>();
+        log.info("查询评论表--------------");
+        List<Comment> commentVOList = new ArrayList<>();
         for (Comment comment : comments) {
-            CommentVO commentVO = new CommentVO();
-            BeanUtils.copyProperties(comment,commentVO);
-            commentVOList.add(commentVO);
+            commentVOList.add(comment);
         }
 
-        article.setCommnet(commentVOList);
-
+        article.setComment(commentVOList);
+        log.info("判断是否能评论之前--------------");
         //文章浏览量 + 1，，如果同一id短时间多次访问，浏览量只 + 1
+        //判断是否可评论
+        LambdaQueryWrapper<UserPrivacy> l = new LambdaQueryWrapper<>();
+        l.eq(UserPrivacy::getUserId,article.getAuthorId());
+        UserPrivacy userPrivacy = userPrivacyMapper.selectOne(l);
+        String canComment = userPrivacy.getCanComment();
+        if("0".equals(canComment)){
+            article.setCanComment("Public");
+        }else if("1".equals(canComment)){
+            article.setCanComment("仅自己可评论");
+        }else if("2".equals(canComment)){
+            //粉丝可评论 判断是否是粉丝
+            LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+            f.eq(Follow::getFollowerId,articleRequest.getUserId())
+                    .eq(Follow::getFollowingId,article.getAuthorId());
+            Follow follow = followmapper.selectOne(f);
+            if(null != follow){//是粉丝
+                article.setCanComment("是粉丝可以评论");
+            }else{
+                article.setCanComment("非粉丝不可评论");
+            }
+        }else if("3".equals(canComment)){//互相关注可评论
+            LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+            f.eq(Follow::getFollowerId,article.getAuthorId()).eq(Follow::getFollowingId,articleRequest.getUserId());
+            Follow follow = followmapper.selectOne(f);
+            if(null != follow){
+                f.clear();
+                f.eq(Follow::getFollowerId,articleRequest.getUserId()).eq(Follow::getFollowingId,article.getAuthorId());
+                Follow fo = followmapper.selectOne(f);
+                if (null != fo){
+                    article.setCanComment("互关可评论");
+                }else{
+                    article.setCanComment("非互关不可评论");
+                }
+            }else{
+                article.setCanComment("非互关不可评论");
+            }
+        }
 
         return article;
     }
