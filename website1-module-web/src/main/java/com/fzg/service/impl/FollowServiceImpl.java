@@ -126,4 +126,13 @@ public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> impleme
         List<UserVO> userList = baseMapper.queryFolList(request.getFollowerId(),pageSize,(pageNum-1)*pageSize);
         return userList;
     }
+
+    @Override
+    public List<UserVO> queryFollingList(FollowVO request) {
+        Integer pageNum = request.getPageNum() == null ? 1 : request.getPageNum();
+        Integer pageSize = request.getPageSize() == null ? 10 : request.getPageSize();
+
+        List<UserVO> userList = baseMapper.queryFollingList(request.getFollowingId(),pageSize,(pageNum-1)*pageSize);
+        return userList;
+    }
 }

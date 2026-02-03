@@ -12,4 +12,6 @@ public interface FollowService extends IService<Follow> {
     Boolean addFollow(FollowVO follow);
 
     List<UserVO> queryFolList(FollowVO foVO);
+
+    List<UserVO> queryFollingList(FollowVO follow);
 }

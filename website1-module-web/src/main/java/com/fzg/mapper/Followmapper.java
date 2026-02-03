@@ -13,4 +13,6 @@ import java.util.List;
 public interface Followmapper extends BaseMapper<Follow> {
 
     List<UserVO> queryFolList(@Param("followerId") Long followerId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
+
+    List<UserVO> queryFollingList(@Param("followingId") Long followingId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
 }

@@ -60,6 +60,15 @@ public class FollowController {
         return Result.success(list);
     }
 
+    @PostMapping("/queryFollingList")
+    public Result queryFollingList(@RequestBody FollowVO follow) {
+        if(null == follow || null == follow.getFollowingId()){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        List<UserVO> list = followService.queryFollingList(follow);
+        return Result.success(list);
+    }
+
 
 
 
