@@ -14,10 +14,45 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
 
     @Override
     public Boolean saveComment(Comment comment) {
+        //参数兜底（防止前端乱传）
+        if (comment.getParentId() == null) {
+            comment.setParentId(0L);
+        }
         // TODO 保存评论 并且发消息到消息队列，通知用户
-        int insert = baseMapper.insert(comment);
+        if (comment.getParentId() == 0) {
+            // 一级评论
+            comment.setRootId(0L);
+        } else {
+            // 回复评论
+            // 如果前端没传 rootId，就查父评论
+            if (comment.getRootId() == null || comment.getRootId() == 0) {
+                Comment parent = baseMapper.selectById(comment.getParentId());
+                if (parent == null) {
+                    throw new RuntimeException("父评论不存在");
+                }
 
-        return insert > 0;
+                // 父评论是一级
+                if (parent.getParentId() == 0) {
+                    comment.setRootId(parent.getId());
+                } else {
+                    // 父评论是二级
+                    comment.setRootId(parent.getRootId());
+                }
+            }
+        }
+
+        //插入评论
+        int insert = baseMapper.insert(comment);
+        if (insert <= 0) {
+            return false;
+        }
+
+        //如果是回复，更新一级评论的 reply_count
+        if (comment.getParentId() != 0) {
+            baseMapper.incrementReplyCount(comment.getRootId());
+        }
+
+        return true;
     }
 
     @Override

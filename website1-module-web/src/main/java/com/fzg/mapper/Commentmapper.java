@@ -18,4 +18,5 @@ public interface Commentmapper extends BaseMapper<Comment> {
             @Param("size") Integer size
     );
 
+    void incrementReplyCount(@Param("rootId") Long rootId);
 }
