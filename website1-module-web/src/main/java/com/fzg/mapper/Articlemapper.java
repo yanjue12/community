@@ -44,5 +44,5 @@ public interface Articlemapper extends BaseMapper<Article> {
 
     List<ArticleVO> queryArtFavById(@Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
 
-    void decreComCount(@Param("articleId") Long articleId);
+    int decreComCount(@Param("articleId") Long articleId);
 }

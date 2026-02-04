@@ -19,7 +19,7 @@ public interface Commentmapper extends BaseMapper<Comment> {
 
     void incrementReplyCount(@Param("rootId") Long rootId);
 
-    void logicDeleteById(@Param("id") Long id);
+    int logicDeleteById(@Param("id") Long id);
 
     List<Long> selectRootIdsForPage(@Param("articleId") Long articleId, @Param("lastId") Long lastId, @Param("size") int size);
 

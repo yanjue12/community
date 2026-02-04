@@ -70,32 +70,46 @@ public class CommentController {
     @Transactional(rollbackFor = Exception.class)
     public Result delete(@RequestBody CommentVO commentVO){
         if(null == commentVO || commentVO.getId() == null){
-            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+            throw new RuntimeException("参数为空");
         }
-        Boolean b = false;
         Comment comment = commentmapper.selectById(commentVO.getId());
         if(null == comment || comment.getStatus().equals("0")){
-            return Result.fail(EnumReturn.OPERATION_FAIL);
+            throw new RuntimeException("评论不存在或已删除");
         }
 
         //作者删除评论
         if(commentVO.getAuthorId() == commentVO.getUserId()){
-            commentmapper.logicDeleteById(commentVO.getId());
-            articlemapper.decreComCount(commentVO.getArticleId());
+            int i = commentmapper.logicDeleteById(commentVO.getId());
+            if(i <= 0){
+                throw new RuntimeException("评论删除失败");
+            }
+            int i1 = articlemapper.decreComCount(commentVO.getArticleId());
+            if(i1 <= 0){
+                throw new RuntimeException("文章评论数 减1 失败");
+            }
         }else{
             //判断删除的是否是自己的评论
             if(comment.getUserId() != commentVO.getUserId()){
-                b = false;
+                throw new RuntimeException("无权限删除该评论");
             }else {
                 //是自己的删
-                commentmapper.logicDeleteById(commentVO.getId());
-                articlemapper.decreComCount(commentVO.getArticleId());
+                int i = commentmapper.logicDeleteById(commentVO.getId());
+                if(i <= 0){
+                    throw new RuntimeException("评论删除失败");
+                }
+                int i1 = articlemapper.decreComCount(commentVO.getArticleId());
+                if(i1 <= 0){
+                    throw new RuntimeException("文章评论数 减1 失败");
+                }
             }
         }
         if (comment.getRootId() != null && comment.getRootId() > 0) {
             comment.setReplyCount(comment.getReplyCount() - 1);
-            commentmapper.updateById(comment);
+            int i = commentmapper.updateById(comment);
+            if(i <= 0){
+                throw new RuntimeException("评论回复数 更新失败");
+            }
         }
-        return Result.handle(b);
+        return Result.success(true);
     }
 }
