@@ -69,30 +69,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public Boolean updatePrivateSetting(UpdatePrivateSettingVO upPriSetVO) {
         log.info("UserServiceImpl.updatePrivateSetting开始修改隐私设置");
-        Article article = new Article();
-        if(upPriSetVO.getAllArticle().equals("1")){
-            //单独文章，
-            if(null == upPriSetVO.getArticleId()){
-                return false;
-            }
-            article.setId(upPriSetVO.getArticleId());
-            article.setUserId(upPriSetVO.getUserId());
-            article.setVisibility(upPriSetVO.getVisibility());
-            article.setIsCommentable(upPriSetVO.getIsCommentable());
-            return articlemapper.updateById(article) > 0;
-        }
-        //设置隐私为隐藏了，所有文章都是私密
-        LambdaQueryWrapper<Article> q = new LambdaQueryWrapper<>();
-        q.eq(Article::getUserId,upPriSetVO.getUserId());
-        List<Article> articles = articlemapper.selectList(q);
-        if(!CollectionUtils.isEmpty(articles)){
-            List<Long> articleUserIds = new ArrayList<>();
-            for (Article a : articles) {
-                a.setVisibility("1");
-                articleUserIds.add(a.getUserId());
-            }
-            return articlemapper.updateBatchById(articleUserIds) > 0;
-        }
+//        Article article = new Article();
+//        if(upPriSetVO.getAllArticle().equals("1")){
+//            //单独文章，
+//            if(null == upPriSetVO.getArticleId()){
+//                return false;
+//            }
+//            article.setId(upPriSetVO.getArticleId());
+//            article.setUserId(upPriSetVO.getUserId());
+//            article.setVisibility(upPriSetVO.getVisibility());
+//            article.setIsCommentable(upPriSetVO.getIsCommentable());
+//            return articlemapper.updateById(article) > 0;
+//        }
+//        //设置隐私为隐藏了，所有文章都是私密
+//        LambdaQueryWrapper<Article> q = new LambdaQueryWrapper<>();
+//        q.eq(Article::getUserId,upPriSetVO.getUserId());
+//        List<Article> articles = articlemapper.selectList(q);
+//        if(!CollectionUtils.isEmpty(articles)){
+//            List<Long> articleUserIds = new ArrayList<>();
+//            for (Article a : articles) {
+//                a.setVisibility("1");
+//                articleUserIds.add(a.getUserId());
+//            }
+//            return articlemapper.updateBatchById(articleUserIds) > 0;
+//        }
 
 
         return null;

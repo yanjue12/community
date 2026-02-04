@@ -2,6 +2,7 @@ package com.fzg.controller.app;
 
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fzg.constant.RedisFollowKey;
 import com.fzg.constant.RedisVerificationKey;
@@ -9,6 +10,8 @@ import com.fzg.enums.EnumReturn;
 import com.fzg.model.Article;
 import com.fzg.model.Result;
 import com.fzg.model.User;
+import com.fzg.model.UserPrivacy;
+import com.fzg.service.UserPrivacyService;
 import com.fzg.service.UserService;
 import com.fzg.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,6 +37,7 @@ import java.util.Date;
 public class UserController {
 
     private final UserService userService;
+    private final UserPrivacyService userPrivacyService;
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -46,13 +50,25 @@ public class UserController {
         if(null == upPriSetVO){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
-        if(null == upPriSetVO.getUserId() || StringUtils.isEmpty(upPriSetVO.getVisibility())||
-        StringUtils.isEmpty(upPriSetVO.getIsCommentable()) || StringUtils.isEmpty(upPriSetVO.getAllArticle())){
+        if(null == upPriSetVO.getUserId()){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
         Boolean b = userService.updatePrivateSetting(upPriSetVO);
-        return b ? Result.success(true) : Result.fail(EnumReturn.valueOf("修改失败"));
+        return Result.handle(b);
     }
+
+    @PostMapping("/queryPrivateSetting")
+    @Schema(name = "用户模块", description = "用户查询隐私设置")
+    public Result queryPrivateSetting(@RequestBody UpdatePrivateSettingVO upSetVO){
+        if(null == upSetVO || null == upSetVO.getUserId()){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
+        u.eq(UserPrivacy::getUserId, upSetVO.getUserId());
+        UserPrivacy userPrivacy = userPrivacyService.getOne(u);
+        return Result.success(userPrivacy);
+    }
+
 
 
 
