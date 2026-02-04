@@ -1,10 +1,18 @@
 package com.fzg.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.mapper.Commentmapper;
+import com.fzg.mapper.Followmapper;
 import com.fzg.model.Comment;
+import com.fzg.model.Follow;
+import com.fzg.model.UserPrivacy;
 import com.fzg.service.CommentService;
+import com.fzg.service.UserPrivacyService;
 import com.fzg.vo.CommentPageVO;
+import com.fzg.vo.CommentVO;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,8 +20,13 @@ import java.util.List;
 @Service
 public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> implements CommentService {
 
+    @Autowired
+    private UserPrivacyService userPrivacyService;
+    @Autowired
+    private Followmapper followmapper;
+
     @Override
-    public Boolean saveComment(Comment comment) {
+    public Boolean saveComment(CommentVO comment) {
         //参数兜底（防止前端乱传）
         if (comment.getParentId() == null) {
             comment.setParentId(0L);
@@ -40,12 +53,46 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
                 }
             }
         }
+        Comment commentEntity = new Comment();
 
-        //插入评论
-        int insert = baseMapper.insert(comment);
-        if (insert <= 0) {
-            return false;
-        }
+        //判断隐私
+        LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
+        u.eq(UserPrivacy::getUserId, comment.getUserId());
+        UserPrivacy userPrivacy = userPrivacyService.getOne(u);
+        String canComment = userPrivacy.getCanComment();
+        if("0".equals(canComment)){
+            //插入评论
+            BeanUtils.copyProperties(comment, commentEntity);
+            int insert = baseMapper.insert(commentEntity);
+            if (insert <= 0) {
+                return false;
+            }
+        } else if("1".equals(canComment)){
+            if(comment.getUserId() == comment.getAuthorId()){
+                //插入评论
+                BeanUtils.copyProperties(comment, commentEntity);
+                int insert = baseMapper.insert(commentEntity);
+                if (insert <= 0) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+            } else if(("2".equals(canComment))){//粉丝可评论
+                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+                f.eq(Follow::getFollowerId,comment.getUserId())
+                        .eq(Follow::getFollowingId,comment.getAuthorId());
+                Follow follow = followmapper.selectOne(f);
+                if(null == follow){
+                    return false;
+                }
+                BeanUtils.copyProperties(comment, commentEntity);
+                int insert = baseMapper.insert(commentEntity);
+                if (insert <= 0) {
+                    return false;
+                }
+            }
+
 
         //如果是回复，更新一级评论的 reply_count
         if (comment.getParentId() != 0) {

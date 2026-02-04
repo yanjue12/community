@@ -7,6 +7,7 @@ import com.fzg.model.Comment;
 import com.fzg.model.Result;
 import com.fzg.service.CommentService;
 import com.fzg.vo.CommentPageVO;
+import com.fzg.vo.CommentVO;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class CommentController {
     private Commentmapper commentmapper;
 
     @PostMapping("/add")
-    public Result add(@RequestBody Comment comment){
+    public Result add(@RequestBody CommentVO comment){
         if(null == comment || comment.getUserId() == null
         || comment.getArticleId() == null || StringUtils.isEmpty(comment.getContent())){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
