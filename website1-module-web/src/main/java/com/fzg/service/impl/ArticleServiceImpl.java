@@ -153,18 +153,16 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         ArticleDetailVO article = baseMapper.queryArticleDetails(articleId);
         log.info("查询文章详细--------------");
         log.info("文章详细：{}",JSON.toJSONString( article));
-        LambdaQueryWrapper<Comment> q = new LambdaQueryWrapper<>();
-        q.eq(Comment::getArticleId,articleId);
-        List<Comment> comments = commentmapper.selectList(q);
-        log.info("查询评论表--------------");
-        List<Comment> commentVOList = new ArrayList<>();
-        for (Comment comment : comments) {
-            commentVOList.add(comment);
-        }
-
-        article.setComment(commentVOList);
         log.info("判断是否能评论之前--------------");
         //文章浏览量 + 1，，如果同一id短时间多次访问，浏览量只 + 1
+
+        // 评论数：可以来自 article 表冗余字段，或者 count
+        Long commentCount = commentmapper.selectCount(
+                new LambdaQueryWrapper<Comment>()
+                        .eq(Comment::getArticleId, articleId)
+                        .eq(Comment::getStatus, 1)
+        );
+        article.setCommentCount(commentCount.intValue());
         //判断是否可评论
         LambdaQueryWrapper<UserPrivacy> l = new LambdaQueryWrapper<>();
         l.eq(UserPrivacy::getUserId,article.getAuthorId());

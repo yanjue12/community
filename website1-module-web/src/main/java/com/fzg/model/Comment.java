@@ -96,6 +96,8 @@ public class Comment implements Serializable {
 
     private String nickname;
     private String avatar;
+    private Long rootId;
+    private Integer replyCount;
 
     private static final long serialVersionUID = 1L;
 }
