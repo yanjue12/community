@@ -2,14 +2,17 @@ package com.fzg.controller.app;
 
 
 import com.fzg.enums.EnumReturn;
+import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.Commentmapper;
 import com.fzg.model.Comment;
 import com.fzg.model.Result;
 import com.fzg.service.CommentService;
 import com.fzg.vo.CommentPageVO;
 import com.fzg.vo.CommentVO;
+import com.fzg.vo.RootCommentVO;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,6 +22,8 @@ public class CommentController {
     private CommentService commentService;
     @Autowired
     private Commentmapper commentmapper;
+    @Autowired
+    private Articlemapper articlemapper;
 
     @PostMapping("/add")
     public Result add(@RequestBody CommentVO comment){
@@ -43,7 +48,7 @@ public class CommentController {
     public Result queryRootComList(@RequestParam Long articleId,
                                @RequestParam Long lastId, // 滚动游标
                                @RequestParam Integer size){
-        CommentPageVO commentPageVO = commentService.queryComList(articleId,lastId,size);
+        CommentPageVO<RootCommentVO> commentPageVO = commentService.queryComList(articleId,lastId,size);
 
         return Result.success(commentPageVO);
     }
@@ -56,8 +61,41 @@ public class CommentController {
     }
 
 
+    /**
+     * 评论删除 ： 作者可以删除任何评论 非作者只能删自己评论的
+     * @param commentVO
+     * @return
+     */
     @PostMapping("/delete")
-    public Result delete(@RequestBody Comment comment){
-        return Result.success("删除成功");
+    @Transactional(rollbackFor = Exception.class)
+    public Result delete(@RequestBody CommentVO commentVO){
+        if(null == commentVO || commentVO.getId() == null){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        Boolean b = false;
+        Comment comment = commentmapper.selectById(commentVO.getId());
+        if(null == comment || comment.getStatus().equals("0")){
+            return Result.fail(EnumReturn.OPERATION_FAIL);
+        }
+
+        //作者删除评论
+        if(commentVO.getAuthorId() == commentVO.getUserId()){
+            commentmapper.logicDeleteById(commentVO.getId());
+            articlemapper.decreComCount(commentVO.getArticleId());
+        }else{
+            //判断删除的是否是自己的评论
+            if(comment.getUserId() != commentVO.getUserId()){
+                b = false;
+            }else {
+                //是自己的删
+                commentmapper.logicDeleteById(commentVO.getId());
+                articlemapper.decreComCount(commentVO.getArticleId());
+            }
+        }
+        if (comment.getRootId() != null && comment.getRootId() > 0) {
+            comment.setReplyCount(comment.getReplyCount() - 1);
+            commentmapper.updateById(comment);
+        }
+        return Result.handle(b);
     }
 }

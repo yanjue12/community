@@ -10,7 +10,6 @@ import java.util.List;
 @Repository
 public interface Commentmapper extends BaseMapper<Comment> {
 
-    List<Comment> selectRootCommentPage(@Param("articleId") Long articleId, @Param("lastId") Long lastId, @Param("size") Integer size);
 
     List<Comment> selectChildCommentPage(
             @Param("rootId") Long rootId,
@@ -19,4 +18,12 @@ public interface Commentmapper extends BaseMapper<Comment> {
     );
 
     void incrementReplyCount(@Param("rootId") Long rootId);
+
+    void logicDeleteById(@Param("id") Long id);
+
+    List<Long> selectRootIdsForPage(@Param("articleId") Long articleId, @Param("lastId") Long lastId, @Param("size") int size);
+
+    List<Comment> selectRootsByIds(@Param("list") List<Long> rootIds);
+
+    Integer countChildByRootId(@Param("rootId") Long rootId);
 }

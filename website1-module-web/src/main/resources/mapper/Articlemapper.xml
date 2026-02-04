@@ -48,6 +48,11 @@
         set view_count = view_count + 1
         where id = #{articleId}
     </update>
+    <update id="decreComCount">
+        update article
+        set comment_count = comment_count - 1
+        where id = #{articleId}
+    </update>
 
 
     <select id="queryListByArticleType" resultType="com.fzg.vo.ArticleVO">

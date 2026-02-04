@@ -1,5 +1,6 @@
 package com.fzg.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.mapper.Commentmapper;
@@ -11,13 +12,19 @@ import com.fzg.service.CommentService;
 import com.fzg.service.UserPrivacyService;
 import com.fzg.vo.CommentPageVO;
 import com.fzg.vo.CommentVO;
+import com.fzg.vo.RootCommentVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> implements CommentService {
 
     @Autowired
@@ -103,18 +110,49 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
     }
 
     @Override
-    public CommentPageVO queryComList(Long articleId, Long lastId, Integer size) {
-        List<Comment> list = baseMapper.selectRootCommentPage(articleId, lastId, size);
-
-        CommentPageVO vo = new CommentPageVO();
-        vo.setList(list);
-
-        if (!list.isEmpty()) {
-            vo.setLastId(list.get(list.size() - 1).getId());
+    public CommentPageVO<RootCommentVO> queryComList(Long articleId, Long lastId, Integer size) {
+        // 1️⃣ 查应该出现的 rootId（关键）
+        List<Long> rootIds = baseMapper.selectRootIdsForPage(articleId, lastId, size + 1);
+        log.info("rootIds:{}", JSON.toJSONString(rootIds));
+        boolean hasMore = rootIds.size() > size;
+        if (hasMore) {
+            rootIds = rootIds.subList(0, size);
         }
 
-        vo.setHasMore(list.size() == size);
-        return vo;
+        // 2️⃣ 批量查一级评论（可能部分被删）
+        List<Comment> roots = baseMapper.selectRootsByIds(rootIds);
+        log.info("批量查出的一级评论");
+        Map<Long, Comment> rootMap = roots.stream()
+                .collect(Collectors.toMap(Comment::getId, c -> c));
+
+        // 3️⃣ 组装 VO
+        List<RootCommentVO> voList = new ArrayList<>();
+
+        for (Long rootId : rootIds) {
+            RootCommentVO vo = new RootCommentVO();
+            vo.setRootId(rootId);
+
+            Comment root = rootMap.get(rootId);
+            if (root == null || !"1".equals(root.getStatus())) {
+                vo.setRootDeleted(true);
+                vo.setRootComment(null);
+                vo.setReplyCount(
+                        baseMapper.countChildByRootId(rootId)
+                );
+            } else {
+                vo.setRootDeleted(false);
+                vo.setRootComment(root);
+                vo.setReplyCount(root.getReplyCount());
+            }
+
+            voList.add(vo);
+        }
+
+        CommentPageVO<RootCommentVO> page = new CommentPageVO<>();
+        page.setList(voList);
+        page.setHasMore(hasMore);
+        page.setLastId(rootIds.isEmpty() ? null : rootIds.get(rootIds.size() - 1));
+        return page;
     }
 
     @Override

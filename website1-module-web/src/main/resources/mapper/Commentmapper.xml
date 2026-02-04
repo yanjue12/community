@@ -6,19 +6,24 @@
         SET reply_count = reply_count + 1
         WHERE id = #{rootId}
     </update>
+    <update id="logicDeleteById">
+        update comment
+        SET status = '0'
+        WHERE id = #{id}
+    </update>
 
-    <select id="selectRootCommentPage" resultType="com.fzg.model.Comment">
-        SELECT *
-        FROM comment
-        WHERE article_id = #{articleId}
-        AND parent_id = 0
-        AND status = '1'
-        <if test="lastId != null and lastId != 0">
-            AND id &lt; #{lastId}
-        </if>
-        ORDER BY id DESC
-        LIMIT #{size}
-    </select>
+<!--    <select id="selectRootCommentPage" resultType="com.fzg.model.Comment">-->
+<!--        SELECT *-->
+<!--        FROM comment-->
+<!--        WHERE article_id = #{articleId}-->
+<!--        AND parent_id = 0-->
+<!--        AND status = '1'-->
+<!--        <if test="lastId != null and lastId != 0">-->
+<!--            AND id &lt; #{lastId}-->
+<!--        </if>-->
+<!--        ORDER BY id DESC-->
+<!--        LIMIT #{size}-->
+<!--    </select>-->
 
 
     <!-- 二级评论：某一级评论下 -->
@@ -33,5 +38,48 @@
         </if>
         ORDER BY id ASC
         LIMIT #{size}
+    </select>
+    <select id="selectRootIdsForPage" resultType="java.lang.Long">
+        SELECT rootId
+        FROM (
+        -- 1️⃣ 正常存在的一级评论
+        SELECT id AS rootId
+        FROM comment
+        WHERE article_id = #{articleId}
+        AND parent_id = 0
+        AND status = '1'
+        <if test="lastId != null and lastId != 0">
+            AND id &lt; #{lastId}
+        </if>
+
+        UNION ALL
+
+        -- 2️⃣ 被删除但仍有子评论的 root
+        SELECT DISTINCT root_id AS rootId
+        FROM comment
+        WHERE article_id = #{articleId}
+        AND root_id != 0
+        AND status = '1'
+        <if test="lastId != null and lastId != 0">
+            AND root_id &lt; #{lastId}
+        </if>
+        ) t
+        GROUP BY rootId
+        ORDER BY rootId DESC
+        LIMIT #{size}
+    </select>
+    <select id="selectRootsByIds" resultType="com.fzg.model.Comment">
+        SELECT *
+        FROM comment
+        WHERE id IN
+        <foreach collection="list" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+    <select id="countChildByRootId" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM comment
+        WHERE root_id = #{rootId}
+          AND status = '1'
     </select>
 </mapper>
