@@ -1,13 +1,13 @@
 package com.fzg.controller.app;
 
-import cn.dev33.satoken.annotation.SaCheckLogin;
-import cn.dev33.satoken.stp.StpUtil;
 import com.alibaba.fastjson2.JSON;
-import com.fzg.annotation.ArticleViewTrack;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
-import com.fzg.model.Article;
+import com.fzg.mapper.Followmapper;
+import com.fzg.model.Follow;
 import com.fzg.model.Result;
+import com.fzg.model.UserPrivacy;
 import com.fzg.service.*;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -36,6 +37,10 @@ public class ArticleController {
     private Articlemapper articlemapper;
     @Autowired
     private ArticleStatService articleStatService;
+    @Autowired
+    private UserPrivacyService userPrivacyService;
+    @Autowired
+    private Followmapper followmapper;
 
 
     /**
@@ -74,7 +79,7 @@ public class ArticleController {
         // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
-     /* 查询当前登录人发布的文章 个人主页作品展示
+     /* 查询发布的文章 个人主页作品展示
      * @param articleRequest
      * @return
      */
@@ -86,8 +91,51 @@ public class ArticleController {
 
         Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
         Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
-
-        List<ArticleVO> articleVOList = articlemapper.queryArticleByUserId(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+        List<ArticleVO> articleVOList = new ArrayList<>();
+        if(articleRequest.getUserId() == articleRequest.getAuthorId()){
+            //说明查看的是自己的主页作品
+            articleVOList = articlemapper.queryArticleByUserId(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+        } else {
+            //查看他人的主页作品 需要判断作者的隐私设置
+            LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
+            u.eq(UserPrivacy::getUserId,articleRequest.getAuthorId());
+            UserPrivacy userPrivacy = userPrivacyService.getOne(u);
+            String artvis = userPrivacy.getArticleVisibility();
+            //判断隐私权限
+            if("0".equals(artvis)){
+                articleVOList = articlemapper.queryArticleByUserId(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
+            }else if("1".equals(artvis)){
+                //私密
+                return Result.success(articleVOList);
+            }else if("2".equals(artvis)){
+                //粉丝可见
+                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+                f.eq(Follow::getFollowerId,articleRequest.getUserId())
+                 .eq(Follow::getFollowingId,articleRequest.getAuthorId());
+                Follow follow = followmapper.selectOne(f);
+                if(null == follow){
+                    return Result.success(articleVOList);
+                }
+                articleVOList = articlemapper.queryArticleByUserId(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
+            }else if("3".equals(artvis)){
+                //互相关注
+                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+                f.eq(Follow::getFollowerId,articleRequest.getUserId())
+                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
+                Follow follow = followmapper.selectOne(f);
+                if(null == follow){
+                    return Result.success(articleVOList);
+                }
+                f.clear();
+                f.eq(Follow::getFollowerId,articleRequest.getAuthorId())
+                        .eq(Follow::getFollowingId,articleRequest.getUserId());
+                Follow follow2 = followmapper.selectOne(f);
+                if(null == follow2){
+                    return Result.success(articleVOList);
+                }
+                articleVOList = articlemapper.queryArticleByUserId(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
+            }
+        }
 
         return Result.success(articleVOList);
     }
@@ -105,8 +153,51 @@ public class ArticleController {
 
         Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
         Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
-        List<ArticleVO> articleVOList = articleService.queryArtLikeById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
 
+        List<ArticleVO> articleVOList = new ArrayList<>();
+        if(articleRequest.getUserId() == articleRequest.getAuthorId()){
+            //说明查看的是自己的主页作品
+            articleVOList = articlemapper.queryArtLikeById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+        } else {
+            //查看他人的主页作品 需要判断作者的隐私设置
+            LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
+            u.eq(UserPrivacy::getUserId, articleRequest.getAuthorId());
+            UserPrivacy userPrivacy = userPrivacyService.getOne(u);
+            String artvis = userPrivacy.getArticleVisibility();
+            if("0".equals(artvis)){
+                articleVOList = articlemapper.queryArtLikeById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
+            }else if("1".equals(artvis)){
+                //私密
+                return Result.success(articleVOList);
+            }else if("2".equals(artvis)){
+                //粉丝可见
+                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+                f.eq(Follow::getFollowerId,articleRequest.getUserId())
+                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
+                Follow follow = followmapper.selectOne(f);
+                if(null == follow){
+                    return Result.success(articleVOList);
+                }
+                articleVOList = articlemapper.queryArtLikeById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
+            }else if("3".equals(artvis)){
+                //互相关注
+                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+                f.eq(Follow::getFollowerId,articleRequest.getUserId())
+                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
+                Follow follow = followmapper.selectOne(f);
+                if(null == follow){
+                    return Result.success(articleVOList);
+                }
+                f.clear();
+                f.eq(Follow::getFollowerId,articleRequest.getAuthorId())
+                        .eq(Follow::getFollowingId,articleRequest.getUserId());
+                Follow follow2 = followmapper.selectOne(f);
+                if(null == follow2){
+                    return Result.success(articleVOList);
+                }
+                articleVOList = articlemapper.queryArtLikeById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
+            }
+        }
 
         return Result.success(articleVOList);
     }
@@ -124,7 +215,50 @@ public class ArticleController {
         Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
         Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
 
-        List<ArticleVO> articleVOList = articleService.queryFavoriteArtById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+        List<ArticleVO> articleVOList = new ArrayList<>();
+        if(articleRequest.getUserId() == articleRequest.getAuthorId()){
+            //说明查看的是自己的主页作品
+            articleVOList = articleService.queryFavoriteArtById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+        } else {
+            //查看他人的主页作品 需要判断作者的隐私设置
+            LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
+            u.eq(UserPrivacy::getUserId, articleRequest.getAuthorId());
+            UserPrivacy userPrivacy = userPrivacyService.getOne(u);
+            String artvis = userPrivacy.getArticleVisibility();
+            if("0".equals(artvis)){
+                articleVOList = articleService.queryFavoriteArtById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
+            }else if("1".equals(artvis)){
+                //私密
+                return Result.success(articleVOList);
+            }else if("2".equals(artvis)){
+                //粉丝可见
+                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+                f.eq(Follow::getFollowerId,articleRequest.getUserId())
+                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
+                Follow follow = followmapper.selectOne(f);
+                if(null == follow){
+                    return Result.success(articleVOList);
+                }
+                articleVOList = articleService.queryFavoriteArtById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
+            }else if("3".equals(artvis)){
+                //互相关注
+                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+                f.eq(Follow::getFollowerId,articleRequest.getUserId())
+                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
+                Follow follow = followmapper.selectOne(f);
+                if(null == follow){
+                    return Result.success(articleVOList);
+                }
+                f.clear();
+                f.eq(Follow::getFollowerId,articleRequest.getAuthorId())
+                        .eq(Follow::getFollowingId,articleRequest.getUserId());
+                Follow follow2 = followmapper.selectOne(f);
+                if(null == follow2){
+                    return Result.success(articleVOList);
+                }
+                articleVOList = articleService.queryFavoriteArtById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
+            }
+        }
 
         return Result.success(articleVOList);
     }
