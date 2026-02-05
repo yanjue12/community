@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fzg.constant.RedisFollowKey;
 import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
+import com.fzg.mapper.Articlemapper;
 import com.fzg.model.Article;
 import com.fzg.model.Result;
 import com.fzg.model.User;
@@ -38,6 +39,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserPrivacyService userPrivacyService;
+    private final Articlemapper articlemapper;
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -63,10 +65,21 @@ public class UserController {
         if(null == upSetVO || null == upSetVO.getUserId()){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
-        LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
-        u.eq(UserPrivacy::getUserId, upSetVO.getUserId());
-        UserPrivacy userPrivacy = userPrivacyService.getOne(u);
-        return Result.success(userPrivacy);
+        UserPrivacy userPrivacy;
+        Article article;
+        if("ALL".equals(upSetVO.getFlag())){
+            LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
+            u.eq(UserPrivacy::getUserId, upSetVO.getUserId());
+            userPrivacy = userPrivacyService.getOne(u);
+            return Result.success(userPrivacy);
+        }else if("MONOMER".equals(upSetVO.getFlag())){
+            article = articlemapper.selectById(upSetVO.getArticleId());
+            if(null == article){
+                return Result.fail(EnumReturn.valueOf("文章不存在"));
+            }
+            return Result.success(article);
+        }
+        return Result.fail(EnumReturn.valueOf("入参flag传递错误"));
     }
 
 

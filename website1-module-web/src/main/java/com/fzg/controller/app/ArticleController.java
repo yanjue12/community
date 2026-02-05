@@ -94,7 +94,7 @@ public class ArticleController {
         List<ArticleVO> articleVOList = new ArrayList<>();
         if(articleRequest.getUserId() == articleRequest.getAuthorId()){
             //说明查看的是自己的主页作品
-            articleVOList = articlemapper.queryArticleByUserId(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+            articleVOList = articlemapper.querySelfArticleByUserId(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
         } else {
             //查看他人的主页作品 需要判断作者的隐私设置
             LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();

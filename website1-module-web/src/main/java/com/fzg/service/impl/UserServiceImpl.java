@@ -12,9 +12,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
+import com.fzg.mapper.UserPrivacyMapper;
 import com.fzg.model.Article;
 import com.fzg.model.Result;
 import com.fzg.model.User;
+import com.fzg.model.UserPrivacy;
+import com.fzg.service.UserPrivacyService;
 import com.fzg.service.UserService;
 import com.fzg.mapper.UserMapper;
 import com.fzg.util.UserUtil;
@@ -59,6 +62,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private UserMapper userMapper;
     @Autowired
     private Articlemapper articlemapper;
+    @Autowired
+    private UserPrivacyMapper userPrivacyMapper;
+    @Autowired
+    private UserPrivacyService userPrivacyService;
 
 
     /**
@@ -69,33 +76,32 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public Boolean updatePrivateSetting(UpdatePrivateSettingVO upPriSetVO) {
         log.info("UserServiceImpl.updatePrivateSetting开始修改隐私设置");
-//        Article article = new Article();
-//        if(upPriSetVO.getAllArticle().equals("1")){
-//            //单独文章，
-//            if(null == upPriSetVO.getArticleId()){
-//                return false;
-//            }
-//            article.setId(upPriSetVO.getArticleId());
-//            article.setUserId(upPriSetVO.getUserId());
-//            article.setVisibility(upPriSetVO.getVisibility());
-//            article.setIsCommentable(upPriSetVO.getIsCommentable());
-//            return articlemapper.updateById(article) > 0;
-//        }
-//        //设置隐私为隐藏了，所有文章都是私密
-//        LambdaQueryWrapper<Article> q = new LambdaQueryWrapper<>();
-//        q.eq(Article::getUserId,upPriSetVO.getUserId());
-//        List<Article> articles = articlemapper.selectList(q);
-//        if(!CollectionUtils.isEmpty(articles)){
-//            List<Long> articleUserIds = new ArrayList<>();
-//            for (Article a : articles) {
-//                a.setVisibility("1");
-//                articleUserIds.add(a.getUserId());
-//            }
-//            return articlemapper.updateBatchById(articleUserIds) > 0;
-//        }
 
+        Boolean b = false;
+        //懒得搞字典，直接弄 ALL为全局设置
+        if("ALL".equals(upPriSetVO.getFlag())){
+            b = userPrivacyService.updateById(upPriSetVO);
+        }else if("MONOMER".equals(upPriSetVO.getFlag())){
+            //修改单篇文章设置
+            if(null == upPriSetVO.getArticleId()){
+                log.error("入参文章id为空");
+                return false;
+            }
+            LambdaQueryWrapper<Article> a = new LambdaQueryWrapper<>();
+            a.eq(Article::getId,upPriSetVO.getArticleId())
+                    .eq(Article::getUserId,upPriSetVO.getUserId());
+            Article article = articlemapper.selectOne(a);
+            if(null == article){
+                log.error("文章查询出为空");
+                return false;
+            }
+            article.setVisibility(upPriSetVO.getArticleVisibility());
+            article.setIsCommentable(upPriSetVO.getCanComment());
+            article.setIsRecommend(upPriSetVO.getAllowRecommendation());
+            b = articlemapper.updateById(article) > 0;
+        }
 
-        return null;
+        return b;
     }
 
 
