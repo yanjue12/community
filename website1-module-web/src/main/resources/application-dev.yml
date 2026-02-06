@@ -66,6 +66,8 @@ spring:
     #            required: true
     protocol: smtp
 
+  elasticsearch:
+    uris: http://localhost:9200
 
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
