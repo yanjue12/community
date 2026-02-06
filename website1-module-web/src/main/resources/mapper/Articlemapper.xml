@@ -377,6 +377,14 @@
             limit #{pageSize} offset #{offset}
 
     </select>
+    <select id="selectArticlesByIds" resultType="com.fzg.vo.ArticleVO">
+        SELECT *
+        FROM article
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
 
 
 </mapper>

@@ -47,4 +47,6 @@ public interface Articlemapper extends BaseMapper<Article> {
     int decreComCount(@Param("articleId") Long articleId);
 
     List<ArticleVO> querySelfArticleByUserId(@Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
+
+    List<ArticleVO> selectArticlesByIds(@Param("ids") List<Long> articleIds);
 }

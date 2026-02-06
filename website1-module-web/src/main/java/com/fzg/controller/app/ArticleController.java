@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.Followmapper;
+import com.fzg.model.ArticleEs;
 import com.fzg.model.Follow;
 import com.fzg.model.Result;
 import com.fzg.model.UserPrivacy;
@@ -13,6 +14,8 @@ import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -41,6 +44,8 @@ public class ArticleController {
     private UserPrivacyService userPrivacyService;
     @Autowired
     private Followmapper followmapper;
+    @Autowired
+    private ElasticsearchRestTemplate elasticsearchRestTemplate;
 
 
     /**
@@ -299,15 +304,21 @@ public class ArticleController {
     }
 
     @PostMapping("deleteArt")
+    @Transactional
     public Result deleteArt(@RequestBody ArticleRequest articleRequest){
         //StpUtil.checkLogin();
         if(null == articleRequest){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
+        Long articleId = articleRequest.getArticleId();
+        if(null == articleId){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        int b = articlemapper.deleteById(articleId);
+        // 2. ES 删除
+        elasticsearchRestTemplate.delete(articleId.toString(), ArticleEs.class);
 
-        int b = articlemapper.deleteById(articleRequest.getArticleId());
-
-        return b > 0 ? Result.success(true) : Result.fail(EnumReturn.OPERATION_FAIL);
+        return Result.handle(b > 0);
     }
 
 
@@ -356,7 +367,7 @@ public class ArticleController {
         if(StringUtils.isEmpty(searchRequset.getType())){
             return Result.fail(EnumReturn.QUERY_PARAM_EMPTY);
         }
-        ResultSearchVO searchVO = articleService.search(searchRequset);
+        ResultSearchVO searchVO = articleService.searchArticleByEs(searchRequset);
 
         return Result.success(searchVO);
     }

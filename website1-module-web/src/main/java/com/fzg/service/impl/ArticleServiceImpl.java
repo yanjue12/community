@@ -11,9 +11,15 @@ import com.fzg.model.*;
 import com.fzg.service.ArticleService;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +51,9 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private UserPrivacyMapper  userPrivacyMapper;
     @Autowired
     private Followmapper followmapper;
+    @Autowired
+    private ElasticsearchRestTemplate elasticsearchRestTemplate;
+
 
 
     /**
@@ -285,29 +294,79 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         return searchSuggestions;
     }
 
+
+
+
     @Override
-    public ResultSearchVO search(ArticleRequest searchRequset) {
+    public ResultSearchVO searchArticleByEs(ArticleRequest searchRequset) {
+
         String keyword = searchRequset.getType();
         Integer pageNum = searchRequset.getPageNum() == null ? 1 : searchRequset.getPageNum();
         Integer pageSize = searchRequset.getPageSize() == null ? 10 : searchRequset.getPageSize();
         Long userId = searchRequset.getUserId();
-        //分组 三个维度 文章：标题和简介，，用户：昵称和用户名，，标签：标签名并反查文章
-        ResultSearchVO resultSearchVO = new ResultSearchVO();
-        //文章标题和简介
-        List<ArticleVO> articlesByTitle =
-                baseMapper.searchByTitle(keyword, pageSize, (pageNum-1)  * pageSize);
-        resultSearchVO.setArticles(articlesByTitle);
 
-        //文章：标签命中（反查文章）
-        List<ArticleVO> articlesByTag =
-                baseMapper.searchByTag(keyword, pageSize, (pageNum-1)  * pageSize);
-        resultSearchVO.setArticlesByTag(articlesByTag);
+        ResultSearchVO result = new ResultSearchVO();
+        int offset = (pageNum - 1) * pageSize;
 
-        //用户昵称
-        List<UserVO> users = baseMapper.searchByName(keyword,userId, pageSize, (pageNum-1)  * pageSize);
-        resultSearchVO.setUsers(users);
+    /* =========================
+        文章：标题 + 内容（ES）
+       ========================= */
+        BoolQueryBuilder articleQuery = QueryBuilders.boolQuery()
+                .should(QueryBuilders.matchQuery("title", keyword).boost(3f))
+                .should(QueryBuilders.matchQuery("content", keyword))
+                .minimumShouldMatch(1);
 
-        return resultSearchVO;
+
+        NativeSearchQuery articleSearch = new NativeSearchQueryBuilder()
+                .withQuery(articleQuery)
+                .withPageable(PageRequest.of(pageNum - 1, pageSize))
+                .build();
+
+        List<Long> articleIds = elasticsearchRestTemplate
+                .search(articleSearch, ArticleEs.class)
+                .stream()
+                .map(hit -> hit.getContent().getId())
+                .collect(Collectors.toList());
+
+        if (!articleIds.isEmpty()) {
+            List<ArticleVO> articles =
+                    baseMapper.selectArticlesByIds(articleIds);
+            result.setArticles(articles);
+        } else {
+            result.setArticles(Collections.emptyList());
+        }
+
+    /* =========================
+        文章：标签命中（ES）
+       ========================= */
+        NativeSearchQuery tagSearch = new NativeSearchQueryBuilder()
+                .withQuery(QueryBuilders.termQuery("tags", keyword))
+                .withPageable(PageRequest.of(pageNum - 1, pageSize))
+                .build();
+
+        List<Long> tagArticleIds = elasticsearchRestTemplate
+                .search(tagSearch, ArticleEs.class)
+                .stream()
+                .map(hit -> hit.getContent().getId())
+                .collect(Collectors.toList());
+
+        if (!tagArticleIds.isEmpty()) {
+            List<ArticleVO> articlesByTag =
+                    baseMapper.selectArticlesByIds(tagArticleIds);
+            result.setArticlesByTag(articlesByTag);
+        } else {
+            result.setArticlesByTag(Collections.emptyList());
+        }
+
+    /* =========================
+         用户：仍然 MySQL
+       ========================= */
+        List<UserVO> users =
+                baseMapper.searchByName(keyword, userId, pageSize, offset);
+        result.setUsers(users);
+
+        return result;
     }
+
 
 }

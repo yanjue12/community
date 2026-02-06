@@ -21,7 +21,7 @@ public interface ArticleService extends IService<Article> {
      */
     List<String> searchSuggestions();
 
-    ResultSearchVO search(ArticleRequest searchRequset);
+    ResultSearchVO searchArticleByEs(ArticleRequest searchRequset);
 
     ArticleDetailVO queryArticleDetails(ArticleRequest articleRequest);
 
@@ -31,4 +31,5 @@ public interface ArticleService extends IService<Article> {
     List<ArticleVO> queryArtLikeById(Long userId, Integer pageSize, Integer offset);
 
     List<ArticleVO> queryFavoriteArtById(Long userId, Integer pageSize, Integer offset);
+
 }
