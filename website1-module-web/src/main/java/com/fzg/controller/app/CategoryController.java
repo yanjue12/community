@@ -23,7 +23,8 @@ public class CategoryController {
     @PostMapping("/list")
     public Result queryCategory(){
         LambdaQueryWrapper<Category> q = new LambdaQueryWrapper<>();
-        q.eq(Category::getStatus,"1");
+        q.eq(Category::getStatus,"1")
+                .eq(Category::getParentId,0L);
         List<Category> categories = categorymapper.selectList(q);
         return Result.success(categories);
     }
