@@ -11,6 +11,7 @@ import com.fzg.model.Result;
 import com.fzg.model.UserPrivacy;
 import com.fzg.service.*;
 import com.fzg.vo.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -359,7 +360,7 @@ public class ArticleController {
     }
 
     /**
-     * 首页搜索：文章标题模糊，，用户昵称模糊，标签模糊，结果分组后返回，type为条件
+     * 首页搜索：文章标题内容，，用户昵称模糊，标签，结果分组后返回，type为条件
      * @param
      * @return
      */
@@ -381,6 +382,7 @@ public class ArticleController {
      * @return
      */
     @PostMapping("/search/suggestions")
+    @Schema(description = "搜索框内随机内容展示")
     public Result searchSuggestions(){
 
         List<String> searchSuggestions = articleService.searchSuggestions();
@@ -395,6 +397,7 @@ public class ArticleController {
 
 
     @PostMapping("/like")
+    @Schema(description = "获取点赞列表")
     public Result like(@RequestBody LikeRequest likeRequest){
         if(null == likeRequest){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);

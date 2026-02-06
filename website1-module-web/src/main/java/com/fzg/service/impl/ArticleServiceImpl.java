@@ -11,6 +11,7 @@ import com.fzg.model.*;
 import com.fzg.service.ArticleService;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.springframework.beans.BeanUtils;
@@ -315,14 +316,17 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     /* =========================
         文章：标题 + 内容（ES）
        ========================= */
-        BoolQueryBuilder articleQuery = QueryBuilders.boolQuery()
-                .should(QueryBuilders.matchQuery("title", keyword).boost(3f))
-                .should(QueryBuilders.matchQuery("content", keyword))
+        BoolQueryBuilder query = QueryBuilders.boolQuery()
+                .should(QueryBuilders.multiMatchQuery(keyword, "title^5", "content"))
+                .should(QueryBuilders.multiMatchQuery(keyword, "title^3", "content")
+                        .fuzziness(Fuzziness.AUTO))
                 .minimumShouldMatch(1);
 
 
+
+
         NativeSearchQuery articleSearch = new NativeSearchQueryBuilder()
-                .withQuery(articleQuery)
+                .withQuery(query)
                 .withPageable(PageRequest.of(pageNum - 1, pageSize))
                 .build();
 
