@@ -1,6 +1,7 @@
 package com.fzg.model;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -33,6 +34,12 @@ public class ArticleTagRelation implements Serializable {
      * 创建时间
      */
     private Date createdAt;
+
+    private Integer hitCount;//命中次数
+    private BigDecimal density;//密度
+    private BigDecimal score;//成立评分
+    private String source;//1系统生成 2用户补充
+    private String confirmed;//是否人工确认
 
     private static final long serialVersionUID = 1L;
 }
