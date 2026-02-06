@@ -3,9 +3,12 @@ package com.fzg.model;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
  * 审核历史表
@@ -16,6 +19,8 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("audit_log") // MyBatis-Plus表名映射，非MP可删除
+@AllArgsConstructor
+@NoArgsConstructor
 public class AuditLog {
 
     /**
@@ -47,7 +52,19 @@ public class AuditLog {
     /**
      * 创建时间（操作执行时间）
      */
-    private LocalDateTime createdAt;
+    private Date createdAt;
+
+
+    public AuditLog(Long auditId,
+                    Byte action,
+                    Long auditorId,
+                    String reason) {
+        this.auditId = auditId;
+        this.action = action;
+        this.auditorId = auditorId;
+        this.reason = reason;
+        this.createdAt = new Date();
+    }
 
     // 推荐：内置操作类型常量，避免代码硬编码魔法数字
     public static class ActionType {

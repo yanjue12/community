@@ -17,6 +17,7 @@ import com.fzg.model.Article;
 import com.fzg.model.Result;
 import com.fzg.model.User;
 import com.fzg.model.UserPrivacy;
+import com.fzg.service.AuditRecordService;
 import com.fzg.service.UserPrivacyService;
 import com.fzg.service.UserService;
 import com.fzg.mapper.UserMapper;
@@ -66,6 +67,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private UserPrivacyMapper userPrivacyMapper;
     @Autowired
     private UserPrivacyService userPrivacyService;
+    @Autowired
+    private AuditRecordService auditRecordService;
 
 
     /**
@@ -106,10 +109,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean publishArticle(Article articleVO) {
         log.info("UserServiceImpl.publishArticle开始发布文章");
-        articleVO.setStatus("2");
-        int insert = articlemapper.insert(articleVO);
+        int insert = 0;
+        try {
+            articleVO.setStatus("2");
+            insert = articlemapper.insert(articleVO);
+
+            // 2. 创建审核记录
+            auditRecordService.createAudit(articleVO.getId());
+
+            // 3. 立即执行自动审核（同步）
+            auditRecordService.autoAudit(articleVO);
+        } catch (Exception e) {
+            log.error("UserServiceImpl.publishArticle发布文章异常",e);
+            throw new RuntimeException(e);
+        }
+
         return insert > 0;
     }
 
