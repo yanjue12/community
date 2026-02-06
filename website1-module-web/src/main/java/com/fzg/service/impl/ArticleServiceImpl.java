@@ -128,6 +128,10 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     @Override
     public List<ArticleVO> queryFavoriteArtById(Long userId, Integer pageSize, Integer offset) {
         List<ArticleVO> articleVOList = baseMapper.queryArtFavById(userId,pageSize,offset);
+        log.info("查询收藏列表大小：{}",articleVOList.size());
+        if(articleVOList.isEmpty()){
+            return articleVOList;
+        }
         List<Long> articleIds = articleVOList.stream().map(ArticleVO::getId).collect(Collectors.toList());
 
         //优先从redis获取点赞 收藏 状态
