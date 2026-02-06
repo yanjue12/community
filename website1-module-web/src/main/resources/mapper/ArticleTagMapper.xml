@@ -5,4 +5,9 @@
     <select id="queryHotTags" resultType="com.fzg.model.ArticleTag">
         SELECT * FROM article_tag ORDER BY article_count DESC LIMIT 10
     </select>
+    <select id="listTagNamesByArticleId" resultType="java.lang.String">
+        select att.name from article_tag att
+        join article_tag_relation atr on att.id = atr.tag_id
+        where atr.article_id = #{id}
+    </select>
 </mapper>

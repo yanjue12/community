@@ -12,5 +12,8 @@ import java.util.List;
 public class ArticleTagServiceImpl extends ServiceImpl<ArticleTagMapper, ArticleTag> implements ArticleTagService {
 
 
-
+    @Override
+    public List<String> listTagNamesByArticleId(Long id) {
+        return baseMapper.listTagNamesByArticleId(id);
+    }
 }

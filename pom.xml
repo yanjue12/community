@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.6.3</version>
+        <version>2.7.6</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>org.fzg</groupId>
@@ -96,10 +96,6 @@
                 <version>${druid.version}</version>
             </dependency>
             <!-- Spring Data Elasticsearch -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
-            </dependency>
 
             <!--第三方工具类库hutool-->
             <dependency>
