@@ -105,6 +105,9 @@ public class ArticleController {
             LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
             u.eq(UserPrivacy::getUserId,articleRequest.getAuthorId());
             UserPrivacy userPrivacy = userPrivacyService.getOne(u);
+            if(null == userPrivacy){
+                return Result.success(articleVOList);
+            }
             String artvis = userPrivacy.getArticleVisibility();
             //判断隐私权限
             if("0".equals(artvis)){
@@ -150,7 +153,7 @@ public class ArticleController {
      * @param articleRequest
      * @return
      */
-    @PostMapping("queryLikeArtById")
+    @PostMapping("/queryLikeArtById")
     public Result queryArtLikeById(@RequestBody ArticleRequest articleRequest){
         if(null == articleRequest){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
@@ -212,7 +215,7 @@ public class ArticleController {
      * @param articleRequest
      * @return
      */
-    @PostMapping("queryFavArtById")
+    @PostMapping("/queryFavArtById")
     public Result queryFavoriteArtById(@RequestBody ArticleRequest articleRequest){
         if(null == articleRequest){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
@@ -224,6 +227,7 @@ public class ArticleController {
         if(articleRequest.getUserId() == articleRequest.getAuthorId()){
             //说明查看的是自己的主页作品
             articleVOList = articleService.queryFavoriteArtById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
+            log.info("查询收藏列表大小:{}",articleVOList.size());
         } else {
             //查看他人的主页作品 需要判断作者的隐私设置
             LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
@@ -303,7 +307,7 @@ public class ArticleController {
         return b ? Result.success(true) : Result.fail(EnumReturn.OPERATION_FAIL);
     }
 
-    @PostMapping("deleteArt")
+    @PostMapping("/deleteArt")
     @Transactional
     public Result deleteArt(@RequestBody ArticleRequest articleRequest){
         //StpUtil.checkLogin();
@@ -376,7 +380,7 @@ public class ArticleController {
      * 搜索框内随机内容展示
      * @return
      */
-    @PostMapping("search/suggestions")
+    @PostMapping("/search/suggestions")
     public Result searchSuggestions(){
 
         List<String> searchSuggestions = articleService.searchSuggestions();
