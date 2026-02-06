@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -118,9 +119,23 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
         if (hasMore) {
             rootIds = rootIds.subList(0, size);
         }
+        if(CollectionUtils.isEmpty(rootIds)){
+            CommentPageVO<RootCommentVO> page = new CommentPageVO<>();
+            page.setHasMore(hasMore);
+            page.setList(new ArrayList<>());
+            page.setLastId(0L);
+            return page;
+        }
 
         // 2️⃣ 批量查一级评论（可能部分被删）
         List<Comment> roots = baseMapper.selectRootsByIds(rootIds);
+        if(CollectionUtils.isEmpty( roots)){
+            CommentPageVO<RootCommentVO> page = new CommentPageVO<>();
+            page.setHasMore(hasMore);
+            page.setList(new ArrayList<>());
+            page.setLastId(0L);
+            return page;
+        }
         log.info("批量查出的一级评论");
         Map<Long, Comment> rootMap = roots.stream()
                 .collect(Collectors.toMap(Comment::getId, c -> c));
