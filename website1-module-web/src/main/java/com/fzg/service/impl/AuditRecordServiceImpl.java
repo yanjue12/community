@@ -64,7 +64,7 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
         }
 
         //1.敏感词检测
-        String hitWord = sensitiveService.hit(article.getTitle() + article.getContent());
+        String hitWord = sensitiveService.hit(article.getTitle() , article.getContent());
         if (hitWord != null) {
             doReject(record, article, "命中敏感词：" + hitWord, true);
             return;
