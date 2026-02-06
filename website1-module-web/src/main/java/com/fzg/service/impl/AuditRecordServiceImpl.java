@@ -11,6 +11,7 @@ import com.fzg.model.AuditRecord;
 import com.fzg.service.ArticleTagService;
 import com.fzg.service.AuditRecordService;
 import com.fzg.service.SensitiveService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
@@ -23,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 
 @Service
+@Slf4j
 public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, AuditRecord> implements AuditRecordService{
 
 
@@ -123,7 +125,7 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
         );
 
         List<String> tags = articleTagService.listTagNamesByArticleId(article.getId());
-
+        log.info("开始同步es");
         // 同步 ES（唯一入口）
         elasticsearchRestTemplate.save(ArticleEsConverter.toEs(article, tags));
     }

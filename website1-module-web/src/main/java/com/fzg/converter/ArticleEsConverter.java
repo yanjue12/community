@@ -6,6 +6,7 @@ import com.fzg.model.ArticleEs;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
+import java.util.Optional;
 
 public final class ArticleEsConverter {
 
@@ -30,8 +31,9 @@ public final class ArticleEsConverter {
         }
 
         es.setUserId(article.getUserId());
-        es.setViewCount(Long.valueOf(article.getViewCount()));
-        es.setLikeCount(Long.valueOf(article.getLikeCount()));
+        // 使用 Optional.ofNullable 处理可能的空值
+        es.setViewCount(Optional.ofNullable(article.getViewCount()).map(Long::valueOf).orElse(0L));
+        es.setLikeCount(Optional.ofNullable(article.getLikeCount()).map(Long::valueOf).orElse(0L));
 
         // 时间字段：LocalDateTime
         if (article.getCreatedAt() != null) {
