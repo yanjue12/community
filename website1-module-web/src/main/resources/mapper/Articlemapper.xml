@@ -247,6 +247,7 @@
                a.type,a.published_at as updatedTime,a.view_count as viewCount,
                a.like_count as likeCount,a.comment_count as commentCount,
                a.share_count as shareCount,a.collect_count as collectCount,
+               a.updated_at as updatedAt,a.publishd_at as publishedAt,
                u.id as userId, u.nickname as nickName,
                u.avatar as avatar,
                c.name as categoryName,
