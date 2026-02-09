@@ -2,6 +2,7 @@ package com.fzg.controller.app;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fzg.enums.ArticleListType;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.Followmapper;
@@ -77,201 +78,35 @@ public class ArticleController {
 
 
 
-        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        // @@@@@@@@@@@           个人主页数据请求            @@@@@@@@@@@@@@@@@@@@
-        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-
-     /* 查询发布的文章 个人主页作品展示
-     * @param articleRequest
-     * @return
-     */
     @PostMapping("/queryArticleById")
-    public Result queryArticleById(@RequestBody ArticleRequest articleRequest){
-        if(null == articleRequest){
-            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
-        }
-
-        Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
-        Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
-        List<ArticleVO> articleVOList = new ArrayList<>();
-        if(articleRequest.getUserId() == articleRequest.getAuthorId()){
-            //说明查看的是自己的主页作品
-            articleVOList = articlemapper.querySelfArticleByUserId(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
-        } else {
-            //查看他人的主页作品 需要判断作者的隐私设置
-            LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
-            u.eq(UserPrivacy::getUserId,articleRequest.getAuthorId());
-            UserPrivacy userPrivacy = userPrivacyService.getOne(u);
-            if(null == userPrivacy){
-                return Result.success(articleVOList);
-            }
-            String artvis = userPrivacy.getArticleVisibility();
-            //判断隐私权限
-            if("0".equals(artvis)){
-                articleVOList = articlemapper.queryArticleByUserId(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
-            }else if("1".equals(artvis)){
-                //私密
-                return Result.success(articleVOList);
-            }else if("2".equals(artvis)){
-                //粉丝可见
-                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
-                f.eq(Follow::getFollowerId,articleRequest.getUserId())
-                 .eq(Follow::getFollowingId,articleRequest.getAuthorId());
-                Follow follow = followmapper.selectOne(f);
-                if(null == follow){
-                    return Result.success(articleVOList);
-                }
-                articleVOList = articlemapper.queryArticleByUserId(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
-            }else if("3".equals(artvis)){
-                //互相关注
-                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
-                f.eq(Follow::getFollowerId,articleRequest.getUserId())
-                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
-                Follow follow = followmapper.selectOne(f);
-                if(null == follow){
-                    return Result.success(articleVOList);
-                }
-                f.clear();
-                f.eq(Follow::getFollowerId,articleRequest.getAuthorId())
-                        .eq(Follow::getFollowingId,articleRequest.getUserId());
-                Follow follow2 = followmapper.selectOne(f);
-                if(null == follow2){
-                    return Result.success(articleVOList);
-                }
-                articleVOList = articlemapper.queryArticleByUserId(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
-            }
-        }
-
-        return Result.success(articleVOList);
+    @Schema(description = "查询发布的文章")
+    public Result queryArticleById(@RequestBody ArticleRequest req) {
+        return Result.success(
+                articleService.queryWithVisibility(req, ArticleListType.PUBLISH)
+        );
     }
 
-    /**
-     * 查询用户喜欢列表
-     * @param articleRequest
-     * @return
-     */
     @PostMapping("/queryLikeArtById")
-    public Result queryArtLikeById(@RequestBody ArticleRequest articleRequest){
-        if(null == articleRequest){
-            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
-        }
-
-        Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
-        Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
-
-        List<ArticleVO> articleVOList = new ArrayList<>();
-        if(articleRequest.getUserId() == articleRequest.getAuthorId()){
-            //说明查看的是自己的主页作品
-            articleVOList = articlemapper.queryArtLikeById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
-        } else {
-            //查看他人的主页作品 需要判断作者的隐私设置
-            LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
-            u.eq(UserPrivacy::getUserId, articleRequest.getAuthorId());
-            UserPrivacy userPrivacy = userPrivacyService.getOne(u);
-            String artvis = userPrivacy.getArticleVisibility();
-            if("0".equals(artvis)){
-                articleVOList = articlemapper.queryArtLikeById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
-            }else if("1".equals(artvis)){
-                //私密
-                return Result.success(articleVOList);
-            }else if("2".equals(artvis)){
-                //粉丝可见
-                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
-                f.eq(Follow::getFollowerId,articleRequest.getUserId())
-                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
-                Follow follow = followmapper.selectOne(f);
-                if(null == follow){
-                    return Result.success(articleVOList);
-                }
-                articleVOList = articlemapper.queryArtLikeById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
-            }else if("3".equals(artvis)){
-                //互相关注
-                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
-                f.eq(Follow::getFollowerId,articleRequest.getUserId())
-                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
-                Follow follow = followmapper.selectOne(f);
-                if(null == follow){
-                    return Result.success(articleVOList);
-                }
-                f.clear();
-                f.eq(Follow::getFollowerId,articleRequest.getAuthorId())
-                        .eq(Follow::getFollowingId,articleRequest.getUserId());
-                Follow follow2 = followmapper.selectOne(f);
-                if(null == follow2){
-                    return Result.success(articleVOList);
-                }
-                articleVOList = articlemapper.queryArtLikeById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
-            }
-        }
-
-        return Result.success(articleVOList);
+    @Schema(description = "查询用户喜欢列表")
+    public Result queryArtLikeById(@RequestBody ArticleRequest req) {
+        return Result.success(
+                articleService.queryWithVisibility(req, ArticleListType.LIKE)
+        );
     }
 
-    /**
-     * 查询收藏列表
-     * @param articleRequest
-     * @return
-     */
     @PostMapping("/queryFavArtById")
-    public Result queryFavoriteArtById(@RequestBody ArticleRequest articleRequest){
-        if(null == articleRequest){
-            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
-        }
-        Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
-        Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
-
-        List<ArticleVO> articleVOList = new ArrayList<>();
-        if(articleRequest.getUserId() == articleRequest.getAuthorId()){
-            //说明查看的是自己的主页作品
-            articleVOList = articleService.queryFavoriteArtById(articleRequest.getUserId(),pageSize,(pageNum-1)*pageSize);
-            log.info("查询收藏列表大小:{}",articleVOList.size());
-        } else {
-            //查看他人的主页作品 需要判断作者的隐私设置
-            LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
-            u.eq(UserPrivacy::getUserId, articleRequest.getAuthorId());
-            UserPrivacy userPrivacy = userPrivacyService.getOne(u);
-            String artvis = userPrivacy.getArticleVisibility();
-            if("0".equals(artvis)){
-                articleVOList = articleService.queryFavoriteArtById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
-            }else if("1".equals(artvis)){
-                //私密
-                return Result.success(articleVOList);
-            }else if("2".equals(artvis)){
-                //粉丝可见
-                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
-                f.eq(Follow::getFollowerId,articleRequest.getUserId())
-                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
-                Follow follow = followmapper.selectOne(f);
-                if(null == follow){
-                    return Result.success(articleVOList);
-                }
-                articleVOList = articleService.queryFavoriteArtById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
-            }else if("3".equals(artvis)){
-                //互相关注
-                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
-                f.eq(Follow::getFollowerId,articleRequest.getUserId())
-                        .eq(Follow::getFollowingId,articleRequest.getAuthorId());
-                Follow follow = followmapper.selectOne(f);
-                if(null == follow){
-                    return Result.success(articleVOList);
-                }
-                f.clear();
-                f.eq(Follow::getFollowerId,articleRequest.getAuthorId())
-                        .eq(Follow::getFollowingId,articleRequest.getUserId());
-                Follow follow2 = followmapper.selectOne(f);
-                if(null == follow2){
-                    return Result.success(articleVOList);
-                }
-                articleVOList = articleService.queryFavoriteArtById(articleRequest.getAuthorId(),pageSize,(pageNum-1)*pageSize);
-            }
-        }
-
-        return Result.success(articleVOList);
+    @Schema(description = "查询用户收藏列表")
+    public Result queryFavoriteArtById(@RequestBody ArticleRequest req) {
+        return Result.success(
+                articleService.queryWithVisibility(req, ArticleListType.FAVORITE)
+        );
     }
+
+
+
+
+
 
     /**
      * 查询待审核内容

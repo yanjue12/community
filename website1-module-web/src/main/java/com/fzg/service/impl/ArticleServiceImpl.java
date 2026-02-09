@@ -5,9 +5,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.constant.RedisArticleKey;
+import com.fzg.enums.ArticleListType;
+import com.fzg.job.ArticleQueryExecutor;
 import com.fzg.mapper.*;
 import com.fzg.model.*;
 import com.fzg.service.ArticleService;
+import com.fzg.service.UserPrivacyService;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.common.unit.Fuzziness;
@@ -54,6 +57,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private Followmapper followmapper;
     @Autowired
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
+    @Autowired
+    private UserPrivacyService userPrivacyService;
 
 
 
@@ -116,6 +121,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         return articleVOList;
     }
+
 
 
     @Override
@@ -404,6 +410,116 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             articleVO.setLiked(likedArticleIds.contains(articleVO.getId()));
             articleVO.setFavorited(favoriteArticleIds.contains(articleVO.getId()));
         }
+    }
+
+
+    /**
+     * 查询用户主页数据
+     * @param req
+     * @param type
+     * @return
+     */
+    @Override
+    public List<ArticleVO> queryWithVisibility(ArticleRequest req, ArticleListType type) {
+
+        Integer pageNum = req.getPageNum() == null ? 1 : req.getPageNum();
+        Integer pageSize = req.getPageSize() == null ? 10 : req.getPageSize();
+        int offset = (pageNum - 1) * pageSize;
+
+        Long userId = req.getUserId();
+        Long authorId = req.getAuthorId();
+        List<ArticleVO> result;
+
+        //1.自己看自己
+        if (Objects.equals(userId, authorId)) {
+            result =  querySelfList(type, userId, pageSize, offset);
+        }
+
+        //2.权限判断
+        if (!canView(userId, authorId)) {
+            result =   Collections.emptyList();
+        }
+
+        //3.查他人的
+        result =   queryOtherList(type, authorId, pageSize, offset);
+
+        if (result == null) {
+            return Collections.emptyList();
+        }
+
+        //4.点赞 收藏状态填充
+        fillLikeAndFavoriteStatus(userId,result);
+
+        return result;
+    }
+
+    private boolean canView(Long viewerId, Long authorId) {
+
+        UserPrivacy privacy = userPrivacyService.getOne(
+                new LambdaQueryWrapper<UserPrivacy>()
+                        .eq(UserPrivacy::getUserId, authorId)
+        );
+
+        if (privacy == null) {
+            return false;
+        }
+
+        switch (privacy.getArticleVisibility()) {
+            case "0": // 公开
+                return true;
+            case "1": // 私密
+                return false;
+            case "2": // 粉丝可见
+                return isFollower(viewerId, authorId);
+            case "3": // 互关
+                return isMutualFollow(viewerId, authorId);
+            default:
+                return false;
+        }
+    }
+
+    private List<ArticleVO> querySelfList(
+            ArticleListType type, Long userId, Integer pageSize, Integer offset) {
+
+        switch (type) {
+            case PUBLISH:
+                return articlemapper.querySelfArticleByUserId(userId, pageSize, offset);
+            case LIKE:
+                return articlemapper.queryArtLikeById(userId, pageSize, offset);
+            case FAVORITE:
+                return this.queryFavoriteArtById(userId, pageSize, offset);
+            default:
+                return Collections.emptyList();
+        }
+    }
+
+    private List<ArticleVO> queryOtherList(
+            ArticleListType type, Long authorId, Integer pageSize, Integer offset) {
+
+        switch (type) {
+            case PUBLISH:
+                return articlemapper.queryArticleByUserId(authorId, pageSize, offset);
+            case LIKE:
+                return articlemapper.queryArtLikeById(authorId, pageSize, offset);
+            case FAVORITE:
+                return this.queryFavoriteArtById(authorId, pageSize, offset);
+            default:
+                return Collections.emptyList();
+        }
+    }
+
+
+    public boolean isFollower(Long userId, Long authorId) {
+        return followmapper.selectOne(
+                new LambdaQueryWrapper<Follow>()
+                        .eq(Follow::getFollowerId, userId)
+                        .eq(Follow::getFollowingId, authorId)
+        ) != null;
+    }
+
+    public boolean isMutualFollow(Long userId, Long authorId) {
+        return isFollower(userId, authorId)
+                && isFollower(authorId, userId);
     }
 
 

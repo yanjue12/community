@@ -1,6 +1,8 @@
 package com.fzg.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.fzg.enums.ArticleListType;
+import com.fzg.job.ArticleQueryExecutor;
 import com.fzg.model.Article;
 import com.fzg.vo.*;
 
@@ -32,4 +34,5 @@ public interface ArticleService extends IService<Article> {
 
     List<ArticleVO> queryFavoriteArtById(Long userId, Integer pageSize, Integer offset);
 
+    Object queryWithVisibility(ArticleRequest req, ArticleListType articleListType);
 }
