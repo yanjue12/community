@@ -3,7 +3,6 @@ package com.fzg.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.databind.BeanProperty;
 import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.constant.RedisArticleKey;
 import com.fzg.mapper.*;
@@ -13,6 +12,8 @@ import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.MultiMatchQueryBuilder;
+import org.elasticsearch.index.query.Operator;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
@@ -29,7 +30,6 @@ import org.springframework.util.CollectionUtils;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -316,11 +316,47 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     /* =========================
         文章：标题 + 内容（ES）
        ========================= */
-        BoolQueryBuilder query = QueryBuilders.boolQuery()
-                .should(QueryBuilders.multiMatchQuery(keyword, "title^5", "content"))
-                .should(QueryBuilders.multiMatchQuery(keyword, "title^3", "content")
-                        .fuzziness(Fuzziness.AUTO))
-                .minimumShouldMatch(1);
+        BoolQueryBuilder query = QueryBuilders.boolQuery();
+
+        /* ========= P0：短语完全命中（最高优先级） ========= */
+        query.should(
+                QueryBuilders.matchPhraseQuery("title", keyword)
+                        .boost(20f)
+        );
+        query.should(
+                QueryBuilders.matchPhraseQuery("content", keyword)
+                        .boost(5f)
+        );
+
+        /* ========= P1：multi_match（分词但相关） ========= */
+        query.should(
+                QueryBuilders.multiMatchQuery(keyword)
+                        .field("title", 8)
+                        .field("content", 2)
+                        .type(MultiMatchQueryBuilder.Type.BEST_FIELDS)
+        );
+
+        /* ========= P2：普通 match（无模糊） ========= */
+        query.should(
+                QueryBuilders.matchQuery("title", keyword)
+                        .operator(Operator.AND)   // 关键：AND
+                        .boost(4f)
+        );
+        query.should(
+                QueryBuilders.matchQuery("content", keyword)
+                        .operator(Operator.AND)
+                        .boost(1f)
+        );
+
+        /* ========= P3：错词兜底（弱） ========= */
+        query.should(
+                QueryBuilders.matchQuery("title", keyword)
+                        .fuzziness(Fuzziness.ONE) // 只能 ONE
+                        .boost(0.5f)
+        );
+
+        /* ========= 最少命中 ========= */
+        query.minimumShouldMatch(1);
 
 
 
