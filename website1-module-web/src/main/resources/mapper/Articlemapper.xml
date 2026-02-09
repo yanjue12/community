@@ -378,9 +378,10 @@
 
     </select>
     <select id="selectArticlesByIds" resultType="com.fzg.vo.ArticleVO">
-        SELECT *
-        FROM article
-        WHERE id IN
+        SELECT a.*,u.avatar,u.nickname
+        FROM article a
+        join user u on a.user_id = u.id
+        WHERE a.id IN
         <foreach collection="ids" item="id" open="(" close=")" separator=",">
             #{id}
         </foreach>

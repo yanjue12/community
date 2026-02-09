@@ -101,28 +101,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     @Override
     public List<ArticleVO> queryArtLikeById(Long userId, Integer pageSize, Integer offset) {
         List<ArticleVO> articleVOList = baseMapper.queryArtLikeById(userId,pageSize,offset);
-        //获取收藏状态
-        List<Long> articleIds = articleVOList.stream().map(ArticleVO::getId).collect(Collectors.toList());
-
-        //优先从redis获取点赞 收藏 状态
-        Set<Long> favoriteArticleIds = new HashSet<>();
-        for (Long articleId : articleIds) {
-            String favoriteKey = RedisArticleKey.getFavoriteArticleStatusKey(userId, articleId);
-            Boolean hasFavorite = redisTemplate.hasKey(favoriteKey);
-            if (Boolean.TRUE.equals(hasFavorite)) {
-                favoriteArticleIds.add(articleId);
-            }
-        }
-        if(favoriteArticleIds.isEmpty()){
-            List<Long> favoriteList = favoritemapper.queryFavoriteByUserBatch(userId, articleIds);
-            favoriteArticleIds =
-                    null == favoriteList ? Collections.emptySet() : new HashSet<>(favoriteList);
-        }
-
-        //设置点赞状态
-        for (ArticleVO articleVO : articleVOList) {
-            articleVO.setFavorited(favoriteArticleIds.contains(articleVO.getId()));
-        }
+        fillLikeAndFavoriteStatus(userId,articleVOList);
         return articleVOList;
     }
 
@@ -133,27 +112,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         if(articleVOList.isEmpty()){
             return articleVOList;
         }
-        List<Long> articleIds = articleVOList.stream().map(ArticleVO::getId).collect(Collectors.toList());
-
-        //优先从redis获取点赞 收藏 状态
-        Set< Long> likedArticleIds = new HashSet<>();
-        for (Long articleId : articleIds) {
-            String likeKey = RedisArticleKey.getLikeArticleStatusKey(userId, articleId);
-            Boolean hasLiked = redisTemplate.hasKey(likeKey);
-            if (Boolean.TRUE.equals(hasLiked)) {
-                likedArticleIds.add(articleId);
-            }
-        }
-        // 如果缓存未命中，从数据库查询
-        if (likedArticleIds.isEmpty()) {
-            List<Long> likedList = likeRecordMapper.queryLikedByUserBatch(userId, articleIds);
-            likedArticleIds =
-                    null == likedList ? Collections.emptySet() : new HashSet<>(likedList);
-        }
-        //设置点赞状态
-        for (ArticleVO articleVO : articleVOList) {
-            articleVO.setLiked(likedArticleIds.contains(articleVO.getId()));
-        }
+       fillLikeAndFavoriteStatus(userId,articleVOList);
 
         return articleVOList;
     }
@@ -240,40 +199,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 log.error("首页查询出数据为空");
                 return new ArticlePageVO();
             }
-            List<Long> articleIds = articleVOList.stream().map(ArticleVO::getId).collect(Collectors.toList());
 
-            //优先从redis获取点赞 收藏 状态
-            Set< Long> likedArticleIds = new HashSet<>();
-            Set<Long> favoriteArticleIds = new HashSet<>();
-            for (Long articleId : articleIds) {
-                String likeKey = RedisArticleKey.getLikeArticleStatusKey(userId, articleId);
-                Boolean hasLiked = redisTemplate.hasKey(likeKey);
-                if (Boolean.TRUE.equals(hasLiked)) {
-                    likedArticleIds.add(articleId);
-                }
-                String favoriteKey = RedisArticleKey.getFavoriteArticleStatusKey(userId, articleId);
-                Boolean hasFavorite = redisTemplate.hasKey(favoriteKey);
-                if (Boolean.TRUE.equals(hasFavorite)) {
-                    favoriteArticleIds.add(articleId);
-                }
-            }
-            // 如果缓存未命中，从数据库查询
-            if (likedArticleIds.isEmpty()) {
-                List<Long> likedList = likeRecordMapper.queryLikedByUserBatch(userId, articleIds);
-                likedArticleIds =
-                    null == likedList ? Collections.emptySet() : new HashSet<>(likedList);
-            }
-            if(favoriteArticleIds.isEmpty()){
-                List<Long> favoriteList = favoritemapper.queryFavoriteByUserBatch(userId, articleIds);
-                favoriteArticleIds =
-                    null == favoriteList ? Collections.emptySet() : new HashSet<>(favoriteList);
-            }
-
-            //设置点赞状态
-            for (ArticleVO articleVO : articleVOList) {
-                articleVO.setLiked(likedArticleIds.contains(articleVO.getId()));
-                articleVO.setFavorited(favoriteArticleIds.contains(articleVO.getId()));
-            }
+           fillLikeAndFavoriteStatus(userId,articleVOList);
 
 
             articlePageVO.setArticleVOList(articleVOList);
@@ -375,6 +302,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         if (!articleIds.isEmpty()) {
             List<ArticleVO> articles =
                     baseMapper.selectArticlesByIds(articleIds);
+            fillLikeAndFavoriteStatus(userId, articles);
             result.setArticles(articles);
         } else {
             result.setArticles(Collections.emptyList());
@@ -394,9 +322,11 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 .map(hit -> hit.getContent().getId())
                 .collect(Collectors.toList());
 
+
         if (!tagArticleIds.isEmpty()) {
             List<ArticleVO> articlesByTag =
                     baseMapper.selectArticlesByIds(tagArticleIds);
+            fillLikeAndFavoriteStatus(userId, articlesByTag);
             result.setArticlesByTag(articlesByTag);
         } else {
             result.setArticlesByTag(Collections.emptyList());
@@ -411,6 +341,71 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         return result;
     }
+
+
+
+    /**
+     * 批量填充文章点赞 & 收藏状态（Redis 优先，DB 兜底）
+     */
+    private void fillLikeAndFavoriteStatus(Long userId, List<ArticleVO> articleVOList) {
+
+        if (CollectionUtils.isEmpty(articleVOList)) {
+            return;
+        }
+
+        //未登录：明确给 false，而不是 null
+        if (userId == null) {
+            for (ArticleVO articleVO : articleVOList) {
+                articleVO.setLiked(false);
+                articleVO.setFavorited(false);
+            }
+            return;
+        }
+
+
+        List<Long> articleIds = articleVOList.stream()
+                .map(ArticleVO::getId)
+                .collect(Collectors.toList());
+
+        /* ===== 点赞状态 ===== */
+        Set<Long> likedArticleIds = new HashSet<>();
+        for (Long articleId : articleIds) {
+            String likeKey = RedisArticleKey.getLikeArticleStatusKey(userId, articleId);
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(likeKey))) {
+                likedArticleIds.add(articleId);
+            }
+        }
+
+        if (likedArticleIds.isEmpty()) {
+            List<Long> likedList = likeRecordMapper.queryLikedByUserBatch(userId, articleIds);
+            if (likedList != null) {
+                likedArticleIds.addAll(likedList);
+            }
+        }
+
+        /* ===== 收藏状态 ===== */
+        Set<Long> favoriteArticleIds = new HashSet<>();
+        for (Long articleId : articleIds) {
+            String favoriteKey = RedisArticleKey.getFavoriteArticleStatusKey(userId, articleId);
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(favoriteKey))) {
+                favoriteArticleIds.add(articleId);
+            }
+        }
+
+        if (favoriteArticleIds.isEmpty()) {
+            List<Long> favoriteList = favoritemapper.queryFavoriteByUserBatch(userId, articleIds);
+            if (favoriteList != null) {
+                favoriteArticleIds.addAll(favoriteList);
+            }
+        }
+
+        /* ===== 回填 ===== */
+        for (ArticleVO articleVO : articleVOList) {
+            articleVO.setLiked(likedArticleIds.contains(articleVO.getId()));
+            articleVO.setFavorited(favoriteArticleIds.contains(articleVO.getId()));
+        }
+    }
+
 
 
 }
