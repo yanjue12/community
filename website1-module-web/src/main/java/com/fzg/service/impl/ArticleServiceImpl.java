@@ -509,7 +509,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     }
 
 
-    public boolean isFollower(Long userId, Long authorId) {
+    private boolean isFollower(Long userId, Long authorId) {
         return followmapper.selectOne(
                 new LambdaQueryWrapper<Follow>()
                         .eq(Follow::getFollowerId, userId)
@@ -517,7 +517,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         ) != null;
     }
 
-    public boolean isMutualFollow(Long userId, Long authorId) {
+    private boolean isMutualFollow(Long userId, Long authorId) {
         return isFollower(userId, authorId)
                 && isFollower(authorId, userId);
     }
