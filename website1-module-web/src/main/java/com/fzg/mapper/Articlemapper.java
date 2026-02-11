@@ -25,12 +25,12 @@ public interface Articlemapper extends BaseMapper<Article> {
 
     List<ArticleVO> searchByTag(@Param("keyword") String keyword, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
 
-    List<UserVO> searchByName(@Param("keyword") String keyword,@Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
+    List<UserVO> searchByName(@Param("keyword") String keyword, @Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
 
 
     void batchUpdateLikeCount(@Param("list") List<ArticleLikeVO> batchList);
 
-    void upArticleLikeCount(@Param("articleId") Long articleId, @Param("actionLike") Integer actionLike,@Param("type") String type);
+    void upArticleLikeCount(@Param("articleId") Long articleId, @Param("actionLike") Integer actionLike, @Param("type") String type);
 
     List<ArticleVO> queryArticleByUserId(@Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer i);
 
@@ -53,7 +53,6 @@ public interface Articlemapper extends BaseMapper<Article> {
     List<ArticleVO> selectArticlesByIds(@Param("ids") List<Long> articleIds);
 
 
-
     List<ArticleVO> queryHotList(@Param("request") ArticleRequest request, @Param("pageSize") int pageSize, @Param("offset") int offset);
 
     List<ArticleVO> queryFollowList(@Param("request") ArticleRequest request, @Param("pageSize") int pageSize, @Param("offset") int offset);
@@ -63,24 +62,24 @@ public interface Articlemapper extends BaseMapper<Article> {
     List<ArticleVO> queryRecommendFallback(@Param("pageSize") int pageSize, @Param("offset") int offset);
 
 
-
     ArticleDimension selectArticleDimension(@Param("articleId") Long articleId);
 
-    List<ArticleVO> queryPersonalizedList(
+    List<Long> queryPersonalizedList(
             @Param("tagWeights") List<TagWeightDTO> tagWeights,
             @Param("excludeIds") Set<Long> excludeIds,
             @Param("flag") String flag,
-            @Param("pageSize") int pageSize,
-            @Param("offset") int offset
+            @Param("pageSize") int pageSize
     );
 
 
-    List<ArticleVO> queryExploreList(
+    List<Long> queryExploreList(
             @Param("excludeIds") Set<Long> excludeIds,
             @Param("excludeTagIds") List<Long> excludeTagIds,
-            @Param("limit") int limit,
-            @Param("offset") int offset
+            @Param("limit") int limit
     );
 
 
+    List<ArticleVO> queryByIdsPreserveOrder(@Param("ids") List<Long> pageIds);
+
+    List<Long> queryHotIdsLimit(@Param("limit") int limit);
 }

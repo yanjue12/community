@@ -266,29 +266,57 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             return baseMapper.queryHotList(request, pageSize, offset);
         }
 
+        String cacheKey = RedisRecommendKey.userRecommendList(userId);
+
+        // ==============================
+        // 1.先查缓存
+        // ==============================
+        List<Long> cachedIds = getCachedRecommendIds(cacheKey);
+
+        if (CollectionUtils.isEmpty(cachedIds)) {
+
+            // 2.没缓存 → 生成完整推荐池
+            cachedIds = buildFullRecommendPool(userId);
+
+            if (!CollectionUtils.isEmpty(cachedIds)) {
+                redisTemplate.opsForList().rightPushAll(cacheKey, cachedIds);
+                redisTemplate.expire(cacheKey, 30, TimeUnit.MINUTES);
+            }
+        }
+
+        // ==============================
+        // 3.切片分页
+        // ==============================
+
+        int start = (pageNum - 1) * pageSize;
+        int end = start + pageSize;
+
+        if (start >= cachedIds.size()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> pageIds =
+                cachedIds.subList(start, Math.min(end, cachedIds.size()));
+
+        return baseMapper.queryByIdsPreserveOrder(pageIds);
+    }
+
+    //构建完整推荐池
+    private List<Long> buildFullRecommendPool(Long userId) {
+
         UserProfile profile = userProfileMapper.selectByUserId(userId);
 
         if (profile == null || profile.getProfileLevel() < 1) {
-            return baseMapper.queryRecommendFallback(pageSize, offset);
+            return baseMapper.queryHotIdsLimit(100);
         }
 
-        // ===============================
-        // 1.比例设计
-        // ===============================
+        int totalSize = 100;
 
-        int exploreSize = (int) Math.ceil(pageSize * 0.2); // 20%
-        int remainSize = pageSize - exploreSize;
+        int exploreSize = (int) Math.ceil(totalSize * 0.2);
+        int remainSize = totalSize - exploreSize;
 
         int coldSize = remainSize / 2;
         int hotSize = remainSize - coldSize;
-
-        int coldOffset = (pageNum - 1) * coldSize;
-        int hotOffset = (pageNum - 1) * hotSize;
-        int exploreOffset = (pageNum - 1) * exploreSize;
-
-        // ===============================
-        // 2.标签
-        // ===============================
 
         List<TagWeightDTO> topTagWeights =
                 getTopTagWeights(profile.getTagProfile(), 5);
@@ -297,60 +325,92 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 .map(TagWeightDTO::getTagId)
                 .collect(Collectors.toList());
 
-        Set<Long> excludeIds = new HashSet<>(getExposedArticleIds(userId));
+        Set<Long> excludeIds = new HashSet<>();
 
-        // ===============================
-        // 3.冷池
-        // ===============================
-
-        List<ArticleVO> coldList =
-                baseMapper.queryPersonalizedList(
+        List<Long> coldIds =
+                    baseMapper.queryPersonalizedList(
                         topTagWeights,
                         excludeIds,
                         "cold",
-                        coldSize,
-                        coldOffset
+                        coldSize
                 );
 
-        excludeIds.addAll(extractIds(coldList));
+        excludeIds.addAll(coldIds);
 
-        // ===============================
-        // 4.热池
-        // ===============================
-
-        List<ArticleVO> hotList =
+        List<Long> hotIds =
                 baseMapper.queryPersonalizedList(
                         topTagWeights,
                         excludeIds,
                         "hot",
-                        hotSize,
-                        hotOffset
+                        hotSize
                 );
 
-        excludeIds.addAll(extractIds(hotList));
+        excludeIds.addAll(hotIds);
 
-        // ===============================
-        // 5.探索池（非兴趣标签）
-        // ===============================
-
-        List<ArticleVO> exploreList =
+        List<Long> exploreIds =
                 baseMapper.queryExploreList(
                         excludeIds,
                         topTagIds,
-                        exploreSize,
-                        exploreOffset
+                        exploreSize
                 );
 
-        // ===============================
-        // 6.混排
-        // ===============================
+        List<Long> finalIds = new ArrayList<>();
+        finalIds.addAll(coldIds);
+        finalIds.addAll(hotIds);
 
-        List<ArticleVO> personalizeList = new ArrayList<>();
-        personalizeList.addAll(coldList);
-        personalizeList.addAll(hotList);
-
-        return mixWithExplore(personalizeList, exploreList, pageSize);
+        return mixIdList(finalIds, exploreIds);
     }
+
+    private List<Long> getCachedRecommendIds(String key) {
+
+        Long size = redisTemplate.opsForList().size(key);
+
+        if (size == null || size == 0) {
+            return Collections.emptyList();
+        }
+
+        List<Object> objects =
+                redisTemplate.opsForList().range(key, 0, -1);
+
+        if (CollectionUtils.isEmpty(objects)) {
+            return Collections.emptyList();
+        }
+
+        return objects.stream()
+                .map(o -> Long.valueOf(o.toString()))
+                .collect(Collectors.toList());
+    }
+
+    private List<Long> mixIdList(
+            List<Long> personalize,
+            List<Long> explore) {
+
+        List<Long> result = new ArrayList<>();
+
+        int exploreIndex = 0;
+        int personalizeIndex = 0;
+
+        int interval = personalize.size() / (explore.size() + 1);
+        if (interval <= 0) interval = 1;
+
+        while (personalizeIndex < personalize.size()
+                || exploreIndex < explore.size()) {
+
+            for (int i = 0;
+                 i < interval && personalizeIndex < personalize.size();
+                 i++) {
+
+                result.add(personalize.get(personalizeIndex++));
+            }
+
+            if (exploreIndex < explore.size()) {
+                result.add(explore.get(exploreIndex++));
+            }
+        }
+
+        return result;
+    }
+
 
     //混排 冷 热 探索打乱重组
     private List<ArticleVO> mixWithExplore(

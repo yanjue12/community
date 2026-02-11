@@ -7,4 +7,13 @@ public class RedisRecommendKey {
         return "rec:expose:" + userId;
     }
 
+
+    /**
+     * 用户推荐池
+     * rec:user:1001:list
+     */
+    public static String userRecommendList(Long userId) {
+        return "rec:user:" + userId + ":list";
+    }
+
 }
