@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.UserProfileMapper">
+
+    <insert id="upsert">
+        insert into user_profile
+        (
+            user_id,
+            tag_profile,
+            category_profile,
+            author_profile,
+            behavior_count,
+            profile_level,
+            last_calculated_at,
+            create_at,
+            update_at
+        )
+        values
+            (
+                #{userId},
+                #{tagProfile},
+                #{categoryProfile},
+                #{authorProfile},
+                #{behaviorCount},
+                #{profileLevel},
+                #{lastCalculatedAt},
+                now(),
+                now()
+            )
+            on duplicate key update
+                                 tag_profile = values(tag_profile),
+                                 category_profile = values(category_profile),
+                                 author_profile = values(author_profile),
+                                 behavior_count = values(behavior_count),
+                                 profile_level = values(profile_level),
+                                 last_calculated_at = values(last_calculated_at),
+                                 update_at = now()
+    </insert>
+    <select id="selectByUserId" resultType="com.fzg.model.UserProfile">
+        select * from user_profile
+        where user_id = #{userId}
+    </select>
+
+
+</mapper>

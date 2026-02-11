@@ -2,6 +2,8 @@ package com.fzg.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.Article;
+import com.fzg.model.ArticleDimension;
+import com.fzg.model.TagWeightDTO;
 import com.fzg.vo.*;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
@@ -49,4 +51,26 @@ public interface Articlemapper extends BaseMapper<Article> {
     List<ArticleVO> querySelfArticleByUserId(@Param("userId") Long userId, @Param("pageSize") Integer pageSize, @Param("offset") Integer offset);
 
     List<ArticleVO> selectArticlesByIds(@Param("ids") List<Long> articleIds);
+
+
+
+    List<ArticleVO> queryHotList(@Param("request") ArticleRequest request, @Param("pageSize") int pageSize, @Param("offset") int offset);
+
+    List<ArticleVO> queryFollowList(@Param("request") ArticleRequest request, @Param("pageSize") int pageSize, @Param("offset") int offset);
+
+    List<ArticleVO> queryLatestList(@Param("request") ArticleRequest request, @Param("pageSize") int pageSize, @Param("offset") int offset);
+
+    List<ArticleVO> queryRecommendFallback(@Param("pageSize") int pageSize, @Param("offset") int offset);
+
+
+
+    ArticleDimension selectArticleDimension(@Param("articleId") Long articleId);
+
+    List<ArticleVO> queryPersonalizedList(
+            @Param("tagWeights") List<TagWeightDTO> tagWeights,
+            @Param("pageSize") int pageSize,
+            @Param("offset") int offset
+    );
+
+
 }

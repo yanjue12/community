@@ -59,6 +59,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
     @Autowired
     private UserPrivacyService userPrivacyService;
+    @Autowired
+    private UserProfileMapper userProfileMapper;
 
 
 
@@ -193,28 +195,103 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
      * @return
      */
     @Override
-    public ArticlePageVO queryListByArticleType(ArticleRequest articleRequest) {
-        Long userId = articleRequest.getUserId();
-        Integer pageNum = articleRequest.getPageNum() == null ? 1 : articleRequest.getPageNum();
-        Integer pageSize = articleRequest.getPageSize() == null ? 10 : articleRequest.getPageSize();
-        ArticlePageVO articlePageVO = new ArticlePageVO();
-        try {
-            List<ArticleVO> articleVOList = baseMapper.queryListByArticleType(articleRequest,pageSize,(pageNum-1)  * pageSize);
-            //判断当前用户有没有对这些文章进行点赞 批量
-            if(CollectionUtils.isEmpty(articleVOList)){
-                log.error("首页查询出数据为空");
-                return new ArticlePageVO();
-            }
+    public ArticlePageVO queryListByArticleType(ArticleRequest request) {
 
-           fillLikeAndFavoriteStatus(userId,articleVOList);
+        Long userId = request.getUserId();
+        int pageNum = request.getPageNum() == null ? 1 : request.getPageNum();
+        int pageSize = request.getPageSize() == null ? 10 : request.getPageSize();
+        int offset = (pageNum - 1) * pageSize;
 
+        List<ArticleVO> list;
 
-            articlePageVO.setArticleVOList(articleVOList);
-        }catch (Exception e){
-            log.info("查询异常:{}",e);
-            throw new RuntimeException(e);
+        switch (request.getType()) {
+            case "0": // 热榜
+                list = baseMapper.queryHotList(request, pageSize, offset);
+                break;
+
+            case "1": // 推荐
+                list = queryRecommendList(request, pageSize, offset);
+                break;
+
+            case "2": // 关注
+                list = baseMapper.queryFollowList(request, pageSize, offset);
+                break;
+
+            case "3": // 最新
+            default:
+                list = baseMapper.queryLatestList(request, pageSize, offset);
         }
-        return articlePageVO;
+
+        if (CollectionUtils.isEmpty(list)) {
+            return new ArticlePageVO();
+        }
+
+        // 用户态补充（读 Redis / DB）
+        fillLikeAndFavoriteStatus(userId, list);
+
+        ArticlePageVO vo = new ArticlePageVO();
+        vo.setArticleVOList(list);
+        return vo;
+    }
+
+
+
+
+    private List<ArticleVO> queryRecommendList(
+            ArticleRequest request,
+            int pageSize,
+            int offset) {
+
+        Long userId = request.getUserId();
+
+        // 1️⃣ 未登录 → 热榜
+        if (userId == null) {
+            return baseMapper.queryHotList(request, pageSize, offset);
+        }
+
+        // 2️⃣ 查询用户画像
+        UserProfile profile = userProfileMapper.selectByUserId(userId);
+
+        // 3️⃣ 无画像 → 兜底
+        if (profile == null) {
+            return baseMapper.queryRecommendFallback(pageSize, offset);
+        }
+
+        Map<Long, Double> tagProfile = profile.getTagProfile();
+
+        // 4️⃣ 标签画像为空 → 兜底
+        if (CollectionUtils.isEmpty(tagProfile)) {
+            return baseMapper.queryRecommendFallback(pageSize, offset);
+        }
+
+        // 5️⃣ 取 Top 权重标签
+        List<TagWeightDTO> topTagWeights =
+                getTopTagWeights(tagProfile, 5);
+
+        if (CollectionUtils.isEmpty(topTagWeights)) {
+            return baseMapper.queryRecommendFallback(pageSize, offset);
+        }
+
+        // 6️⃣ 走个性化排序SQL
+        return baseMapper.queryPersonalizedList(
+                topTagWeights,
+                pageSize,
+                offset
+        );
+    }
+
+
+
+
+    private List<TagWeightDTO> getTopTagWeights(
+            Map<Long, Double> tagProfile,
+            int limit) {
+
+        return tagProfile.entrySet().stream()
+                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                .limit(limit)
+                .map(e -> new TagWeightDTO(e.getKey(), e.getValue()))
+                .collect(Collectors.toList());
     }
 
 

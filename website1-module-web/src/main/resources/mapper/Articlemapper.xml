@@ -63,19 +63,22 @@
            a.share_count as shareCount,
            a.is_recommend as isRecommend,
            a.is_top as isTop,
-           a.view_count as viewCount,
-           a.like_count as likeCount,
-           a.comment_count as commentCount,
-           a.collect_count as collectCount,
-           a.share_count as shareCount,
-           a.is_recommend as isRecommend,
-           a.is_top as isTop,
            u.id as userId, u.nickname as nickName,
             u.avatar as avatar,
             c.name as categoryName,
     tt.tagsName as tagName,
     -- 计算热度得分（用于热榜排序）
-    (a.view_count + a.like_count * 10 + a.comment_count * 5 + a.collect_count * 3) as hotScore
+        (
+        a.view_count
+        + a.like_count * 10
+        + a.comment_count * 5
+        + a.collect_count * 3
+        )
+        /
+        POW(
+        (TIMESTAMPDIFF(HOUR, a.published_at, NOW()) + 2),
+        1.5
+        ) as hotScore
     from article a
     left join user u on a.user_id = u.id
     left join category c on a.category_id = c.id
@@ -96,6 +99,7 @@
     where a.visibility = 0 -- 0:公开
     and a.status = 1 -- 1:已发布
     and a.published_at is not null -- 已发布的文章
+    and a.created_at >= DATE_SUB(NOW(), INTERVAL 10 DAY)
 
     <if test="request.type != null and request.type != ''">
       <if test="request.type =='0' ">
@@ -387,6 +391,260 @@
             #{id}
         </foreach>
     </select>
+
+    <select id="queryHotList" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+        a.type,a.published_at as updatedTime,a.view_count as viewCount,
+        a.like_count as likeCount,a.comment_count as commentCount,
+        a.share_count as shareCount,a.collect_count as collectCount,
+        a.share_count as shareCount,
+        a.is_recommend as isRecommend,
+        a.is_top as isTop,
+        u.id as userId, u.nickname as nickName,
+        u.avatar as avatar,
+        c.name as categoryName,
+        tt.tagsName as tagName,
+        -- 计算热度得分（用于热榜排序）
+        (
+            a.view_count
+            + a.like_count * 10
+            + a.comment_count * 5
+            + a.collect_count * 3
+        )
+        /
+        POW((TIMESTAMPDIFF(HOUR, a.published_at, NOW()) + 2),1.5) as hotScore
+        from article a
+        left join user u on a.user_id = u.id
+        left join category c on a.category_id = c.id
+        left join (
+        select
+        atr.article_id,
+        GROUP_CONCAT(at.name SEPARATOR ', ') AS tagsName
+        from article_tag at
+        join article_tag_relation atr on at.id = atr.tag_id
+        group by atr.article_id
+        ) tt on tt.article_id = a.id
+
+
+        where a.visibility = 0 -- 0:公开
+        and a.status = 1 -- 1:已发布
+        and a.published_at is not null -- 已发布的文章
+        and a.created_at >= DATE_SUB(NOW(), INTERVAL 10 DAY)
+
+        <!-- 热榜：按综合热度排序 -->
+        order by hotScore desc,
+        a.published_at desc
+        limit #{pageSize} offset #{offset}
+    </select>
+
+    <select id="queryFollowList" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+        a.type,a.published_at as updatedTime,a.view_count as viewCount,
+        a.like_count as likeCount,a.comment_count as commentCount,
+        a.share_count as shareCount,a.collect_count as collectCount,
+        a.share_count as shareCount,
+        a.is_recommend as isRecommend,
+        a.is_top as isTop,
+        u.id as userId, u.nickname as nickName,
+        u.avatar as avatar,
+        c.name as categoryName,
+        tt.tagsName as tagName
+        from article a
+        left join user u on a.user_id = u.id
+        left join category c on a.category_id = c.id
+        left join (
+        select
+        atr.article_id,
+        GROUP_CONCAT(at.name SEPARATOR ', ') AS tagsName
+        from article_tag at
+        join article_tag_relation atr on at.id = atr.tag_id
+        group by atr.article_id
+        ) tt on tt.article_id = a.id
+
+        -- 关注类型接关注表
+        left join follow f on f.following_id = a.user_id and f.follower_id = #{request.userId}
+
+
+        where a.visibility = 0 -- 0:公开
+        and a.status = 1 -- 1:已发布
+        and a.published_at is not null -- 已发布的文章
+        and a.created_at >= DATE_SUB(NOW(), INTERVAL 10 DAY)
+        <!-- 关注：只显示关注的人的文章 -->
+        and f.id is not null
+        order by a.published_at desc
+        limit #{pageSize} offset #{offset}
+    </select>
+    <select id="queryLatestList" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+        a.type,a.published_at as updatedTime,a.view_count as viewCount,
+        a.like_count as likeCount,a.comment_count as commentCount,
+        a.share_count as shareCount,a.collect_count as collectCount,
+        a.share_count as shareCount,
+        a.is_recommend as isRecommend,
+        a.is_top as isTop,
+        u.id as userId, u.nickname as nickName,
+        u.avatar as avatar,
+        c.name as categoryName,
+        tt.tagsName as tagName
+        from article a
+        left join user u on a.user_id = u.id
+        left join category c on a.category_id = c.id
+        left join (
+        select
+        atr.article_id,
+        GROUP_CONCAT(at.name SEPARATOR ', ') AS tagsName
+        from article_tag at
+        join article_tag_relation atr on at.id = atr.tag_id
+        group by atr.article_id
+        ) tt on tt.article_id = a.id
+
+        where a.visibility = 0 -- 0:公开
+        and a.status = 1 -- 1:已发布
+        and a.published_at is not null -- 已发布的文章
+        and a.created_at >= DATE_SUB(NOW(), INTERVAL 10 DAY)
+        <!-- 最新：按发布时间排序 -->
+        order by a.published_at desc
+        limit #{pageSize} offset #{offset}
+    </select>
+
+
+    <select id="queryRecommendFallback" resultType="com.fzg.vo.ArticleVO">
+        select
+            a.id,a.title,a.summary,a.cover_image as coverImage,
+            a.type,a.published_at as updatedTime,
+            a.view_count as viewCount,
+            a.like_count as likeCount,
+            a.comment_count as commentCount,
+            a.collect_count as collectCount,
+            a.share_count as shareCount,
+            a.is_recommend as isRecommend,
+            a.is_top as isTop,
+
+            u.id as userId,u.nickname as nickName,u.avatar as avatar,
+            c.name as categoryName,
+            tt.tagsName as tagName,
+
+            (
+                a.view_count
+                    + a.like_count * 10
+                    + a.comment_count * 5
+                    + a.collect_count * 3
+                ) as score
+
+        from article a
+                 left join user u on a.user_id = u.id
+                 left join category c on a.category_id = c.id
+                 left join (
+            select atr.article_id,
+                   GROUP_CONCAT(at.name SEPARATOR ',') AS tagsName
+            from article_tag at
+    join article_tag_relation atr on at.id = atr.tag_id
+            group by atr.article_id
+        ) tt on tt.article_id = a.id
+
+        where a.visibility = 0
+          and a.status = 1
+          and a.published_at is not null
+          and a.is_recommend = 1
+
+        order by a.is_top desc, score desc, a.published_at desc
+            limit #{pageSize} offset #{offset}
+    </select>
+
+
+    <select id="selectArticleDimension" resultType="com.fzg.model.ArticleDimension">
+        select
+            a.category_id as categoryId,
+            atr.tag_id as tagId,
+            a.user_id as authorId
+        from article a
+                 left join article_tag_relation atr on a.id = atr.article_id
+        where a.id = #{articleId}
+            limit 1
+    </select>
+
+
+    <select id="queryPersonalizedList"
+            resultType="com.fzg.vo.ArticleVO">
+
+        select
+        a.id,
+        a.title,
+        a.summary,
+        a.cover_image as coverImage,
+        a.type,
+        a.published_at as updatedTime,
+        a.view_count as viewCount,
+        a.like_count as likeCount,
+        a.comment_count as commentCount,
+        a.collect_count as collectCount,
+        a.share_count as shareCount,
+        a.is_recommend as isRecommend,
+        a.is_top as isTop,
+
+        u.id as userId,
+        u.nickname as nickName,
+        u.avatar as avatar,
+        c.name as categoryName,
+        tt.tagsName as tagName,
+
+        -- 个性化得分
+        (
+        <foreach collection="tagWeights"
+                 item="tw"
+                 separator="+">
+            sum(
+            case
+            when atr.tag_id = #{tw.tagId}
+            then #{tw.weight}
+            else 0
+            end
+            )
+        </foreach>
+        ) * 5
+
+        +
+
+        (
+        a.view_count
+        + a.like_count * 10
+        + a.comment_count * 5
+        + a.collect_count * 3
+        ) / 10
+
+        as finalScore
+
+        from article a
+
+        left join article_tag_relation atr
+        on a.id = atr.article_id
+
+        left join user u on a.user_id = u.id
+        left join category c on a.category_id = c.id
+
+        left join (
+        select
+        atr.article_id,
+        GROUP_CONCAT(at.name SEPARATOR ',') AS tagsName
+        from article_tag at
+        join article_tag_relation atr on at.id = atr.tag_id
+        group by atr.article_id
+        ) tt on tt.article_id = a.id
+
+        where a.visibility = 0
+        and a.status = 1
+        and a.published_at is not null
+        and a.created_at >= DATE_SUB(NOW(), INTERVAL 15 DAY)
+
+        group by a.id
+
+        order by finalScore desc,
+        a.published_at desc
+
+        limit #{pageSize} offset #{offset}
+    </select>
+
+
 
 
 </mapper>
