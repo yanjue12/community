@@ -190,6 +190,18 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
 
 
+
+
+
+
+
+    /*  ============================================================================================
+        ============================================================================================
+                                 查询首页文章信息(热榜，个性化推荐，关注，最新)
+        ============================================================================================
+        ============================================================================================*/
+
+
     /**
      * 查首页帖子信息
      *
@@ -212,7 +224,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 break;
 
             case "1": // 推荐
-                list = queryRecommendList(request, pageSize, offset);
+                list = queryRecommendList(request, pageSize, offset,pageNum);
                 break;
 
             case "2": // 关注
@@ -245,11 +257,11 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private List<ArticleVO> queryRecommendList(
             ArticleRequest request,
             int pageSize,
-            int offset) {
+            int offset,
+            int pageNum) {
 
         Long userId = request.getUserId();
 
-        // 未登录 → 热榜
         if (userId == null) {
             return baseMapper.queryHotList(request, pageSize, offset);
         }
@@ -260,14 +272,24 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             return baseMapper.queryRecommendFallback(pageSize, offset);
         }
 
-        // ========== 1.计算探索比例 ==========
-        int exploreSize = (int) Math.ceil(pageSize * 0.2);
-        int personalizeSize = pageSize - exploreSize;
+        // ===============================
+        // 1.比例设计
+        // ===============================
 
-        Set<Long> excludeIds = new HashSet<>(getExposedArticleIds(userId));
+        int exploreSize = (int) Math.ceil(pageSize * 0.2); // 20%
+        int remainSize = pageSize - exploreSize;
 
+        int coldSize = remainSize / 2;
+        int hotSize = remainSize - coldSize;
 
-        // ========== 2.个性化部分 ==========
+        int coldOffset = (pageNum - 1) * coldSize;
+        int hotOffset = (pageNum - 1) * hotSize;
+        int exploreOffset = (pageNum - 1) * exploreSize;
+
+        // ===============================
+        // 2.标签
+        // ===============================
+
         List<TagWeightDTO> topTagWeights =
                 getTopTagWeights(profile.getTagProfile(), 5);
 
@@ -275,37 +297,110 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 .map(TagWeightDTO::getTagId)
                 .collect(Collectors.toList());
 
-        List<ArticleVO> personalizeList =
+        Set<Long> excludeIds = new HashSet<>(getExposedArticleIds(userId));
+
+        // ===============================
+        // 3.冷池
+        // ===============================
+
+        List<ArticleVO> coldList =
                 baseMapper.queryPersonalizedList(
                         topTagWeights,
                         excludeIds,
-                        personalizeSize,
-                        offset
+                        "cold",
+                        coldSize,
+                        coldOffset
                 );
 
-        // 收集ID用于排除
-        Set<Long> usedIds = personalizeList.stream()
-                .map(ArticleVO::getId)
-                .collect(Collectors.toSet());
+        excludeIds.addAll(extractIds(coldList));
 
-        excludeIds.addAll(usedIds);
+        // ===============================
+        // 4.热池
+        // ===============================
 
-        // ========== 3.探索部分 ==========
+        List<ArticleVO> hotList =
+                baseMapper.queryPersonalizedList(
+                        topTagWeights,
+                        excludeIds,
+                        "hot",
+                        hotSize,
+                        hotOffset
+                );
+
+        excludeIds.addAll(extractIds(hotList));
+
+        // ===============================
+        // 5.探索池（非兴趣标签）
+        // ===============================
+
         List<ArticleVO> exploreList =
                 baseMapper.queryExploreList(
                         excludeIds,
                         topTagIds,
-                        exploreSize
+                        exploreSize,
+                        exploreOffset
                 );
 
-        // ========== 4.混合 ==========
-        List<ArticleVO> finalList = new ArrayList<>();
-        finalList.addAll(personalizeList);
-        finalList.addAll(exploreList);
+        // ===============================
+        // 6.混排
+        // ===============================
 
-        return finalList;
+        List<ArticleVO> personalizeList = new ArrayList<>();
+        personalizeList.addAll(coldList);
+        personalizeList.addAll(hotList);
+
+        return mixWithExplore(personalizeList, exploreList, pageSize);
     }
 
+    //混排 冷 热 探索打乱重组
+    private List<ArticleVO> mixWithExplore(
+            List<ArticleVO> personalize,
+            List<ArticleVO> explore,
+            int pageSize) {
+
+        List<ArticleVO> result = new ArrayList<>();
+
+        int exploreIndex = 0;
+        int personalizeIndex = 0;
+
+        int interval = personalize.size() / (explore.size() + 1);
+        if (interval <= 0) interval = 1;
+
+        while (result.size() < pageSize &&
+                (personalizeIndex < personalize.size()
+                        || exploreIndex < explore.size())) {
+
+            // 插入个性化
+            for (int i = 0;
+                 i < interval
+                         && personalizeIndex < personalize.size()
+                         && result.size() < pageSize;
+                 i++) {
+
+                result.add(personalize.get(personalizeIndex++));
+            }
+
+            // 插入探索
+            if (exploreIndex < explore.size()
+                    && result.size() < pageSize) {
+
+                result.add(explore.get(exploreIndex++));
+            }
+        }
+
+        return result;
+    }
+
+
+
+    private Set<Long> extractIds(List<ArticleVO> list) {
+        if (CollectionUtils.isEmpty(list)) {
+            return Collections.emptySet();
+        }
+        return list.stream()
+                .map(ArticleVO::getId)
+                .collect(Collectors.toSet());
+    }
 
 
     //获取标签权重
@@ -355,6 +450,24 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 .map(o -> Long.valueOf(o.toString()))
                 .collect(Collectors.toSet());
     }
+
+
+
+
+    /*  ============================================================================================
+        ============================================================================================
+             ！！！！！！！！！！！查询首页文章信息(热榜，个性化推荐，关注，最新)结束！！！！！！！！！
+        ============================================================================================
+        ============================================================================================*/
+
+
+
+
+
+
+
+
+
 
 
 

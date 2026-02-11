@@ -586,9 +586,7 @@
         u.nickname as nickName,
         u.avatar as avatar,
         c.name as categoryName,
-        tt.tagsName as tagName,
 
-        -- 个性化得分
         (
         <foreach collection="tagWeights"
                  item="tw"
@@ -622,19 +620,12 @@
         left join user u on a.user_id = u.id
         left join category c on a.category_id = c.id
 
-        left join (
-        select
-        atr.article_id,
-        GROUP_CONCAT(at.name SEPARATOR ',') AS tagsName
-        from article_tag at
-        join article_tag_relation atr on at.id = atr.tag_id
-        group by atr.article_id
-        ) tt on tt.article_id = a.id
-
         where a.visibility = 0
         and a.status = 1
         and a.published_at is not null
         and a.created_at >= DATE_SUB(NOW(), INTERVAL 15 DAY)
+
+        <!-- 排除已曝光 -->
         <if test="excludeIds != null and excludeIds.size() > 0">
             and a.id not in
             <foreach collection="excludeIds"
@@ -646,13 +637,25 @@
             </foreach>
         </if>
 
+        <!-- 冷热拆池 -->
+        <if test="flag != null">
+            <if test="flag == 'cold'">
+                and a.view_count &lt; 1000
+            </if>
+            <if test="flag == 'hot'">
+                and a.view_count &gt;= 1000
+            </if>
+        </if>
+
         group by a.id
 
         order by finalScore desc,
         a.published_at desc
 
         limit #{pageSize} offset #{offset}
+
     </select>
+
 
 
 
@@ -698,7 +701,8 @@
         limit #{limit}
     </select>
 
-    <select id="queryExploreList" resultType="com.fzg.vo.ArticleVO">
+    <select id="queryExploreList"
+            resultType="com.fzg.vo.ArticleVO">
 
         select
         a.id,
@@ -714,24 +718,11 @@
         a.share_count as shareCount,
         a.is_recommend as isRecommend,
         a.is_top as isTop,
+
         u.id as userId,
         u.nickname as nickName,
         u.avatar as avatar,
         c.name as categoryName,
-
-        -- 热度分
-        (
-        a.view_count
-        + a.like_count * 10
-        + a.comment_count * 5
-        + a.collect_count * 3
-        ) as hotScore,
-
-        -- 新鲜度分
-        (1 / (TIMESTAMPDIFF(HOUR, a.published_at, NOW()) + 2)) as freshScore,
-
-        -- 低曝光扶持
-        (1 / (a.recommend_expose_count + 1)) as exposeScore,
 
         (
         (
@@ -754,9 +745,21 @@
         and a.status = 1
         and a.published_at is not null
 
-        -- 排除已曝光
+        <!-- 排除已曝光 -->
+        <if test="excludeIds != null and excludeIds.size() > 0">
+            and a.id not in
+            <foreach collection="excludeIds"
+                     item="id"
+                     open="("
+                     separator=","
+                     close=")">
+                #{id}
+            </foreach>
+        </if>
+
+        <!-- 排除兴趣标签（真正探索） -->
         <if test="excludeTagIds != null and excludeTagIds.size() > 0">
-            and a.id not exists (
+            and a.id not in (
             select atr.article_id
             from article_tag_relation atr
             where atr.tag_id in
@@ -770,15 +773,14 @@
             )
         </if>
 
-        -- 质量门槛
         and a.view_count > 20
-
 
         order by exploreScore desc
 
-        limit #{limit}
+        limit #{limit} offset #{offset}
 
     </select>
+
 
 
 </mapper>

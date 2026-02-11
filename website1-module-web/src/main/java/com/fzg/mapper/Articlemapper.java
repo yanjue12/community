@@ -69,6 +69,7 @@ public interface Articlemapper extends BaseMapper<Article> {
     List<ArticleVO> queryPersonalizedList(
             @Param("tagWeights") List<TagWeightDTO> tagWeights,
             @Param("excludeIds") Set<Long> excludeIds,
+            @Param("flag") String flag,
             @Param("pageSize") int pageSize,
             @Param("offset") int offset
     );
@@ -77,7 +78,8 @@ public interface Articlemapper extends BaseMapper<Article> {
     List<ArticleVO> queryExploreList(
             @Param("excludeIds") Set<Long> excludeIds,
             @Param("excludeTagIds") List<Long> excludeTagIds,
-            @Param("limit") int limit
+            @Param("limit") int limit,
+            @Param("offset") int offset
     );
 
 
