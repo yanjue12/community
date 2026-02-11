@@ -260,15 +260,20 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             return baseMapper.queryRecommendFallback(pageSize, offset);
         }
 
-        // ========== 1️⃣ 计算探索比例 ==========
+        // ========== 1.计算探索比例 ==========
         int exploreSize = (int) Math.ceil(pageSize * 0.2);
         int personalizeSize = pageSize - exploreSize;
 
-        Set<Long> excludeIds = getExposedArticleIds(userId);
+        Set<Long> excludeIds = new HashSet<>(getExposedArticleIds(userId));
 
-        // ========== 2️⃣ 个性化部分 ==========
+
+        // ========== 2.个性化部分 ==========
         List<TagWeightDTO> topTagWeights =
                 getTopTagWeights(profile.getTagProfile(), 5);
+
+        List<Long> topTagIds = topTagWeights.stream()
+                .map(TagWeightDTO::getTagId)
+                .collect(Collectors.toList());
 
         List<ArticleVO> personalizeList =
                 baseMapper.queryPersonalizedList(
@@ -285,14 +290,15 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         excludeIds.addAll(usedIds);
 
-        // ========== 3️⃣ 探索部分 ==========
+        // ========== 3.探索部分 ==========
         List<ArticleVO> exploreList =
                 baseMapper.queryExploreList(
                         excludeIds,
+                        topTagIds,
                         exploreSize
                 );
 
-        // ========== 4️⃣ 混合 ==========
+        // ========== 4.混合 ==========
         List<ArticleVO> finalList = new ArrayList<>();
         finalList.addAll(personalizeList);
         finalList.addAll(exploreList);

@@ -656,7 +656,7 @@
 
 
 
-    <select id="queryExploreList" resultType="com.fzg.vo.ArticleVO">
+    <select id="queryExploreList000" resultType="com.fzg.vo.ArticleVO">
         select
         a.id,
         a.title,
@@ -698,6 +698,87 @@
         limit #{limit}
     </select>
 
+    <select id="queryExploreList" resultType="com.fzg.vo.ArticleVO">
+
+        select
+        a.id,
+        a.title,
+        a.summary,
+        a.cover_image as coverImage,
+        a.type,
+        a.published_at as updatedTime,
+        a.view_count as viewCount,
+        a.like_count as likeCount,
+        a.comment_count as commentCount,
+        a.collect_count as collectCount,
+        a.share_count as shareCount,
+        a.is_recommend as isRecommend,
+        a.is_top as isTop,
+        u.id as userId,
+        u.nickname as nickName,
+        u.avatar as avatar,
+        c.name as categoryName,
+
+        -- 热度分
+        (
+        a.view_count
+        + a.like_count * 10
+        + a.comment_count * 5
+        + a.collect_count * 3
+        ) as hotScore,
+
+        -- 新鲜度分
+        (1 / (TIMESTAMPDIFF(HOUR, a.published_at, NOW()) + 2)) as freshScore,
+
+        -- 低曝光扶持
+        (1 / (a.recommend_expose_count + 1)) as exposeScore,
+
+        (
+        (
+        a.view_count
+        + a.like_count * 10
+        + a.comment_count * 5
+        + a.collect_count * 3
+        ) * 0.6
+        +
+        (1 / (TIMESTAMPDIFF(HOUR, a.published_at, NOW()) + 2)) * 100 * 0.3
+        +
+        (1 / (a.recommend_expose_count + 1)) * 50 * 0.1
+        ) as exploreScore
+
+        from article a
+        left join user u on a.user_id = u.id
+        left join category c on a.category_id = c.id
+
+        where a.visibility = 0
+        and a.status = 1
+        and a.published_at is not null
+
+        -- 排除已曝光
+        <if test="excludeTagIds != null and excludeTagIds.size() > 0">
+            and a.id not exists (
+            select atr.article_id
+            from article_tag_relation atr
+            where atr.tag_id in
+            <foreach collection="excludeTagIds"
+                     item="tagId"
+                     open="("
+                     separator=","
+                     close=")">
+                #{tagId}
+            </foreach>
+            )
+        </if>
+
+        -- 质量门槛
+        and a.view_count > 20
+
+
+        order by exploreScore desc
+
+        limit #{limit}
+
+    </select>
 
 
 </mapper>
