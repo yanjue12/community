@@ -249,44 +249,57 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         Long userId = request.getUserId();
 
-        // 1️⃣ 未登录 → 热榜
+        // 未登录 → 热榜
         if (userId == null) {
             return baseMapper.queryHotList(request, pageSize, offset);
         }
 
-        // 2️⃣ 查询用户画像
         UserProfile profile = userProfileMapper.selectByUserId(userId);
 
-        // 3️⃣ 无画像 → 兜底
-        if (profile == null) {
+        if (profile == null || profile.getProfileLevel() < 1) {
             return baseMapper.queryRecommendFallback(pageSize, offset);
         }
 
-        Map<Long, Double> tagProfile = profile.getTagProfile();
-
-        // 4️⃣ 标签画像为空 → 兜底
-        if (CollectionUtils.isEmpty(tagProfile)) {
-            return baseMapper.queryRecommendFallback(pageSize, offset);
-        }
-
-        // 5️⃣ 取 Top 权重标签
-        List<TagWeightDTO> topTagWeights =
-                getTopTagWeights(tagProfile, 5);
-
-        if (CollectionUtils.isEmpty(topTagWeights)) {
-            return baseMapper.queryRecommendFallback(pageSize, offset);
-        }
+        // ========== 1️⃣ 计算探索比例 ==========
+        int exploreSize = (int) Math.ceil(pageSize * 0.2);
+        int personalizeSize = pageSize - exploreSize;
 
         Set<Long> excludeIds = getExposedArticleIds(userId);
 
-        return baseMapper.queryPersonalizedList(
-                topTagWeights,
-                excludeIds,
-                pageSize,
-                offset
-        );
+        // ========== 2️⃣ 个性化部分 ==========
+        List<TagWeightDTO> topTagWeights =
+                getTopTagWeights(profile.getTagProfile(), 5);
 
+        List<ArticleVO> personalizeList =
+                baseMapper.queryPersonalizedList(
+                        topTagWeights,
+                        excludeIds,
+                        personalizeSize,
+                        offset
+                );
+
+        // 收集ID用于排除
+        Set<Long> usedIds = personalizeList.stream()
+                .map(ArticleVO::getId)
+                .collect(Collectors.toSet());
+
+        excludeIds.addAll(usedIds);
+
+        // ========== 3️⃣ 探索部分 ==========
+        List<ArticleVO> exploreList =
+                baseMapper.queryExploreList(
+                        excludeIds,
+                        exploreSize
+                );
+
+        // ========== 4️⃣ 混合 ==========
+        List<ArticleVO> finalList = new ArrayList<>();
+        finalList.addAll(personalizeList);
+        finalList.addAll(exploreList);
+
+        return finalList;
     }
+
 
 
     //获取标签权重

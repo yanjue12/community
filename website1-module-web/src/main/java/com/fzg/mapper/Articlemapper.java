@@ -74,5 +74,9 @@ public interface Articlemapper extends BaseMapper<Article> {
     );
 
 
+    List<ArticleVO> queryExploreList(
+            @Param("excludeIds") Set<Long> excludeIds,
+            @Param("limit") int limit
+    );
 
 }
