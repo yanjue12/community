@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.constant.RedisArticleKey;
+import com.fzg.constant.RedisRecommendKey;
 import com.fzg.enums.ArticleListType;
 import com.fzg.job.ArticleQueryExecutor;
 import com.fzg.mapper.*;
@@ -33,6 +34,7 @@ import org.springframework.util.CollectionUtils;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -231,6 +233,9 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         ArticlePageVO vo = new ArticlePageVO();
         vo.setArticleVOList(list);
+        //记录曝光
+        recordExpose(userId, list);
+
         return vo;
     }
 
@@ -272,17 +277,19 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             return baseMapper.queryRecommendFallback(pageSize, offset);
         }
 
-        // 6️⃣ 走个性化排序SQL
+        Set<Long> excludeIds = getExposedArticleIds(userId);
+
         return baseMapper.queryPersonalizedList(
                 topTagWeights,
+                excludeIds,
                 pageSize,
                 offset
         );
+
     }
 
 
-
-
+    //获取标签权重
     private List<TagWeightDTO> getTopTagWeights(
             Map<Long, Double> tagProfile,
             int limit) {
@@ -294,7 +301,41 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 .collect(Collectors.toList());
     }
 
+    //曝光存储规则
+    private void recordExpose(Long userId, List<ArticleVO> list) {
 
+        if (userId == null || CollectionUtils.isEmpty(list)) {
+            return;
+        }
+
+        String key = RedisRecommendKey.userExposeSet(userId);
+
+        for (ArticleVO vo : list) {
+            redisTemplate.opsForSet().add(key, vo.getId());
+        }
+
+        // 保留 7 天
+        redisTemplate.expire(key, 7, TimeUnit.DAYS);
+    }
+
+    //获取曝光集合
+    private Set<Long> getExposedArticleIds(Long userId) {
+
+        if (userId == null) {
+            return Collections.emptySet();
+        }
+
+        String key = RedisRecommendKey.userExposeSet(userId);
+        Set<Object> set = redisTemplate.opsForSet().members(key);
+
+        if (CollectionUtils.isEmpty(set)) {
+            return Collections.emptySet();
+        }
+
+        return set.stream()
+                .map(o -> Long.valueOf(o.toString()))
+                .collect(Collectors.toSet());
+    }
 
 
 

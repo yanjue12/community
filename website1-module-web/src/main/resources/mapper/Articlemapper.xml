@@ -635,6 +635,16 @@
         and a.status = 1
         and a.published_at is not null
         and a.created_at >= DATE_SUB(NOW(), INTERVAL 15 DAY)
+        <if test="excludeIds != null and excludeIds.size() > 0">
+            and a.id not in
+            <foreach collection="excludeIds"
+                     item="id"
+                     open="("
+                     separator=","
+                     close=")">
+                #{id}
+            </foreach>
+        </if>
 
         group by a.id
 
