@@ -730,7 +730,7 @@
             #{id}
         </foreach>
 
-        order by field(id,
+        order by field(a.id,
         <foreach collection="ids"
                  item="id"
                  separator=",">

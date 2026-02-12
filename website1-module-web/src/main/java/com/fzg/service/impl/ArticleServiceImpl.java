@@ -245,9 +245,10 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         ArticlePageVO vo = new ArticlePageVO();
         vo.setArticleVOList(list);
-        //记录曝光
-        recordExpose(userId, list);
-
+        //记录曝光 未登录暂时不记录
+        if(userId != null && userId > 0){
+            recordExpose(userId, list);
+        }
         return vo;
     }
 
@@ -279,7 +280,10 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             cachedIds = buildFullRecommendPool(userId);
 
             if (!CollectionUtils.isEmpty(cachedIds)) {
-                redisTemplate.opsForList().rightPushAll(cacheKey, cachedIds);
+                List<String> stringIds = cachedIds.stream()
+                        .map(String::valueOf)
+                        .collect(Collectors.toList());
+                redisTemplate.opsForList().rightPushAll(cacheKey, stringIds);
                 redisTemplate.expire(cacheKey, 30, TimeUnit.MINUTES);
             }
         }
@@ -361,25 +365,25 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         return mixIdList(finalIds, exploreIds);
     }
 
-    private List<Long> getCachedRecommendIds(String key) {
+        private List<Long> getCachedRecommendIds(String key) {
 
-        Long size = redisTemplate.opsForList().size(key);
+            Long size = redisTemplate.opsForList().size(key);
 
-        if (size == null || size == 0) {
-            return Collections.emptyList();
+            if (size == null || size == 0) {
+                return Collections.emptyList();
+            }
+
+            List<Object> objects =
+                    redisTemplate.opsForList().range(key, 0, -1);
+
+            if (CollectionUtils.isEmpty(objects)) {
+                return Collections.emptyList();
+            }
+
+            return objects.stream()
+                    .map(o -> Long.valueOf(o.toString()))
+                    .collect(Collectors.toList());
         }
-
-        List<Object> objects =
-                redisTemplate.opsForList().range(key, 0, -1);
-
-        if (CollectionUtils.isEmpty(objects)) {
-            return Collections.emptyList();
-        }
-
-        return objects.stream()
-                .map(o -> Long.valueOf(o.toString()))
-                .collect(Collectors.toList());
-    }
 
     private List<Long> mixIdList(
             List<Long> personalize,
@@ -485,7 +489,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         String key = RedisRecommendKey.userExposeSet(userId);
 
         for (ArticleVO vo : list) {
-            redisTemplate.opsForSet().add(key, vo.getId());
+            redisTemplate.opsForSet().add(key, vo.getId().toString());
         }
 
         // 保留 7 天
