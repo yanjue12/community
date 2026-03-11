@@ -11,6 +11,7 @@ import com.fzg.model.LikeRecord;
 import com.fzg.model.Result;
 import com.fzg.ratelimit.LikeRateLimit;
 import com.fzg.service.LikeRecordService;
+import com.fzg.service.NotificationPublisher;
 import com.fzg.vo.LikeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +29,8 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
 
     private final RedisTemplate<String, String> redisTemplate;
     private final Articlemapper articlemapper;
-    private final LikeRateLimit likeRateLimit; // 注入 LikeRateLimit
-    private final NotificationService notificationService;
+    private final LikeRateLimit likeRateLimit;
+    private final NotificationPublisher notificationPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -87,7 +88,16 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
             if (oldStatus != null && !oldStatus.equals(String.valueOf(actionLike))) {
                 //文章点赞数修改
                 articlemapper.upArticleLikeCount(articleId, actionLike,"like");
-                //TODO 通知
+                
+                // 点赞时发送通知
+                if (actionLike == 1) {
+                    Article article = articlemapper.selectById(articleId);
+                    if (article != null) {
+                        notificationPublisher.publishArticleLikeNotification(
+                                article.getUserId(), userId, articleId, article.getTitle()
+                        );
+                    }
+                }
             }
             // 关键：更新 Redis 缓存点赞状态
             String cacheKey = RedisArticleKey.getLikeArticleStatusKey(userId, articleId);

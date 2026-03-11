@@ -8,8 +8,10 @@ import com.fzg.mapper.UserMapper;
 import com.fzg.model.Follow;
 import com.fzg.model.User;
 import com.fzg.service.FollowService;
+import com.fzg.service.NotificationPublisher;
 import com.fzg.vo.FollowVO;
 import com.fzg.vo.UserVO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,12 +23,14 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> implements FollowService {
 
     @Autowired
     private UserMapper userMapper;
     @Autowired
     private RedisTemplate redisTemplate;
+    private final NotificationPublisher notificationPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -79,6 +83,9 @@ public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> impleme
                             "1",
                             7, TimeUnit.DAYS
                     );
+                    
+                    // 发送关注通知
+                    notificationPublisher.publishFollowNotification(followingId, followerId);
                 }
                 // 取消关注但本来就没关注 → 直接成功
                 return true;

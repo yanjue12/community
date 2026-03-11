@@ -9,10 +9,12 @@ import com.fzg.model.Comment;
 import com.fzg.model.Follow;
 import com.fzg.model.UserPrivacy;
 import com.fzg.service.CommentService;
+import com.fzg.service.NotificationPublisher;
 import com.fzg.service.UserPrivacyService;
 import com.fzg.vo.CommentPageVO;
 import com.fzg.vo.CommentVO;
 import com.fzg.vo.RootCommentVO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,12 +28,14 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> implements CommentService {
 
     @Autowired
     private UserPrivacyService userPrivacyService;
     @Autowired
     private Followmapper followmapper;
+    private final NotificationPublisher notificationPublisher;
 
     @Override
     public Boolean saveComment(CommentVO comment) {
@@ -101,10 +105,24 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
                 }
             }
 
-
         //如果是回复，更新一级评论的 reply_count
         if (comment.getParentId() != 0) {
             baseMapper.incrementReplyCount(comment.getRootId());
+            
+            // 发送回复通知
+            Comment parentComment = baseMapper.selectById(comment.getParentId());
+            if (parentComment != null) {
+                notificationPublisher.publishCommentReplyNotification(
+                        parentComment.getUserId(), comment.getUserId(), 
+                        comment.getParentId(), commentEntity.getId(), comment.getContent()
+                );
+            }
+        } else {
+            // 一级评论，发送文章评论通知
+            notificationPublisher.publishArticleCommentNotification(
+                    comment.getAuthorId(), comment.getUserId(),
+                    comment.getArticleId(), "", commentEntity.getId(), comment.getContent()
+            );
         }
 
         return true;
