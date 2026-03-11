@@ -390,6 +390,11 @@
         <foreach collection="ids" item="id" open="(" close=")" separator=",">
             #{id}
         </foreach>
+        ORDER BY FIELD(a.id,
+        <foreach collection="ids" item="id" separator=",">
+            #{id}
+        </foreach>
+        )
     </select>
 
     <select id="queryHotList" resultType="com.fzg.vo.ArticleVO">

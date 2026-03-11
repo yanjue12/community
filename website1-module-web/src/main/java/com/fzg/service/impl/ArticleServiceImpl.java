@@ -561,11 +561,11 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         /* ========= P0：短语完全命中（最高优先级） ========= */
         query.should(
                 QueryBuilders.matchPhraseQuery("title", keyword)
-                        .boost(20f)
+                        .boost(500f)
         );
         query.should(
                 QueryBuilders.matchPhraseQuery("content", keyword)
-                        .boost(5f)
+                        .boost(3f)
         );
 
         /* ========= P1：multi_match（分词但相关） ========= */

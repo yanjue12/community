@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.RolePermissionMapper">
+
+
+    <select id="selectList" resultType="com.fzg.model.RolePermission">
+        select  * from role_permission
+        where role_id = #{id}
+        order by desc created_at;
+    </select>
+</mapper>
