@@ -6,6 +6,7 @@ import com.fzg.constant.RedisArticleKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.LikeRecordMapper;
+import com.fzg.model.Article;
 import com.fzg.model.LikeRecord;
 import com.fzg.model.Result;
 import com.fzg.ratelimit.LikeRateLimit;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -27,9 +29,10 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
     private final RedisTemplate<String, String> redisTemplate;
     private final Articlemapper articlemapper;
     private final LikeRateLimit likeRateLimit; // 注入 LikeRateLimit
-
+    private final NotificationService notificationService;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Result articleLike(LikeRequest likeRequest) {
 
         Integer actionLike = likeRequest.getActionLike();
@@ -84,6 +87,7 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
             if (oldStatus != null && !oldStatus.equals(String.valueOf(actionLike))) {
                 //文章点赞数修改
                 articlemapper.upArticleLikeCount(articleId, actionLike,"like");
+                //TODO 通知
             }
             // 关键：更新 Redis 缓存点赞状态
             String cacheKey = RedisArticleKey.getLikeArticleStatusKey(userId, articleId);
@@ -100,5 +104,7 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
         }
         return Result.success(true);
     }
+
+
 
 }

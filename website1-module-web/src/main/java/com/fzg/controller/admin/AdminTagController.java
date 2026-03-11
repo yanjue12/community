@@ -30,9 +30,9 @@ public class AdminTagController {
         Page<ArticleTag> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ArticleTag> wrapper = new LambdaQueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
-            wrapper.like(ArticleTag::getTagName, keyword);
+            wrapper.like(ArticleTag::getName, keyword);
         }
-        wrapper.orderByDesc(ArticleTag::getCreateTime);
+        wrapper.orderByDesc(ArticleTag::getCreatedAt);
         return Result.success(tagMapper.selectPage(page, wrapper));
     }
 
@@ -58,7 +58,7 @@ public class AdminTagController {
      */
     @PostMapping
     public Result createTag(@RequestBody ArticleTag tag) {
-        tag.setCreateTime(new java.util.Date());
+        tag.setCreatedAt(new java.util.Date());
         int result = tagMapper.insert(tag);
         return Result.handle(result > 0);
     }
@@ -69,7 +69,7 @@ public class AdminTagController {
     @PutMapping("/{id}")
     public Result updateTag(@PathVariable Long id, @RequestBody ArticleTag tag) {
         tag.setId(id);
-        tag.setUpdateTime(new java.util.Date());
+        tag.setCreatedAt(new java.util.Date());
         int result = tagMapper.updateById(tag);
         return Result.handle(result > 0);
     }
@@ -98,7 +98,7 @@ public class AdminTagController {
     @GetMapping("/hot")
     public Result getHotTags(@RequestParam(defaultValue = "10") Integer limit) {
         LambdaQueryWrapper<ArticleTag> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(ArticleTag::getUseCount).last("LIMIT " + limit);
+        wrapper.orderByDesc(ArticleTag::getArticleCount).last("LIMIT " + limit);
         return Result.success(tagMapper.selectList(wrapper));
     }
 }

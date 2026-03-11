@@ -30,9 +30,14 @@ public class Notification implements Serializable {
     private Long fromUserId;
 
     /**
-     * 类型 1:系统 2:评论 3:回复 4:点赞 5:关注 6:私信 7:收藏 8:提到
+     * 类型 system:系统消息 user:用户互动 message:私信提醒
      */
     private String type;
+
+    /**
+     * 动作类型（用于细分，如like_article, like_comment, follow, reply等）
+     */
+    private String actionType;
 
     /**
      * 标题
@@ -55,6 +60,11 @@ public class Notification implements Serializable {
     private Long targetId;
 
     /**
+     * 父级ID（如回复的评论ID）
+     */
+    private Long parentId;
+
+    /**
      * 额外数据
      */
     private Object extraData;
@@ -73,6 +83,31 @@ public class Notification implements Serializable {
      * 阅读时间
      */
     private Date readAt;
+
+    /**
+     * 来源对象ID(如评论ID/文章ID)
+     */
+    private Long sourceId;
+
+    /**
+     * 来源对象类型(comment/article/message)
+     */
+    private String sourceType;
+
+    /**
+     * 通知聚合ID
+     */
+    private String groupId;
+
+    /**
+     * 是否删除
+     */
+    private String isDeleted;
+
+    /**
+     * 通知级别(normal/important)
+     */
+    private String notifyLevel;
 
     private static final long serialVersionUID = 1L;
 }
