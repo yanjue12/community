@@ -365,29 +365,22 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         return mixIdList(finalIds, exploreIds);
     }
 
-        private List<Long> getCachedRecommendIds(String key) {
-
-            Long size = redisTemplate.opsForList().size(key);
-
-            if (size == null || size == 0) {
-                return Collections.emptyList();
-            }
-
-            List<Object> objects =
-                    redisTemplate.opsForList().range(key, 0, -1);
-
-            if (CollectionUtils.isEmpty(objects)) {
-                return Collections.emptyList();
-            }
-
-            return objects.stream()
-                    .map(o -> Long.valueOf(o.toString()))
-                    .collect(Collectors.toList());
+    private List<Long> getCachedRecommendIds(String key) {
+        Long size = redisTemplate.opsForList().size(key);
+        if (size == null || size == 0) {
+            return Collections.emptyList();
         }
+        List<Object> objects =
+                redisTemplate.opsForList().range(key, 0, -1);
+        if (CollectionUtils.isEmpty(objects)) {
+            return Collections.emptyList();
+        }
+        return objects.stream()
+                .map(o -> Long.valueOf(o.toString()))
+                .collect(Collectors.toList());
+    }
 
-    private List<Long> mixIdList(
-            List<Long> personalize,
-            List<Long> explore) {
+    private List<Long> mixIdList(List<Long> personalize,List<Long> explore) {
 
         List<Long> result = new ArrayList<>();
 

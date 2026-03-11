@@ -65,7 +65,7 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
 
         //判断隐私
         LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
-        u.eq(UserPrivacy::getUserId, comment.getUserId());
+        u.eq(UserPrivacy::getUserId, comment.getAuthorId());
         UserPrivacy userPrivacy = userPrivacyService.getOne(u);
         String canComment = userPrivacy.getCanComment();
         if("0".equals(canComment)){
