@@ -3,10 +3,14 @@ package com.fzg.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.Commentmapper;
 import com.fzg.mapper.Followmapper;
+import com.fzg.mapper.UserMapper;
+import com.fzg.model.Article;
 import com.fzg.model.Comment;
 import com.fzg.model.Follow;
+import com.fzg.model.User;
 import com.fzg.model.UserPrivacy;
 import com.fzg.service.CommentService;
 import com.fzg.service.NotificationPublisher;
@@ -35,6 +39,10 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
     private UserPrivacyService userPrivacyService;
     @Autowired
     private Followmapper followmapper;
+    @Autowired
+    private Articlemapper articlemapper;
+    @Autowired
+    private UserMapper userMapper;
     private final NotificationPublisher notificationPublisher;
 
     @Override
@@ -112,16 +120,30 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
             // 发送回复通知
             Comment parentComment = baseMapper.selectById(comment.getParentId());
             if (parentComment != null) {
+                // 查询回复用户信息
+                User replier = userMapper.selectById(comment.getUserId());
+                String replierName = replier != null ? replier.getNickname() : "用户";
+                
                 notificationPublisher.publishCommentReplyNotification(
                         parentComment.getUserId(), comment.getUserId(), 
-                        comment.getParentId(), commentEntity.getId(), comment.getContent()
+                        comment.getParentId(), commentEntity.getId(), comment.getContent(),
+                        replierName
                 );
             }
         } else {
             // 一级评论，发送文章评论通知
+            // 查询文章信息
+            Article article = articlemapper.selectById(comment.getArticleId());
+            String articleTitle = article != null ? article.getTitle() : "文章";
+            
+            // 查询评论用户信息
+            User commenter = userMapper.selectById(comment.getUserId());
+            String commenterName = commenter != null ? commenter.getNickname() : "用户";
+            
             notificationPublisher.publishArticleCommentNotification(
                     comment.getAuthorId(), comment.getUserId(),
-                    comment.getArticleId(), "", commentEntity.getId(), comment.getContent()
+                    comment.getArticleId(), articleTitle, commentEntity.getId(), comment.getContent(),
+                    commenterName
             );
         }
 
@@ -130,7 +152,7 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
 
     @Override
     public CommentPageVO<RootCommentVO> queryComList(Long articleId, Long lastId, Integer size) {
-        // 1️⃣ 查应该出现的 rootId（关键）
+        //查应该出现的 rootId（关键）
         List<Long> rootIds = baseMapper.selectRootIdsForPage(articleId, lastId, size + 1);
         log.info("rootIds:{}", JSON.toJSONString(rootIds));
         boolean hasMore = rootIds.size() > size;
@@ -145,7 +167,7 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
             return page;
         }
 
-        // 2️⃣ 批量查一级评论（可能部分被删）
+        // 批量查一级评论（可能部分被删）
         List<Comment> roots = baseMapper.selectRootsByIds(rootIds);
         if(CollectionUtils.isEmpty( roots)){
             CommentPageVO<RootCommentVO> page = new CommentPageVO<>();
@@ -158,7 +180,7 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
         Map<Long, Comment> rootMap = roots.stream()
                 .collect(Collectors.toMap(Comment::getId, c -> c));
 
-        // 3️⃣ 组装 VO
+        //组装 VO
         List<RootCommentVO> voList = new ArrayList<>();
 
         for (Long rootId : rootIds) {
