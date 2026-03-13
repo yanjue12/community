@@ -2,6 +2,7 @@ package com.fzg.service;
 
 import com.fzg.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationPublisher {
 
     private final ApplicationEventPublisher eventPublisher;
@@ -23,10 +25,12 @@ public class NotificationPublisher {
                                    String actionType, String title, String content,
                                    String targetType, Long targetId, String groupId,
                                    Map<String, Object> extraData) {
+        log.info("NotificationPublisher.异步发送通知事件");
         NotificationEvent event = new NotificationEvent(
                 this, userId, fromUserId, type, actionType, title, content,
                 targetType, targetId, groupId, extraData
         );
+        log.info("NotificationPublisher.异步发送通知事件 new成功");
         eventPublisher.publishEvent(event);
     }
 
@@ -56,6 +60,7 @@ public class NotificationPublisher {
     public void publishArticleCommentNotification(Long authorId, Long commenterId, Long articleId, 
                                                  String articleTitle, Long commentId, String commentContent) {
         Map<String, Object> extra = Map.of("articleTitle", articleTitle, "commentContent", commentContent);
+        log.info("publishArticleCommentNotification.评论通知开始");
         publishNotification(authorId, commenterId, "user", "comment_article",
                 "文章收到评论", "评论了你的文章《" + articleTitle + "》",
                 "article", articleId, "comment_article_" + articleId, extra);

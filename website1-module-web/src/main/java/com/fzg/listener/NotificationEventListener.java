@@ -31,7 +31,8 @@ public class NotificationEventListener {
     public void onNotificationEvent(NotificationEvent event) {
         try {
             // 不给自己发通知
-            if (event.getUserId().equals(event.getFromUserId())) {
+            if (event.getUserId() != null && event.getFromUserId() != null && 
+                event.getUserId().equals(event.getFromUserId())) {
                 return;
             }
 
@@ -50,7 +51,8 @@ public class NotificationEventListener {
             notification.setNotifyLevel("normal");
             notification.setCreatedAt(new Date());
 
-            if (event.getExtraData() != null) {
+            // 处理额外数据
+            if (event.getExtraData() != null && !event.getExtraData().isEmpty()) {
                 notification.setExtraData(JSON.toJSONString(event.getExtraData()));
             }
 
