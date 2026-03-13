@@ -178,8 +178,8 @@ public class NotificationController {
     @PutMapping("/{id}/read")
     public Result markAsRead(@PathVariable Long id) {
         Long userId = StpUtil.getLoginIdAsLong();
-        int result = notificationService.markAsRead(userId, java.util.Collections.singletonList(id));
-        return Result.handle(result > 0);
+        boolean result = notificationService.markAsRead(userId, id);
+        return Result.handle(result);
     }
 
     /**
@@ -188,7 +188,7 @@ public class NotificationController {
     @PutMapping("/batch/read")
     public Result batchMarkAsRead(@RequestBody List<Long> ids) {
         Long userId = StpUtil.getLoginIdAsLong();
-        int result = notificationService.markAsRead(userId, ids);
+        int result = notificationService.markBatchAsRead(userId, ids);
         return Result.handle(result > 0);
     }
 
@@ -214,7 +214,7 @@ public class NotificationController {
             return Result.handle(result > 0);
         } else {
             // 全部标记
-            int result = notificationService.markAllAsRead(userId);
+            int result = notificationService.markAllAsRead(userId,type);
             return Result.handle(result > 0);
         }
     }
@@ -225,8 +225,8 @@ public class NotificationController {
     @DeleteMapping("/{id}")
     public Result deleteNotification(@PathVariable Long id) {
         Long userId = StpUtil.getLoginIdAsLong();
-        int result = notificationService.deleteNotification(userId, id);
-        return Result.handle(result > 0);
+        boolean result = notificationService.deleteNotification(userId, id);
+        return Result.handle(result);
     }
 
     /**
@@ -286,7 +286,7 @@ public class NotificationController {
         
         // 自动标记为已读
         if ("0".equals(notification.getIsRead())) {
-            notificationService.markAsRead(userId, java.util.Collections.singletonList(id));
+            notificationService.markAsRead(userId, id);
             notification.setIsRead("1");
         }
         
