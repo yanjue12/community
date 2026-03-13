@@ -6,11 +6,16 @@ import com.fzg.constant.RedisArticleKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.Favoritemapper;
+import com.fzg.mapper.UserMapper;
+import com.fzg.model.Article;
 import com.fzg.model.Favorite;
 import com.fzg.model.Result;
+import com.fzg.model.User;
 import com.fzg.ratelimit.LikeRateLimit;
 import com.fzg.service.FavoriteService;
+import com.fzg.service.NotificationPublisher;
 import com.fzg.vo.LikeRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -18,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@Slf4j
 public class FavoriteServiceImpl extends ServiceImpl<Favoritemapper, Favorite> implements FavoriteService {
 
 
@@ -26,7 +32,11 @@ public class FavoriteServiceImpl extends ServiceImpl<Favoritemapper, Favorite> i
     @Autowired
     private RedisTemplate redisTemplate;
     @Autowired
-    private Articlemapper articlemapper;;
+    private Articlemapper articlemapper;
+    @Autowired
+    private UserMapper userMapper;
+    @Autowired
+    private NotificationPublisher notificationPublisher;
 
     @Override
     public Result articleCollect(LikeRequest likeRequest) {
@@ -83,6 +93,18 @@ public class FavoriteServiceImpl extends ServiceImpl<Favoritemapper, Favorite> i
             if (oldStatus != null && !oldStatus.equals(String.valueOf(actionLike))) {
                 //文章收藏数修改
                 articlemapper.upArticleLikeCount(articleId, actionLike,"favorite");
+                
+                // 收藏时发送通知
+                if (actionLike == 1) {
+                    Article article = articlemapper.selectById(articleId);
+                    User collector = userMapper.selectById(userId);
+                    if (article != null && collector != null) {
+                        String collectorName = collector.getNickname() != null ? collector.getNickname() : "匿名用户";
+                        notificationPublisher.publishArticleCollectNotification(
+                                article.getUserId(), userId, articleId, article.getTitle(), collectorName
+                        );
+                    }
+                }
             }
             // 关键：更新 Redis 缓存点赞状态
             String cacheKey = RedisArticleKey.getFavoriteArticleStatusKey(userId, articleId);

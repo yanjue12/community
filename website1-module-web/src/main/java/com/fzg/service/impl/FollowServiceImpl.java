@@ -48,14 +48,14 @@ public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> impleme
             return true;
         }
         try {
-            // 1️⃣ 查询是否已关注
+            //1.查询是否已关注
             Follow record = getOne(
                     new LambdaQueryWrapper<Follow>()
                             .eq(Follow::getFollowerId, followerId)
                             .eq(Follow::getFollowingId, followingId)
             );
 
-            // 2️⃣ 未关注
+            //2.未关注
             if (record == null) {
                 if (actionFollow == 1) {
                     // 关注 → 插入
@@ -85,13 +85,15 @@ public class FollowServiceImpl extends ServiceImpl<Followmapper, Follow> impleme
                     );
                     
                     // 发送关注通知
-                    notificationPublisher.publishFollowNotification(followingId, followerId);
+                    User follower = userMapper.selectById(followerId);
+                    String followerName = follower != null && follower.getNickname() != null ? follower.getNickname() : "匿名用户";
+                    notificationPublisher.publishFollowNotification(followingId, followerId, followerName);
                 }
                 // 取消关注但本来就没关注 → 直接成功
                 return true;
             }
 
-            // 3️⃣ 已关注
+            //3.已关注
             if (actionFollow == 0) {
                 // 取消关注 → 删除
                 removeById(record.getId());

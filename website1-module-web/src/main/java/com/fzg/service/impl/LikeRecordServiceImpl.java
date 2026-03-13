@@ -6,9 +6,11 @@ import com.fzg.constant.RedisArticleKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.LikeRecordMapper;
+import com.fzg.mapper.UserMapper;
 import com.fzg.model.Article;
 import com.fzg.model.LikeRecord;
 import com.fzg.model.Result;
+import com.fzg.model.User;
 import com.fzg.ratelimit.LikeRateLimit;
 import com.fzg.service.LikeRecordService;
 import com.fzg.service.NotificationPublisher;
@@ -29,6 +31,7 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
 
     private final RedisTemplate<String, String> redisTemplate;
     private final Articlemapper articlemapper;
+    private final UserMapper userMapper;
     private final LikeRateLimit likeRateLimit;
     private final NotificationPublisher notificationPublisher;
 
@@ -92,9 +95,11 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
                 // 点赞时发送通知
                 if (actionLike == 1) {
                     Article article = articlemapper.selectById(articleId);
-                    if (article != null) {
+                    User liker = userMapper.selectById(userId);
+                    if (article != null && liker != null) {
+                        String likerName = liker.getNickname() != null ? liker.getNickname() : "匿名用户";
                         notificationPublisher.publishArticleLikeNotification(
-                                article.getUserId(), userId, articleId, article.getTitle()
+                                article.getUserId(), userId, articleId, article.getTitle(), likerName
                         );
                     }
                 }
