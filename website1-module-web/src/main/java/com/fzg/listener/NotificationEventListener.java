@@ -33,9 +33,14 @@ public class NotificationEventListener {
     @Async("notificationExecutor")
     public void onNotificationEvent(NotificationEvent event) {
         try {
+            log.info("=== 收到通知事件 ===");
+            log.info("接收者ID: {}, 发送者ID: {}, 动作类型: {}, 标题: {}", 
+                    event.getUserId(), event.getFromUserId(), event.getActionType(), event.getTitle());
+            
             // 不给自己发通知
             if (event.getUserId() != null && event.getFromUserId() != null && 
                 event.getUserId().equals(event.getFromUserId())) {
+                log.info("跳过自己给自己的通知");
                 return;
             }
 
@@ -61,9 +66,11 @@ public class NotificationEventListener {
             }
 
             notificationMapper.insert(notification);
-            log.debug("通知已保存到数据库: userId={}, actionType={}", event.getUserId(), event.getActionType());
+            log.info("✅ 通知已保存到数据库: userId={}, actionType={}, notificationId={}", 
+                    event.getUserId(), event.getActionType(), notification.getId());
 
             // 2. 如果用户在线，通过WebSocket推送实时通知
+            log.info("检查用户{}是否在线...", event.getUserId());
             boolean pushed = webSocketPushService.pushNotificationToUser(
                     event.getUserId(),
                     event.getActionType(),
@@ -73,13 +80,13 @@ public class NotificationEventListener {
             );
 
             if (pushed) {
-                log.debug("实时通知推送成功: userId={}, title={}", event.getUserId(), event.getTitle());
+                log.info("✅ 实时通知推送成功: userId={}, title={}", event.getUserId(), event.getTitle());
             } else {
-                log.debug("用户不在线，仅保存到数据库: userId={}", event.getUserId());
+                log.info("⚠️ 用户不在线，仅保存到数据库: userId={}", event.getUserId());
             }
 
         } catch (Exception e) {
-            log.error("处理通知事件失败: {}", e.getMessage(), e);
+            log.error("❌ 处理通知事件失败: {}", e.getMessage(), e);
             // 不抛出异常，避免影响主业务流程
         }
     }

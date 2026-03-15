@@ -25,13 +25,13 @@ public class NotificationPublisher {
                                    String actionType, String title, String content,
                                    String targetType, Long targetId, String groupId,
                                    Map<String, Object> extraData) {
-        log.info("NotificationPublisher.异步发送通知事件");
+        log.info("发布通知事件: userId={}, actionType={}, title={}", userId, actionType, title);
         NotificationEvent event = new NotificationEvent(
                 this, userId, fromUserId, type, actionType, title, content,
                 targetType, targetId, groupId, extraData
         );
-        log.info("NotificationPublisher.异步发送通知事件 new成功");
         eventPublisher.publishEvent(event);
+        log.info("通知事件已发布到事件总线");
     }
 
     /**
@@ -60,11 +60,16 @@ public class NotificationPublisher {
     public void publishArticleCommentNotification(Long authorId, Long commenterId, Long articleId, 
                                                  String articleTitle, Long commentId, String commentContent,
                                                  String commenterName) {
+        log.info("=== 发布文章评论通知事件 ===");
+        log.info("接收者ID: {}, 评论者ID: {}, 文章ID: {}, 评论ID: {}", authorId, commenterId, articleId, commentId);
+        log.info("文章标题: {}, 评论者: {}, 评论内容: {}", articleTitle, commenterName, commentContent);
+        
         Map<String, Object> extra = Map.of("articleTitle", articleTitle, "commentContent", commentContent, "commenterName", commenterName);
-        log.info("publishArticleCommentNotification.评论通知开始");
         publishNotification(authorId, commenterId, "user", "comment_article",
                 "文章收到评论", "用户["+commenterName + "]评论了你的文章《" + articleTitle + "》",
                 "article", articleId, "comment_article_" + articleId, extra);
+        
+        log.info("=== 文章评论通知事件已发布 ===");
     }
 
     /**

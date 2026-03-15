@@ -35,10 +35,17 @@ public class WebSocketSaTokenListener implements SaTokenListener {
     public void doLogout(String loginType, Object loginId, String tokenValue) {
         try {
             Long userId = Long.valueOf(loginId.toString());
-            log.info("用户{}登出，token: {}", userId, tokenValue);
-            WebSocketManager.forceDisconnectUser(userId, "用户已登出");
+            log.info("=== Sa-Token监听器：用户{}登出 ===", userId);
+            log.info("loginType: {}, tokenValue: {}", loginType, tokenValue);
+            
+            boolean disconnected = WebSocketManager.forceDisconnectUser(userId, "用户已登出");
+            if (disconnected) {
+                log.info("✅ 成功断开用户{}的WebSocket连接", userId);
+            } else {
+                log.info("⚠️ 用户{}没有WebSocket连接或断开失败", userId);
+            }
         } catch (Exception e) {
-            log.error("处理用户登出事件时发生错误: {}", e.getMessage(), e);
+            log.error("❌ 处理用户登出事件时发生错误: {}", e.getMessage(), e);
         }
     }
 

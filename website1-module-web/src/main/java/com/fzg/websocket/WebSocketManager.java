@@ -216,31 +216,43 @@ public class WebSocketManager {
      */
     public static boolean forceDisconnectUser(Long userId, String reason) {
         if (userId == null) {
+            log.warn("forceDisconnectUser: 用户ID为空");
             return false;
         }
 
+        log.info("尝试强制断开用户{}的WebSocket连接，原因：{}", userId, reason);
+        
         Session session = USER_SESSIONS.get(userId);
-        if (session != null && session.isOpen()) {
-            try {
-                // 发送断开连接通知
-                String disconnectMessage = String.format(
-                    "{\"type\":\"force_disconnect\",\"reason\":\"%s\",\"timestamp\":%d}",
-                    reason, System.currentTimeMillis()
-                );
-                session.getBasicRemote().sendText(disconnectMessage);
-                
-                // 关闭连接
-                session.close();
-                removeUser(userId, session);
-                log.info("强制断开用户{}的WebSocket连接，原因：{}", userId, reason);
-                return true;
-            } catch (IOException e) {
-                log.error("强制断开用户{}连接失败：{}", userId, e.getMessage());
-                removeUser(userId, session);
-                return false;
-            }
+        if (session == null) {
+            log.info("用户{}没有WebSocket连接", userId);
+            return false;
         }
-        return false;
+        
+        if (!session.isOpen()) {
+            log.info("用户{}的WebSocket连接已关闭", userId);
+            removeUser(userId, session);
+            return false;
+        }
+        
+        try {
+            // 发送断开连接通知
+            String disconnectMessage = String.format(
+                "{\"type\":\"force_disconnect\",\"reason\":\"%s\",\"timestamp\":%d}",
+                reason, System.currentTimeMillis()
+            );
+            session.getBasicRemote().sendText(disconnectMessage);
+            log.info("已向用户{}发送断开连接通知", userId);
+            
+            // 关闭连接
+            session.close();
+            removeUser(userId, session);
+            log.info("✅ 成功强制断开用户{}的WebSocket连接", userId);
+            return true;
+        } catch (IOException e) {
+            log.error("❌ 强制断开用户{}连接失败：{}", userId, e.getMessage());
+            removeUser(userId, session);
+            return false;
+        }
     }
 
     /**

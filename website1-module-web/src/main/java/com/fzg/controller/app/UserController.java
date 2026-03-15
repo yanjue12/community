@@ -207,10 +207,21 @@ public class UserController {
 
     @PostMapping("/logout")
     public Result logout() {
+        try {
+            // 获取当前用户ID用于日志
+            Object loginId = StpUtil.getLoginIdDefaultNull();
+            log.info("用户{}开始登出", loginId);
+            
 
-        StpUtil.logout();
-        return Result.success("退出成功");
-
+            
+            StpUtil.logout();
+            
+            log.info("用户{}登出完成", loginId);
+            return Result.success("退出成功");
+        } catch (Exception e) {
+            log.error("用户登出失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("登出失败"));
+        }
     }
 
 

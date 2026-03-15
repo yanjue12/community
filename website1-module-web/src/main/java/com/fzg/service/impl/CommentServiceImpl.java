@@ -23,7 +23,6 @@ import com.fzg.vo.CommentPageVO;
 import com.fzg.vo.CommentVO;
 import com.fzg.vo.LikeRequest;
 import com.fzg.vo.RootCommentVO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +41,6 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> implements CommentService {
 
     @Autowired
@@ -57,7 +55,8 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
     private CommentLikeRecordMapper commentLikeRecordMapper;
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
-    private final NotificationPublisher notificationPublisher;
+    @Autowired
+    private NotificationPublisher notificationPublisher;
 
     @Override
     public Boolean saveComment(CommentVO comment) {
@@ -174,11 +173,19 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
                                           "comment", commentEntity.getId(), comment.getContent(), articleTitle);
             }
             
+            // 添加详细日志
+            log.info("=== 准备发送文章评论通知 ===");
+            log.info("文章作者ID: {}, 评论者ID: {}, 文章ID: {}, 评论ID: {}", 
+                    comment.getAuthorId(), comment.getUserId(), comment.getArticleId(), commentEntity.getId());
+            log.info("文章标题: {}, 评论者姓名: {}, 评论内容: {}", articleTitle, commenterName, comment.getContent());
+            
             notificationPublisher.publishArticleCommentNotification(
                     comment.getAuthorId(), comment.getUserId(),
                     comment.getArticleId(), articleTitle, commentEntity.getId(), comment.getContent(),
                     commenterName
             );
+            
+            log.info("=== 文章评论通知已发布 ===");
         }
 
         return true;

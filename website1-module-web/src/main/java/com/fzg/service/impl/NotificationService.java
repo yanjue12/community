@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.mapper.Notificationmapper;
 import com.fzg.model.Notification;
+import com.fzg.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,20 +22,21 @@ import java.util.concurrent.TimeUnit;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class NotificationService {
+public class NotificationService implements INotificationService {
 
     private final Notificationmapper notificationMapper;
     private final RedisTemplate<String, Object> redisTemplate;
 
     private static final String UNREAD_COUNT_KEY = "notification:unread:";
     private static final String UNREAD_TYPE_KEY = "notification:unread:type:";
-    private static final long CACHE_EXPIRE_TIME = 3600; // 1小时
+    private static final long CACHE_EXPIRE_TIME = 10; // 10分钟
 
     // ==================== 缓存相关方法 ====================
 
     /**
      * 获取未读数量（带缓存）
      */
+    @Override
     public Long getUnreadCount(Long userId) {
         String cacheKey = UNREAD_COUNT_KEY + userId;
         Object cached = redisTemplate.opsForValue().get(cacheKey);
@@ -44,17 +46,18 @@ public class NotificationService {
 
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Notification::getUserId, userId)
-               .eq(Notification::getIsRead, "0")
-               .eq(Notification::getIsDeleted, "0");
+                .eq(Notification::getIsRead, "0")
+                .eq(Notification::getIsDeleted, "0");
         Long count = notificationMapper.selectCount(wrapper);
 
-        redisTemplate.opsForValue().set(cacheKey, count, CACHE_EXPIRE_TIME, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(cacheKey,String.valueOf(count), CACHE_EXPIRE_TIME, TimeUnit.MINUTES);
         return count;
     }
 
     /**
      * 获取各类型未读数量
      */
+    @Override
     public Map<String, Long> getUnreadCountByType(Long userId) {
         String cacheKey = UNREAD_TYPE_KEY + userId;
         Object cached = redisTemplate.opsForValue().get(cacheKey);
@@ -64,13 +67,13 @@ public class NotificationService {
 
         Map<String, Long> result = new HashMap<>();
         String[] types = {"user", "system", "message"};
-        
+
         for (String type : types) {
             LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(Notification::getUserId, userId)
-                   .eq(Notification::getType, type)
-                   .eq(Notification::getIsRead, "0")
-                   .eq(Notification::getIsDeleted, "0");
+                    .eq(Notification::getType, type)
+                    .eq(Notification::getIsRead, "0")
+                    .eq(Notification::getIsDeleted, "0");
             Long count = notificationMapper.selectCount(wrapper);
             result.put(type, count);
         }
@@ -78,6 +81,9 @@ public class NotificationService {
         redisTemplate.opsForValue().set(cacheKey, result, CACHE_EXPIRE_TIME, TimeUnit.SECONDS);
         return result;
     }
+
+
+
 
     /**
      * 清除缓存
@@ -346,6 +352,7 @@ public class NotificationService {
      * 标记单个为已读
      */
     @Transactional(rollbackFor = Exception.class)
+    @Override
     public boolean markAsRead(Long userId, Long notificationId) {
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Notification::getUserId, userId)
@@ -366,6 +373,7 @@ public class NotificationService {
     /**
      * 批量标记为已读
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public int markBatchAsRead(Long userId, List<Long> notificationIds) {
         if (notificationIds == null || notificationIds.isEmpty()) {
@@ -391,6 +399,7 @@ public class NotificationService {
     /**
      * 全部标记为已读
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public int markAllAsRead(Long userId, String type) {
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
@@ -416,6 +425,7 @@ public class NotificationService {
     /**
      * 删除通知
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteNotification(Long userId, Long notificationId) {
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
@@ -435,6 +445,7 @@ public class NotificationService {
     /**
      * 批量删除通知
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteBatch(Long userId, List<Long> notificationIds) {
         if (notificationIds == null || notificationIds.isEmpty()) {
@@ -458,6 +469,7 @@ public class NotificationService {
     /**
      * 清空已读通知
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public int clearReadNotifications(Long userId) {
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
@@ -480,6 +492,7 @@ public class NotificationService {
     /**
      * 获取通知列表（分页）
      */
+    @Override
     public Page<Notification> getNotificationList(Long userId, Integer pageNum, Integer pageSize, String type, String isRead) {
         pageNum = pageNum == null || pageNum < 1 ? 1 : pageNum;
         pageSize = pageSize == null || pageSize < 1 ? 10 : Math.min(pageSize, 100);
@@ -503,6 +516,7 @@ public class NotificationService {
     /**
      * 获取通知详情（自动标记为已读）
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Notification getNotificationDetail(Long userId, Long notificationId) {
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
