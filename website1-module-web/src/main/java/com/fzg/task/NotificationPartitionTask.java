@@ -291,7 +291,7 @@ public class NotificationPartitionTask {
     /**
      * 删除空分区
      */
-    private void dropPartition(String partitionName) {
+    public void dropPartition(String partitionName) {
         try {
             String dropSql = String.format(
                     "ALTER TABLE %s DROP PARTITION %s",
@@ -378,5 +378,243 @@ public class NotificationPartitionTask {
                         "ORDER BY PARTITION_NAME";
 
         return jdbcTemplate.queryForList(sql, TABLE_NAME);
+    }
+
+    /**
+     * 创建指定年月的分区
+     * @param year 年份
+     * @param month 月份
+     */
+    public void createPartitionForMonth(int year, int month) {
+        try {
+            LocalDate startDate = LocalDate.of(year, month, 1);
+            LocalDate endDate = startDate.plusMonths(1);
+            
+            String partitionName = "p" + startDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
+            
+            // 检查分区是否已存在
+            String checkSql =
+                    "SELECT COUNT(*) " +
+                            "FROM INFORMATION_SCHEMA.PARTITIONS " +
+                            "WHERE TABLE_SCHEMA = DATABASE() " +
+                            "AND TABLE_NAME = ? " +
+                            "AND PARTITION_NAME = ?";
+            
+            Integer exists = jdbcTemplate.queryForObject(checkSql, Integer.class, TABLE_NAME, partitionName);
+            
+            if (exists != null && exists > 0) {
+                log.info("分区 {} 已存在，跳过创建", partitionName);
+                return;
+            }
+            
+            // 创建分区 - 重组p_future分区
+            String reorganizeSql = String.format(
+                    "ALTER TABLE %s " +
+                            "REORGANIZE PARTITION p_future INTO (" +
+                            "    PARTITION %s VALUES LESS THAN (TO_DAYS('%s')), " +
+                            "    PARTITION p_future VALUES LESS THAN MAXVALUE" +
+                            ")",
+                    TABLE_NAME,
+                    partitionName,
+                    endDate
+            );
+            
+            log.info("创建分区: {} ({}年{}月)", partitionName, year, month);
+            jdbcTemplate.execute(reorganizeSql);
+            log.info("分区 {} 创建成功", partitionName);
+            
+        } catch (Exception e) {
+            log.error("创建分区失败: {}年{}月", year, month, e);
+            throw new RuntimeException("创建分区失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 创建下个月的分区
+     */
+    public void createNextMonthPartition() {
+        try {
+            LocalDate nextMonth = LocalDate.now().plusMonths(1);
+            int year = nextMonth.getYear();
+            int month = nextMonth.getMonthValue();
+            
+            log.info("开始创建下个月分区: {}年{}月", year, month);
+            createPartitionForMonth(year, month);
+            log.info("下个月分区创建完成");
+            
+        } catch (Exception e) {
+            log.error("创建下个月分区失败", e);
+            throw new RuntimeException("创建下个月分区失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 删除历史分区
+     */
+    public void dropOldPartitions() {
+        try {
+            log.info("开始删除历史分区");
+            cleanupExpiredPartitions();
+            log.info("历史分区删除完成");
+            
+        } catch (Exception e) {
+            log.error("删除历史分区失败", e);
+            throw new RuntimeException("删除历史分区失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 监控分区状态
+     */
+    public void monitorPartitionStatus() {
+        try {
+            log.info("=== 通知表分区状态监控 ===");
+            
+            List<Map<String, Object>> partitions = getPartitionInfo();
+            
+            if (partitions.isEmpty()) {
+                log.warn("未找到任何分区信息");
+                return;
+            }
+            
+            log.info("当前分区总数: {}", partitions.size());
+            log.info("分区详细信息:");
+            log.info("{:<15} {:<20} {:<10} {:<15} {:<15} {:<20}", 
+                    "分区名", "分区描述", "行数", "平均行长度", "数据长度", "创建时间");
+            log.info("{}","-".repeat(100));
+            
+            long totalRows = 0;
+            long totalDataLength = 0;
+            
+            for (Map<String, Object> partition : partitions) {
+                String partitionName = (String) partition.get("PARTITION_NAME");
+                String description = (String) partition.get("PARTITION_DESCRIPTION");
+                Long tableRows = (Long) partition.get("TABLE_ROWS");
+                Long avgRowLength = (Long) partition.get("AVG_ROW_LENGTH");
+                Long dataLength = (Long) partition.get("DATA_LENGTH");
+                Object createTime = partition.get("CREATE_TIME");
+                
+                // 处理null值
+                tableRows = tableRows != null ? tableRows : 0L;
+                avgRowLength = avgRowLength != null ? avgRowLength : 0L;
+                dataLength = dataLength != null ? dataLength : 0L;
+                
+                totalRows += tableRows;
+                totalDataLength += dataLength;
+                
+                // 简化描述显示
+                String shortDesc = description != null ? 
+                    (description.length() > 18 ? description.substring(0, 15) + "..." : description) : "N/A";
+                
+                log.info("{:<15} {:<20} {:<10} {:<15} {:<15} {:<20}", 
+                        partitionName, 
+                        shortDesc,
+                        tableRows,
+                        formatBytes(avgRowLength),
+                        formatBytes(dataLength),
+                        createTime != null ? createTime.toString() : "N/A");
+            }
+            
+            log.info("{}","-".repeat(100));
+            log.info("总计: 行数={}, 数据大小={}", totalRows, formatBytes(totalDataLength));
+            
+            // 检查分区健康状态
+            checkPartitionHealth(partitions);
+            
+            log.info("=== 分区状态监控完成 ===");
+            
+        } catch (Exception e) {
+            log.error("监控分区状态失败", e);
+            throw new RuntimeException("监控分区状态失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 检查分区健康状态
+     */
+    private void checkPartitionHealth(List<Map<String, Object>> partitions) {
+        try {
+            LocalDate today = LocalDate.now();
+            LocalDate futureThreshold = today.plusDays(30); // 未来30天
+            LocalDate pastThreshold = today.minusDays(30);   // 过去30天
+            
+            boolean hasFuturePartition = false;
+            int recentPartitions = 0;
+            int oldPartitions = 0;
+            
+            for (Map<String, Object> partition : partitions) {
+                String partitionName = (String) partition.get("PARTITION_NAME");
+                
+                if ("p_future".equals(partitionName)) {
+                    hasFuturePartition = true;
+                    continue;
+                }
+                
+                // 尝试从分区名解析日期
+                try {
+                    if (partitionName.startsWith("p") && partitionName.length() >= 7) {
+                        String dateStr = partitionName.substring(1);
+                        LocalDate partitionDate;
+                        
+                        if (dateStr.length() == 6) { // YYYYMM格式
+                            partitionDate = LocalDate.parse(dateStr + "01", DateTimeFormatter.ofPattern("yyyyMMdd"));
+                        } else if (dateStr.length() == 8) { // YYYYMMDD格式
+                            partitionDate = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
+                        } else {
+                            continue;
+                        }
+                        
+                        if (partitionDate.isAfter(pastThreshold)) {
+                            recentPartitions++;
+                        } else {
+                            oldPartitions++;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("无法解析分区日期: {}", partitionName);
+                }
+            }
+            
+            log.info("=== 分区健康检查 ===");
+            log.info("未来分区存在: {}", hasFuturePartition ? "是" : "否");
+            log.info("近期分区数量: {}", recentPartitions);
+            log.info("历史分区数量: {}", oldPartitions);
+            
+            // 健康状态警告
+            if (!hasFuturePartition) {
+                log.warn("警告: 未找到p_future分区，可能影响新数据插入");
+            }
+            
+            if (recentPartitions == 0) {
+                log.warn("警告: 未找到近期分区，可能需要创建当前月份分区");
+            }
+            
+            if (oldPartitions > 6) {
+                log.warn("警告: 历史分区过多({}个)，建议清理", oldPartitions);
+            }
+            
+        } catch (Exception e) {
+            log.error("分区健康检查失败", e);
+        }
+    }
+
+    /**
+     * 格式化字节数为可读格式
+     */
+    private String formatBytes(Long bytes) {
+        if (bytes == null || bytes == 0) {
+            return "0B";
+        }
+        
+        String[] units = {"B", "KB", "MB", "GB", "TB"};
+        int unitIndex = 0;
+        double size = bytes.doubleValue();
+        
+        while (size >= 1024 && unitIndex < units.length - 1) {
+            size /= 1024;
+            unitIndex++;
+        }
+        
+        return String.format("%.1f%s", size, units[unitIndex]);
     }
 }
