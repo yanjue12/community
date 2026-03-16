@@ -25,13 +25,17 @@ public class NotificationPublisher {
                                    String actionType, String title, String content,
                                    String targetType, Long targetId, String groupId,
                                    Map<String, Object> extraData) {
-        log.info("发布通知事件: userId={}, actionType={}, title={}", userId, actionType, title);
+        log.info("=== 开始发布通知事件 ===");
+        log.info("发布通知事件: userId={}, fromUserId={}, actionType={}, title={}", userId, fromUserId, actionType, title);
+        
         NotificationEvent event = new NotificationEvent(
                 this, userId, fromUserId, type, actionType, title, content,
                 targetType, targetId, groupId, extraData
         );
+        
         eventPublisher.publishEvent(event);
         log.info("通知事件已发布到事件总线");
+        log.info("=== 通知事件发布完成 ===");
     }
 
     /**
@@ -60,16 +64,17 @@ public class NotificationPublisher {
     public void publishArticleCommentNotification(Long authorId, Long commenterId, Long articleId, 
                                                  String articleTitle, Long commentId, String commentContent,
                                                  String commenterName) {
-        log.info("=== 发布文章评论通知事件 ===");
+        String eventId = "comment_" + articleId + "_" + commentId + "_" + System.currentTimeMillis();
+        log.info("=== 发布文章评论通知事件 [{}] ===", eventId);
         log.info("接收者ID: {}, 评论者ID: {}, 文章ID: {}, 评论ID: {}", authorId, commenterId, articleId, commentId);
         log.info("文章标题: {}, 评论者: {}, 评论内容: {}", articleTitle, commenterName, commentContent);
         
-        Map<String, Object> extra = Map.of("articleTitle", articleTitle, "commentContent", commentContent, "commenterName", commenterName);
+        Map<String, Object> extra = Map.of("articleTitle", articleTitle, "commentContent", commentContent, "commenterName", commenterName, "eventId", eventId);
         publishNotification(authorId, commenterId, "user", "comment_article",
                 "文章收到评论", "用户["+commenterName + "]评论了你的文章《" + articleTitle + "》",
                 "article", articleId, "comment_article_" + articleId, extra);
         
-        log.info("=== 文章评论通知事件已发布 ===");
+        log.info("=== 文章评论通知事件已发布 [{}] ===", eventId);
     }
 
     /**

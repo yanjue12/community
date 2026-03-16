@@ -38,9 +38,14 @@ public interface INotificationService {
     int markAllAsRead(Long userId, String type);
 
     /**
-     * 删除通知
+     * 删除单个通知（逻辑删除）
      */
     boolean deleteNotification(Long userId, Long notificationId);
+
+    /**
+     * 删除所有通知（逻辑删除）
+     */
+    int deleteAllNotifications(Long userId);
 
     /**
      * 批量删除通知
@@ -61,4 +66,9 @@ public interface INotificationService {
      * 获取通知详情（自动标记为已读）
      */
     Notification getNotificationDetail(Long userId, Long notificationId);
+
+    /**
+     * 手动清理已读通知
+     */
+    int manualCleanupReadNotifications(Integer days);
 }

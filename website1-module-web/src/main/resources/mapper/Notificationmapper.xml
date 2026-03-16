@@ -2,5 +2,30 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.fzg.mapper.Notificationmapper">
 
+    <!-- 查询分区状态信息 -->
+    <select id="getPartitionStatus" resultType="java.util.Map">
+        SELECT 
+            PARTITION_NAME as partitionName,
+            PARTITION_DESCRIPTION as partitionDesc,
+            TABLE_ROWS as rowCount,
+            ROUND(DATA_LENGTH/1024/1024, 2) as dataSizeMb,
+            ROUND(INDEX_LENGTH/1024/1024, 2) as indexSizeMb
+        FROM INFORMATION_SCHEMA.PARTITIONS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'notification'
+          AND PARTITION_NAME IS NOT NULL
+        ORDER BY PARTITION_ORDINAL_POSITION DESC
+        LIMIT 10
+    </select>
+
+    <!-- 创建下个月分区 -->
+    <update id="createNextMonthPartition">
+        CALL CreateNextMonthPartition()
+    </update>
+
+    <!-- 删除历史分区 -->
+    <update id="dropOldPartitions">
+        CALL DropOldPartitions(#{monthsToKeep})
+    </update>
 
 </mapper>

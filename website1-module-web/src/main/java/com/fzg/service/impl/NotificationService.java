@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * 通知服务 - 合并版本
@@ -423,7 +425,7 @@ public class NotificationService implements INotificationService {
     }
 
     /**
-     * 删除通知
+     * 删除单个通知（逻辑删除）
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -440,6 +442,26 @@ public class NotificationService implements INotificationService {
             invalidateCache(userId);
         }
         return result > 0;
+    }
+
+    /**
+     * 删除所有通知（逻辑删除）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int deleteAllNotifications(Long userId) {
+        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Notification::getUserId, userId)
+               .eq(Notification::getIsDeleted, "0");
+
+        Notification update = new Notification();
+        update.setIsDeleted("1");
+
+        int result = notificationMapper.update(update, wrapper);
+        if (result > 0) {
+            invalidateCache(userId);
+        }
+        return result;
     }
 
     /**
@@ -529,5 +551,27 @@ public class NotificationService implements INotificationService {
             markAsRead(userId, notificationId);
         }
         return notification;
+    }
+
+    /**
+     * 手动清理已读通知
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int manualCleanupReadNotifications(Integer days) {
+        if (days == null || days < 1) {
+            days = 15; // 默认15天
+        }
+        
+        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(days);
+        String cutoffTime = cutoffDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        
+        log.info("手动清理{}天前的已读通知，截止时间: {}", days, cutoffTime);
+        
+        int deletedCount = notificationMapper.physicalDeleteReadNotifications(cutoffTime);
+        
+        log.info("手动清理完成，共删除{}条记录", deletedCount);
+        
+        return deletedCount;
     }
 }

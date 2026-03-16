@@ -28,9 +28,16 @@ public class WebSocketPushService {
      */
     public boolean pushNotificationToUser(Long userId, String actionType, String title, String content, Map<String, Object> extraData) {
         try {
+            String eventId = extraData != null ? (String) extraData.get("eventId") : "unknown";
+            log.info("=== 开始推送通知 [{}] ===", eventId);
+            log.info("目标用户ID: {}, 动作类型: {}, 标题: {}", userId, actionType, title);
+            
             // 检查用户是否在线
-            if (!WebSocketManager.isUserOnline(userId)) {
-                log.debug("用户{}不在线，跳过WebSocket推送", userId);
+            boolean isOnline = WebSocketManager.isUserOnline(userId);
+            log.info("检查用户{}在线状态: {}", userId, isOnline ? "在线" : "离线");
+            
+            if (!isOnline) {
+                log.info("用户{}不在线，跳过WebSocket推送 [{}]", userId, eventId);
                 return false;
             }
 
@@ -39,12 +46,14 @@ public class WebSocketPushService {
 
             // 发送WebSocket消息
             String messageJson = JSON.toJSONString(message);
+            log.info("准备发送WebSocket消息 [{}]: {}", eventId, messageJson);
+            
             boolean success = WebSocketManager.sendMessageToUser(userId, messageJson);
 
             if (success) {
-                log.info("向用户{}推送通知成功: {}", userId, title);
+                log.info("✅ 向用户{}推送通知成功 [{}]: {}", userId, eventId, title);
             } else {
-                log.warn("向用户{}推送通知失败: {}", userId, title);
+                log.warn("❌ 向用户{}推送通知失败 [{}]: {}", userId, eventId, title);
             }
 
             return success;

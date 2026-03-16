@@ -33,14 +33,17 @@ public class NotificationEventListener {
     @Async("notificationExecutor")
     public void onNotificationEvent(NotificationEvent event) {
         try {
-            log.info("=== 收到通知事件 ===");
+            String eventId = event.getExtraData() != null ? 
+                    (String) event.getExtraData().get("eventId") : "unknown";
+            
+            log.info("=== 收到通知事件 [{}] ===", eventId);
             log.info("接收者ID: {}, 发送者ID: {}, 动作类型: {}, 标题: {}", 
                     event.getUserId(), event.getFromUserId(), event.getActionType(), event.getTitle());
             
             // 不给自己发通知
             if (event.getUserId() != null && event.getFromUserId() != null && 
                 event.getUserId().equals(event.getFromUserId())) {
-                log.info("跳过自己给自己的通知");
+                log.info("跳过自己给自己的通知 [{}]", eventId);
                 return;
             }
 
@@ -66,11 +69,11 @@ public class NotificationEventListener {
             }
 
             notificationMapper.insert(notification);
-            log.info("✅ 通知已保存到数据库: userId={}, actionType={}, notificationId={}", 
-                    event.getUserId(), event.getActionType(), notification.getId());
+            log.info("✅ 通知已保存到数据库 [{}]: userId={}, actionType={}, notificationId={}", 
+                    eventId, event.getUserId(), event.getActionType(), notification.getId());
 
             // 2. 如果用户在线，通过WebSocket推送实时通知
-            log.info("检查用户{}是否在线...", event.getUserId());
+            log.info("检查用户{}是否在线... [{}]", event.getUserId(), eventId);
             boolean pushed = webSocketPushService.pushNotificationToUser(
                     event.getUserId(),
                     event.getActionType(),
@@ -80,9 +83,9 @@ public class NotificationEventListener {
             );
 
             if (pushed) {
-                log.info("✅ 实时通知推送成功: userId={}, title={}", event.getUserId(), event.getTitle());
+                log.info("✅ 实时通知推送成功 [{}]: userId={}, title={}", eventId, event.getUserId(), event.getTitle());
             } else {
-                log.info("⚠️ 用户不在线，仅保存到数据库: userId={}", event.getUserId());
+                log.info("⚠️ 用户不在线，仅保存到数据库 [{}]: userId={}", eventId, event.getUserId());
             }
 
         } catch (Exception e) {

@@ -15,9 +15,9 @@ import lombok.Data;
 @Data
 public class Notification implements Serializable {
     /**
-     * 通知ID
+     * 通知ID (使用雪花算法)
      */
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
     /**

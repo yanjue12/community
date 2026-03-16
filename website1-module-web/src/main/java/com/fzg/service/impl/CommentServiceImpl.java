@@ -64,19 +64,18 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
         if (comment.getParentId() == null) {
             comment.setParentId(0L);
         }
-        // TODO 保存评论 并且发消息到消息队列，通知用户
+        
+        // 设置根评论ID
         if (comment.getParentId() == 0) {
             // 一级评论
             comment.setRootId(0L);
         } else {
             // 回复评论
-            // 如果前端没传 rootId，就查父评论
             if (comment.getRootId() == null || comment.getRootId() == 0) {
                 Comment parent = baseMapper.selectById(comment.getParentId());
                 if (parent == null) {
                     throw new RuntimeException("父评论不存在");
                 }
-
                 // 父评论是一级
                 if (parent.getParentId() == 0) {
                     comment.setRootId(parent.getId());
@@ -86,109 +85,136 @@ public class CommentServiceImpl extends ServiceImpl<Commentmapper, Comment> impl
                 }
             }
         }
-        Comment commentEntity = new Comment();
 
-        //判断隐私
+        Comment commentEntity = new Comment();
+        BeanUtils.copyProperties(comment, commentEntity);
+
+        //判断隐私设置
         LambdaQueryWrapper<UserPrivacy> u = new LambdaQueryWrapper<>();
         u.eq(UserPrivacy::getUserId, comment.getAuthorId());
         UserPrivacy userPrivacy = userPrivacyService.getOne(u);
         String canComment = userPrivacy.getCanComment();
+        
+        // 统一的评论权限检查和插入逻辑
+        boolean canInsert = false;
+        
         if("0".equals(canComment)){
-            //插入评论
-            BeanUtils.copyProperties(comment, commentEntity);
-            int insert = baseMapper.insert(commentEntity);
-            if (insert <= 0) {
-                return false;
-            }
+            // 所有人可评论
+            canInsert = true;
         } else if("1".equals(canComment)){
-            if(comment.getUserId() == comment.getAuthorId()){
-                //插入评论
-                BeanUtils.copyProperties(comment, commentEntity);
-                int insert = baseMapper.insert(commentEntity);
-                if (insert <= 0) {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-            } else if(("2".equals(canComment))){//粉丝可评论
-                LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
-                f.eq(Follow::getFollowerId,comment.getUserId())
-                        .eq(Follow::getFollowingId,comment.getAuthorId());
-                Follow follow = followmapper.selectOne(f);
-                if(null == follow){
-                    return false;
-                }
-                BeanUtils.copyProperties(comment, commentEntity);
-                int insert = baseMapper.insert(commentEntity);
-                if (insert <= 0) {
-                    return false;
-                }
-            }
+            // 仅自己可评论
+            canInsert = comment.getUserId().equals(comment.getAuthorId());
+        } else if("2".equals(canComment)){
+            // 粉丝可评论
+            LambdaQueryWrapper<Follow> f = new LambdaQueryWrapper<>();
+            f.eq(Follow::getFollowerId, comment.getUserId())
+             .eq(Follow::getFollowingId, comment.getAuthorId());
+            Follow follow = followmapper.selectOne(f);
+            canInsert = (follow != null);
+        }
 
-        //如果是回复，更新一级评论的 reply_count
-        if (comment.getParentId() != 0) {
-            baseMapper.incrementReplyCount(comment.getRootId());
-            
-            // 发送回复通知
-            Comment parentComment = baseMapper.selectById(comment.getParentId());
-            if (parentComment != null) {
-                // 查询回复用户信息
-                User replier = userMapper.selectById(comment.getUserId());
-                String replierName = replier != null ? replier.getNickname() : "用户";
-                
-                // 检测@提及
-                List<String> mentionedUsernames = extractMentions(comment.getContent());
-                if (!mentionedUsernames.isEmpty()) {
-                    // 查询文章标题用于@提及通知的上下文
-                    Article article = articlemapper.selectById(comment.getArticleId());
-                    String articleTitle = article != null ? article.getTitle() : "文章";
-                    
-                    // 处理@提及通知
-                    processMentionNotifications(mentionedUsernames, comment.getUserId(), replierName, 
-                                              "comment", commentEntity.getId(), comment.getContent(), articleTitle);
-                }
-                
-                notificationPublisher.publishCommentReplyNotification(
-                        parentComment.getUserId(), comment.getUserId(), 
-                        comment.getParentId(), commentEntity.getId(), comment.getContent(),
-                        replierName
-                );
+        if (!canInsert) {
+            return false;
+        }
+
+        // 统一插入评论 - 只在这里插入一次
+        int insert = baseMapper.insert(commentEntity);
+        if (insert <= 0) {
+            return false;
+        }
+
+        // 评论插入成功后，处理通知逻辑 - 只执行一次
+        try {
+            if (comment.getParentId() != 0) {
+                // 回复评论的处理
+                handleReplyComment(comment, commentEntity);
+            } else {
+                // 一级评论的处理
+                handleArticleComment(comment, commentEntity);
             }
-        } else {
-            // 一级评论，发送文章评论通知
-            // 查询文章信息
-            Article article = articlemapper.selectById(comment.getArticleId());
-            String articleTitle = article != null ? article.getTitle() : "文章";
-            
-            // 查询评论用户信息
-            User commenter = userMapper.selectById(comment.getUserId());
-            String commenterName = commenter != null ? commenter.getNickname() : "用户";
+        } catch (Exception e) {
+            log.error("发送评论通知失败: {}", e.getMessage(), e);
+            // 通知发送失败不影响评论保存
+        }
+
+        return true;
+    }
+
+    /**
+     * 处理回复评论的通知
+     */
+    private void handleReplyComment(CommentVO comment, Comment commentEntity) {
+        // 更新一级评论的回复数
+        baseMapper.incrementReplyCount(comment.getRootId());
+        
+        // 发送回复通知
+        Comment parentComment = baseMapper.selectById(comment.getParentId());
+        if (parentComment != null) {
+            // 查询回复用户信息
+            User replier = userMapper.selectById(comment.getUserId());
+            String replierName = replier != null ? replier.getNickname() : "用户";
             
             // 检测@提及
             List<String> mentionedUsernames = extractMentions(comment.getContent());
             if (!mentionedUsernames.isEmpty()) {
+                // 查询文章标题用于@提及通知的上下文
+                Article article = articlemapper.selectById(comment.getArticleId());
+                String articleTitle = article != null ? article.getTitle() : "文章";
+                
                 // 处理@提及通知
-                processMentionNotifications(mentionedUsernames, comment.getUserId(), commenterName, 
+                processMentionNotifications(mentionedUsernames, comment.getUserId(), replierName, 
                                           "comment", commentEntity.getId(), comment.getContent(), articleTitle);
             }
             
-            // 添加详细日志
-            log.info("=== 准备发送文章评论通知 ===");
-            log.info("文章作者ID: {}, 评论者ID: {}, 文章ID: {}, 评论ID: {}", 
-                    comment.getAuthorId(), comment.getUserId(), comment.getArticleId(), commentEntity.getId());
-            log.info("文章标题: {}, 评论者姓名: {}, 评论内容: {}", articleTitle, commenterName, comment.getContent());
+            log.info("发送回复通知: 回复者ID={}, 被回复者ID={}, 评论ID={}", 
+                    comment.getUserId(), parentComment.getUserId(), commentEntity.getId());
             
-            notificationPublisher.publishArticleCommentNotification(
-                    comment.getAuthorId(), comment.getUserId(),
-                    comment.getArticleId(), articleTitle, commentEntity.getId(), comment.getContent(),
-                    commenterName
+            notificationPublisher.publishCommentReplyNotification(
+                    parentComment.getUserId(), comment.getUserId(), 
+                    comment.getParentId(), commentEntity.getId(), comment.getContent(),
+                    replierName
             );
-            
-            log.info("=== 文章评论通知已发布 ===");
         }
+    }
 
-        return true;
+    /**
+     * 处理文章评论的通知
+     */
+    private void handleArticleComment(CommentVO comment, Comment commentEntity) {
+        log.info("=== 开始处理文章评论通知 ===");
+        log.info("评论ID: {}, 文章ID: {}, 作者ID: {}, 评论者ID: {}", 
+                commentEntity.getId(), comment.getArticleId(), comment.getAuthorId(), comment.getUserId());
+        
+        // 查询文章信息
+        Article article = articlemapper.selectById(comment.getArticleId());
+        String articleTitle = article != null ? article.getTitle() : "文章";
+        
+        // 查询评论用户信息
+        User commenter = userMapper.selectById(comment.getUserId());
+        String commenterName = commenter != null ? commenter.getNickname() : "用户";
+        
+        // 检测@提及
+        List<String> mentionedUsernames = extractMentions(comment.getContent());
+        if (!mentionedUsernames.isEmpty()) {
+            log.info("检测到@提及用户: {}", mentionedUsernames);
+            // 处理@提及通知
+            processMentionNotifications(mentionedUsernames, comment.getUserId(), commenterName, 
+                                      "comment", commentEntity.getId(), comment.getContent(), articleTitle);
+        }
+        
+        log.info("=== 发送文章评论通知 ===");
+        log.info("文章作者ID: {}, 评论者ID: {}, 文章ID: {}, 评论ID: {}", 
+                comment.getAuthorId(), comment.getUserId(), comment.getArticleId(), commentEntity.getId());
+        log.info("文章标题: {}, 评论者姓名: {}, 评论内容: {}", articleTitle, commenterName, comment.getContent());
+        
+        // 只发送一次通知
+        notificationPublisher.publishArticleCommentNotification(
+                comment.getAuthorId(), comment.getUserId(),
+                comment.getArticleId(), articleTitle, commentEntity.getId(), comment.getContent(),
+                commenterName
+        );
+        
+        log.info("=== 文章评论通知已发布 ===");
     }
 
     @Override

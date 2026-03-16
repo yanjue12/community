@@ -151,5 +151,53 @@ public class NotificationController {
         return Result.success("系统通知推送成功");
     }
 
+    /**
+     * 删除单个通知
+     */
+    @DeleteMapping("/{notificationId}")
+    @Operation(summary = "删除单个通知")
+    public Result<String> deleteNotification(@PathVariable Long notificationId, @RequestParam Long userId) {
+        try {
+            boolean success = notificationService.deleteNotification(userId, notificationId);
+            if (success) {
+                return Result.success("删除成功");
+            } else {
+                return Result.fail(EnumReturn.valueOf("删除失败，通知不存在或无权限"));
+            }
+        } catch (Exception e) {
+            log.error("删除通知{}失败: {}", notificationId, e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("删除失败"));
+        }
+    }
+
+    /**
+     * 删除所有通知
+     */
+    @DeleteMapping("/all")
+    @Operation(summary = "删除所有通知")
+    public Result<String> deleteAllNotifications(@RequestParam Long userId) {
+        try {
+            int count = notificationService.deleteAllNotifications(userId);
+            return Result.success("成功删除" + count + "条通知");
+        } catch (Exception e) {
+            log.error("删除用户{}所有通知失败: {}", userId, e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("删除失败"));
+        }
+    }
+
+    /**
+     * 手动触发通知清理任务（管理员功能）
+     */
+    @PostMapping("/admin/cleanup")
+    @Operation(summary = "手动触发通知清理任务")
+    public Result<String> manualCleanup(@RequestParam(defaultValue = "15") Integer days) {
+        try {
+            int deletedCount = notificationService.manualCleanupReadNotifications(days);
+            return Result.success("清理任务完成，共删除" + deletedCount + "条" + days + "天前的已读通知");
+        } catch (Exception e) {
+            log.error("手动触发清理任务失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("清理任务触发失败"));
+        }
+    }
 
 }
