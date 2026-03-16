@@ -9,6 +9,8 @@ import com.fzg.mapper.AuditRecordMapper;
 import com.fzg.model.Article;
 import com.fzg.model.AuditRecord;
 import com.fzg.model.Result;
+import com.fzg.vo.ArticleRequest;
+import com.fzg.vo.ArticleVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -30,30 +32,12 @@ public class AdminArticleController {
     @Autowired
     private AuditRecordMapper auditRecordMapper;
 
-    /**
-     * 分页查询文章列表
-     */
-    @GetMapping("/list")
-    public Result listArticles(@RequestParam(defaultValue = "1") Integer pageNum,
-                               @RequestParam(defaultValue = "10") Integer pageSize,
-                               @RequestParam(required = false) String keyword,
-                               @RequestParam(required = false) Integer status) {
-        Page<Article> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<>();
-        if (keyword != null && !keyword.isEmpty()) {
-            wrapper.like(Article::getTitle, keyword);
-        }
-        if (status != null) {
-            wrapper.eq(Article::getStatus, status);
-        }
-        wrapper.orderByDesc(Article::getCreatedAt);
-        return Result.success(articleMapper.selectPage(page, wrapper));
-    }
+
 
     /**
      * 获取文章详情
      */
-    @GetMapping("/query/{id}")
+    @PostMapping("/query/{id}")
     public Result getArticle(@PathVariable Long id) {
         Article article = articleMapper.selectById(id);
         return article != null ? Result.success(article) : Result.fail(404, "文章不存在");
@@ -62,7 +46,7 @@ public class AdminArticleController {
     /**
      * 删除文章
      */
-    @DeleteMapping("/{id}")
+    @DeleteMapping("delete/{id}")
     public Result deleteArticle(@PathVariable Long id) {
         Article article = articleMapper.selectById(id);
         if(null == article){
@@ -180,78 +164,15 @@ public class AdminArticleController {
      * 多维度搜索文章
      * 支持：标题、作者ID、作者名称、时间范围、审核状态、置顶、推荐等多条件组合搜索
      */
-    @GetMapping("/search")
-    public Result searchArticles(@RequestParam(defaultValue = "1") Integer pageNum,
-                                 @RequestParam(defaultValue = "10") Integer pageSize,
-                                 @RequestParam(required = false) String title,
-                                 @RequestParam(required = false) String status,
-                                 @RequestParam(required = false) String isTop,
-                                 @RequestParam(required = false) String isRecommend,
-                                 @RequestParam(required = false) Long categoryId,
-                                 @RequestParam(required = false) String startTime,
-                                 @RequestParam(required = false) String endTime,
-                                 @RequestParam(required = false) Integer minViews,
-                                 @RequestParam(required = false) Integer maxViews,
-                                 @RequestParam(required = false) Integer minLikes,
-                                 @RequestParam(required = false) Integer maxLikes) {
-        
-        Page<Article> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<>();
-        
-        // 标题模糊搜索
-        if (title != null && !title.trim().isEmpty()) {
-            wrapper.like(Article::getTitle, title.trim());
-        }
+    @PostMapping("/list")
+    public Result searchArticles(@RequestBody ArticleRequest request) {
+        int pageNum = request.getPageNum() == null ? 1 : request.getPageNum();
+        int pageSize = request.getPageSize() == null ? 10 : request.getPageSize();
+        int offset = (pageNum - 1) * pageSize;
+
+        List<ArticleVO> list = articleMapper.queryArticleByCondition(request,offset);
 
         
-        // 审核状态精确搜索
-        if (status != null && !status.trim().isEmpty()) {
-            wrapper.eq(Article::getStatus, status.trim());
-        }
-        
-        // 是否置顶
-        if (isTop != null && !isTop.trim().isEmpty()) {
-            wrapper.eq(Article::getIsTop, isTop.trim());
-        }
-        
-        // 是否推荐
-        if (isRecommend != null && !isRecommend.trim().isEmpty()) {
-            wrapper.eq(Article::getIsRecommend, isRecommend.trim());
-        }
-        
-        // 分类ID
-        if (categoryId != null) {
-            wrapper.eq(Article::getCategoryId, categoryId);
-        }
-        
-        // 时间范围搜索
-        if (startTime != null && !startTime.trim().isEmpty()) {
-            wrapper.ge(Article::getCreatedAt, startTime.trim());
-        }
-        if (endTime != null && !endTime.trim().isEmpty()) {
-            wrapper.le(Article::getCreatedAt, endTime.trim());
-        }
-        
-        // 浏览量范围
-        if (minViews != null) {
-            wrapper.ge(Article::getViewCount, minViews);
-        }
-        if (maxViews != null) {
-            wrapper.le(Article::getViewCount, maxViews);
-        }
-        
-        // 点赞量范围
-        if (minLikes != null) {
-            wrapper.ge(Article::getLikeCount, minLikes);
-        }
-        if (maxLikes != null) {
-            wrapper.le(Article::getLikeCount, maxLikes);
-        }
-        
-        // 按创建时间倒序排列
-        wrapper.orderByDesc(Article::getCreatedAt);
-        
-        Page<Article> result = articleMapper.selectPage(page, wrapper);
-        return Result.success(result);
+        return Result.success(list);
     }
 }

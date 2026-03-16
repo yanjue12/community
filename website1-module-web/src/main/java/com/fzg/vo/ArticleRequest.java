@@ -30,4 +30,15 @@ public class ArticleRequest {
     private Integer pageNum;
 
     private Integer pageSize;
+
+    // 新增的请求参数
+    private String status;
+    private String isTop;
+    private String isRecommend;
+    private String startTime;
+    private String endTime;
+    private Integer minViews;
+    private Integer maxViews;
+    private Integer minLikes;
+    private Integer maxLikes;
 }

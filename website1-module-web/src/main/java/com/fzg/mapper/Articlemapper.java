@@ -82,4 +82,12 @@ public interface Articlemapper extends BaseMapper<Article> {
     List<ArticleVO> queryByIdsPreserveOrder(@Param("ids") List<Long> pageIds);
 
     List<Long> queryHotIdsLimit(@Param("limit") int limit);
+
+
+
+
+    //************************管理端************************************
+
+    List<ArticleVO> queryArticleByCondition(@Param("request") ArticleRequest request,
+                                            @Param("offset") int offset);
 }
