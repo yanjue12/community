@@ -31,6 +31,8 @@ public class UserRole implements Serializable {
      */
     private Long roleId;
 
+    private String roleName;
+
     /**
      * 创建时间
      */

@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -31,6 +33,9 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     
     @Override
     public DashboardDTO getDashboardData() {
+
+        articleMapper.selectCount(new LambdaQueryWrapper<Article>());
+
         DashboardDTO dashboard = new DashboardDTO();
         dashboard.setOverview(getOverviewData());
         dashboard.setUserGrowthTrend(getUserGrowthTrend(7));
@@ -46,28 +51,100 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     private DashboardDTO.OverviewData getOverviewData() {
         DashboardDTO.OverviewData overview = new DashboardDTO.OverviewData();
+        
+        // 获取当前时间
+        LocalDate now = LocalDate.now();
+        LocalDate currentMonthStart = now.withDayOfMonth(1);
+        LocalDate currentMonthEnd = now.plusDays(1);
+        LocalDate lastMonthStart = currentMonthStart.minusMonths(1);
+        LocalDate lastMonthEnd = currentMonthStart;
+        
+        LocalDateTime todayStart = now.atStartOfDay();
+        LocalDateTime todayEnd = todayStart.plusDays(1);
+        
+        // 本月数据统计
+        overview.setCurrentMonthUsers(userMapper.selectCount(
+            new LambdaQueryWrapper<User>().between(User::getCreatedAt, 
+                currentMonthStart.atStartOfDay(), currentMonthEnd.atStartOfDay())));
+        
+        overview.setCurrentMonthArticles(articleMapper.selectCount(
+            new LambdaQueryWrapper<Article>().between(Article::getCreatedAt,
+                currentMonthStart.atStartOfDay(), currentMonthEnd.atStartOfDay())));
+        
+        overview.setCurrentMonthComments(commentMapper.selectCount(
+            new LambdaQueryWrapper<Comment>().between(Comment::getCreatedAt, 
+                currentMonthStart.atStartOfDay(), currentMonthEnd.atStartOfDay())));
+        
+        // 上月数据统计
+        overview.setLastMonthUsers(userMapper.selectCount(
+            new LambdaQueryWrapper<User>().between(User::getCreatedAt, 
+                lastMonthStart.atStartOfDay(), lastMonthEnd.atStartOfDay())));
+        
+        overview.setLastMonthArticles(articleMapper.selectCount(
+            new LambdaQueryWrapper<Article>().between(Article::getCreatedAt, 
+                lastMonthStart.atStartOfDay(), lastMonthEnd.atStartOfDay())));
+        
+        overview.setLastMonthComments(commentMapper.selectCount(
+            new LambdaQueryWrapper<Comment>().between(Comment::getCreatedAt, 
+                lastMonthStart.atStartOfDay(), lastMonthEnd.atStartOfDay())));
+        
+        // 计算增长率
+        overview.setUserGrowthRate(calculateGrowthRate(overview.getCurrentMonthUsers(), overview.getLastMonthUsers()));
+        overview.setArticleGrowthRate(calculateGrowthRate(overview.getCurrentMonthArticles(), overview.getLastMonthArticles()));
+        overview.setCommentGrowthRate(calculateGrowthRate(overview.getCurrentMonthComments(), overview.getLastMonthComments()));
+        
+        // 总计数据
         overview.setTotalUsers(userMapper.selectCount(null));
         overview.setTotalArticles(articleMapper.selectCount(null));
         overview.setTotalComments(commentMapper.selectCount(null));
         
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LocalDateTime todayEnd = todayStart.plusDays(1);
-        
+        // 今日数据
         overview.setTodayUsers(userMapper.selectCount(
             new LambdaQueryWrapper<User>().between(User::getCreatedAt, todayStart, todayEnd)));
         overview.setTodayArticles(articleMapper.selectCount(
             new LambdaQueryWrapper<Article>().between(Article::getCreatedAt, todayStart, todayEnd)));
         overview.setTodayComments(commentMapper.selectCount(
             new LambdaQueryWrapper<Comment>().between(Comment::getCreatedAt, todayStart, todayEnd)));
+        
+        // 实时数据
         overview.setOnlineUsers((long) WebSocketManager.getOnlineUserCount());
+        
+        // 浏览量数据 (如果有浏览记录表的话)
+        overview.setCurrentMonthViews(0L);
+        overview.setLastMonthViews(0L);
         overview.setTotalViews(0L);
         overview.setTodayViews(0L);
+        overview.setViewGrowthRate(BigDecimal.ZERO);
+        
         return overview;
+    }
+    
+    /**
+     * 计算增长率
+     * @param current 当前值
+     * @param previous 上期值
+     * @return 增长率百分比
+     */
+    private BigDecimal calculateGrowthRate(Long current, Long previous) {
+        if (previous == null || previous == 0) {
+            return current != null && current > 0 ? new BigDecimal("100.00") : BigDecimal.ZERO;
+        }
+        
+        if (current == null) {
+            return new BigDecimal("-100.00");
+        }
+        
+        BigDecimal currentBd = new BigDecimal(current);
+        BigDecimal previousBd = new BigDecimal(previous);
+        BigDecimal difference = currentBd.subtract(previousBd);
+        
+        return difference.divide(previousBd, 4, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("100"))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
 
 
-    // 这个文件包含AnalyticsServiceImpl的其余方法，需要复制到主文件中
 
 
 

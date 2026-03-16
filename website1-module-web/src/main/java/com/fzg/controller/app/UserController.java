@@ -8,10 +8,14 @@ import com.fzg.constant.RedisFollowKey;
 import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
+import com.fzg.mapper.Rolemapper;
+import com.fzg.mapper.UserRolemapper;
 import com.fzg.model.Article;
 import com.fzg.model.Result;
+import com.fzg.model.Role;
 import com.fzg.model.User;
 import com.fzg.model.UserPrivacy;
+import com.fzg.model.UserRole;
 import com.fzg.service.UserPrivacyService;
 import com.fzg.service.UserService;
 import com.fzg.vo.*;
@@ -23,11 +27,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.Date;
 
 @RestController
@@ -40,6 +50,8 @@ public class UserController {
     private final UserService userService;
     private final UserPrivacyService userPrivacyService;
     private final Articlemapper articlemapper;
+    private final UserRolemapper userRolemapper;
+    private final Rolemapper rolemapper;
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -221,6 +233,46 @@ public class UserController {
         } catch (Exception e) {
             log.error("用户登出失败: {}", e.getMessage(), e);
             return Result.fail(EnumReturn.valueOf("登出失败"));
+        }
+    }
+
+    /**
+     * 测试接口：检查用户角色数据
+     */
+    @PostMapping("/checkUserRoles")
+    public Result checkUserRoles() {
+        try {
+            String loginId = (String) StpUtil.getLoginId();
+            Long userId = Long.valueOf(loginId);
+            
+            // 检查用户角色关联
+            List<UserRole> userRoles = userRolemapper.selectList(
+                new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId)
+            );
+            
+            // 检查角色详情
+            List<Role> roles = new ArrayList<>();
+            if (!CollectionUtils.isEmpty(userRoles)) {
+                List<Long> roleIds = userRoles.stream()
+                    .map(UserRole::getRoleId)
+                    .collect(Collectors.toList());
+                roles = rolemapper.selectBatchIds(roleIds);
+            }
+            
+            // 获取Sa-Token中的角色
+            List<String> saTokenRoles = StpUtil.getRoleList(userId);
+            List<String> saTokenPermissions = StpUtil.getPermissionList(userId);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("userId", userId);
+            result.put("userRoles", userRoles);
+            result.put("roles", roles);
+            result.put("saTokenRoles", saTokenRoles);
+            result.put("saTokenPermissions", saTokenPermissions);
+            
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.fail(EnumReturn.valueOf("检查角色失败: " + e.getMessage()));
         }
     }
 

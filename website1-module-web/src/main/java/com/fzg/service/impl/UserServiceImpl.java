@@ -13,10 +13,8 @@ import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.UserPrivacyMapper;
-import com.fzg.model.Article;
-import com.fzg.model.Result;
-import com.fzg.model.User;
-import com.fzg.model.UserPrivacy;
+import com.fzg.mapper.UserRolemapper;
+import com.fzg.model.*;
 import com.fzg.service.AuditRecordService;
 import com.fzg.service.UserPrivacyService;
 import com.fzg.service.UserService;
@@ -64,7 +62,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Autowired
     private Articlemapper articlemapper;
     @Autowired
-    private UserPrivacyMapper userPrivacyMapper;
+    private UserRolemapper userRolemapper;
     @Autowired
     private UserPrivacyService userPrivacyService;
     @Autowired
@@ -390,22 +388,42 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return Result.fail(EnumReturn.PASSWORD_ERROR);
         }
 
-
+        //查询角色
+        LambdaQueryWrapper<UserRole> l = new LambdaQueryWrapper<>();
+        l.eq(UserRole::getUserId,user.getId());
+        UserRole userRole = userRolemapper.selectOne(l);
+        if(null == userRole){
+            return Result.fail(EnumReturn.valueOf("缺少角色"));
+        }
+        String code = "user";
+        if(null != userRole.getRoleName()){
+            code = userRole.getRoleName();
+        }
         //登录成功，记录token
         StpUtil.login(user.getId());
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
         tokenInfo.setTokenTimeout(3600);
         SaSession session = StpUtil.getSession();
         session.set("USER_ID",user.getId());
+        session.set("USER_ROLE",code);
 
         if(userLoginVO.getRememberMe()){
             tokenInfo.setTokenTimeout(3600 * 24 * 7);
         }
+        // 构建登录响应
+        LoginResponseVO loginResponse = new LoginResponseVO();
+        loginResponse.setTokenInfo(tokenInfo);
+        loginResponse.setUserId(user.getId());
+        loginResponse.setUsername(user.getUsername());
+        loginResponse.setNickname(user.getNickname());
+        loginResponse.setAvatar(user.getAvatar());
+        loginResponse.setRoles(code);
+
 
         //保存登录时间和登录ip TODO
         user.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
         this.updateById(user);
-        return Result.success(tokenInfo);
+        return Result.success(loginResponse);
     }
 
     @Override
