@@ -6,6 +6,6 @@ import java.util.List;
 
 @Data
 public class ArticlePageVO {
-    List<ArticleVO> articleVOList;
-    Integer total;
+        List<ArticleVO> articleVOList;
+        Integer total;
 }

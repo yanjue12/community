@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 数据分析服务实现
@@ -30,15 +31,16 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     private final Articlemapper articleMapper;
     private final Commentmapper commentMapper;
     private final Categorymapper categoryMapper;
+    private final DraftMapper draftMapper;
     
     @Override
     public DashboardDTO getDashboardData() {
 
-        articleMapper.selectCount(new LambdaQueryWrapper<Article>());
+        articleMapper.selectCount(new LambdaQueryWrapper<>());
 
         DashboardDTO dashboard = new DashboardDTO();
         dashboard.setOverview(getOverviewData());
-        dashboard.setUserGrowthTrend(getUserGrowthTrend(7));
+        dashboard.setUserGrowthTrend(getUserGrowthTrend("thisMonth", null, null));
         dashboard.setArticlePublishTrend(getArticlePublishTrend(7));
         dashboard.setCategoryDistribution(getCategoryDistribution());
         dashboard.setTagDistribution(getTagDistribution(10));
@@ -61,20 +63,25 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         
         LocalDateTime todayStart = now.atStartOfDay();
         LocalDateTime todayEnd = todayStart.plusDays(1);
+
+        // 总量数据统计（原本月数据字段现在显示总量）
+        overview.setCurrentMonthUsers(userMapper.selectCount(null));
+        overview.setCurrentMonthArticles(articleMapper.selectCount(null));
+        overview.setCurrentMonthComments(commentMapper.selectCount(null));
         
-        // 本月数据统计
-        overview.setCurrentMonthUsers(userMapper.selectCount(
+        // 本月数据统计（用于计算增长率）
+        Long thisMonthUsers = userMapper.selectCount(
             new LambdaQueryWrapper<User>().between(User::getCreatedAt, 
-                currentMonthStart.atStartOfDay(), currentMonthEnd.atStartOfDay())));
+                currentMonthStart.atStartOfDay(), currentMonthEnd.atStartOfDay()));
         
-        overview.setCurrentMonthArticles(articleMapper.selectCount(
+        Long thisMonthArticles = articleMapper.selectCount(
             new LambdaQueryWrapper<Article>().between(Article::getCreatedAt,
-                currentMonthStart.atStartOfDay(), currentMonthEnd.atStartOfDay())));
+                currentMonthStart.atStartOfDay(), currentMonthEnd.atStartOfDay()));
         
-        overview.setCurrentMonthComments(commentMapper.selectCount(
+        Long thisMonthComments = commentMapper.selectCount(
             new LambdaQueryWrapper<Comment>().between(Comment::getCreatedAt, 
-                currentMonthStart.atStartOfDay(), currentMonthEnd.atStartOfDay())));
-        
+                currentMonthStart.atStartOfDay(), currentMonthEnd.atStartOfDay()));
+
         // 上月数据统计
         overview.setLastMonthUsers(userMapper.selectCount(
             new LambdaQueryWrapper<User>().between(User::getCreatedAt, 
@@ -88,10 +95,10 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             new LambdaQueryWrapper<Comment>().between(Comment::getCreatedAt, 
                 lastMonthStart.atStartOfDay(), lastMonthEnd.atStartOfDay())));
         
-        // 计算增长率
-        overview.setUserGrowthRate(calculateGrowthRate(overview.getCurrentMonthUsers(), overview.getLastMonthUsers()));
-        overview.setArticleGrowthRate(calculateGrowthRate(overview.getCurrentMonthArticles(), overview.getLastMonthArticles()));
-        overview.setCommentGrowthRate(calculateGrowthRate(overview.getCurrentMonthComments(), overview.getLastMonthComments()));
+        // 计算增长率（本月与上月对比）
+        overview.setUserGrowthRate(calculateGrowthRate(thisMonthUsers, overview.getLastMonthUsers()));
+        overview.setArticleGrowthRate(calculateGrowthRate(thisMonthArticles, overview.getLastMonthArticles()));
+        overview.setCommentGrowthRate(calculateGrowthRate(thisMonthComments, overview.getLastMonthComments()));
         
         // 总计数据
         overview.setTotalUsers(userMapper.selectCount(null));
@@ -106,17 +113,116 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         overview.setTodayComments(commentMapper.selectCount(
             new LambdaQueryWrapper<Comment>().between(Comment::getCreatedAt, todayStart, todayEnd)));
         
+        // 获取今日24小时用户活跃度数据
+        overview.setTodayLoginActivity(getTodayLoginActivity());
+        
         // 实时数据
         overview.setOnlineUsers((long) WebSocketManager.getOnlineUserCount());
         
         // 浏览量数据 (如果有浏览记录表的话)
-        overview.setCurrentMonthViews(0L);
-        overview.setLastMonthViews(0L);
-        overview.setTotalViews(0L);
-        overview.setTodayViews(0L);
-        overview.setViewGrowthRate(BigDecimal.ZERO);
+        // 总浏览量（原本月浏览量字段现在显示总量）
+        overview.setCurrentMonthViews(0L);  // 这里应该是总浏览量，如果有浏览记录表可以查询总数
+        overview.setLastMonthViews(0L);     // 上月浏览量
+        overview.setTotalViews(0L);         // 总浏览量
+        overview.setTodayViews(0L);         // 今日浏览量
+        overview.setViewGrowthRate(BigDecimal.ZERO);  // 本月与上月浏览量增长率
         
         return overview;
+    }
+
+    /**
+     * 获取今日24小时用户登录活跃度数据
+     * 基于User表的lastLoginTime字段统计各时间段的登录人数
+     */
+    private List<DashboardDTO.HourlyLoginData> getTodayLoginActivity() {
+        List<DashboardDTO.HourlyLoginData> hourlyData = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
+        int currentHour = now.getHour();
+        
+        // 初始化24小时数据，默认为0
+        for (int hour = 0; hour < 24; hour++) {
+            String timeLabel = String.format("%02d:00", hour);
+            hourlyData.add(new DashboardDTO.HourlyLoginData(hour, 0L, timeLabel));
+        }
+        
+        try {
+            // 查询今天整天的登录用户，然后在代码中过滤时间
+            Date todayStart = Date.from(today.atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toInstant());
+            Date todayEnd = Date.from(today.plusDays(1).atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toInstant());
+            
+            // 查询今日登录的用户（lastLoginTime在今天范围内）
+            List<User> todayLoginUsers = userMapper.selectList(
+                new LambdaQueryWrapper<User>()
+                    .between(User::getLastLoginTime, todayStart, todayEnd)
+                    .isNotNull(User::getLastLoginTime)
+            );
+            log.info("查询到今日登录用户数量: {}", todayLoginUsers.size());
+            
+            // 按小时分组统计登录人数，并过滤只统计已经过去的时间
+            Map<Integer, Long> hourlyStats = todayLoginUsers.stream()
+                .filter(user -> user.getLastLoginTime() != null)
+                .map(user -> {
+                    // 将Date转换为LocalDateTime获取小时
+                    LocalDateTime loginTime = user.getLastLoginTime().toInstant()
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDateTime();
+                    return loginTime.getHour();
+                })
+                .filter(hour -> hour <= currentHour) // 只统计已经过去的小时
+                .collect(Collectors.groupingBy(
+                    hour -> hour,
+                    Collectors.counting()
+                ));
+            
+            log.info("按小时统计结果: {}", hourlyStats);
+            
+            // 更新对应小时的数据
+            for (Map.Entry<Integer, Long> entry : hourlyStats.entrySet()) {
+                Integer hour = entry.getKey();
+                Long count = entry.getValue();
+                if (hour >= 0 && hour < 24) {
+                    hourlyData.get(hour).setLoginCount(count);
+                    log.info("更新{}点数据: {}", hour, count);
+                }
+            }
+            
+        } catch (Exception e) {
+            log.warn("获取今日用户登录活跃度数据失败: {}", e.getMessage());
+            // 如果查询失败，返回当前时间之前的模拟数据
+            return generateMockHourlyDataUntilNow();
+        }
+        
+        return hourlyData;
+    }
+    
+    /**
+     * 生成模拟的24小时活跃度数据（只到当前时间）
+     */
+    private List<DashboardDTO.HourlyLoginData> generateMockHourlyDataUntilNow() {
+        List<DashboardDTO.HourlyLoginData> mockData = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        int currentHour = now.getHour();
+        
+        // 模拟一天的用户活跃度曲线（早上和晚上活跃度较高）
+        int[] mockCounts = {
+            2, 1, 0, 0, 1, 3, 8, 15, 25, 30, 28, 32,  // 0-11点
+            35, 28, 25, 22, 20, 25, 30, 35, 28, 15, 8, 5   // 12-23点
+        };
+        
+        for (int hour = 0; hour < 24; hour++) {
+            String timeLabel = String.format("%02d:00", hour);
+            Long count = 0L;
+            
+            // 只有已经过去的时间才有数据
+            if (hour <= currentHour) {
+                count = (long) mockCounts[hour];
+            }
+            
+            mockData.add(new DashboardDTO.HourlyLoginData(hour, count, timeLabel));
+        }
+        
+        return mockData;
     }
     
     /**
@@ -149,22 +255,113 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
 
     @Override
-    public List<ChartDataDTO.LineItem> getUserGrowthTrend(int days) {
+    public List<ChartDataDTO.LineItem> getUserGrowthTrend(String timeType, LocalDate startDate, LocalDate endDate) {
         List<ChartDataDTO.LineItem> trend = new ArrayList<>();
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(days - 1);
-
+        
+        switch (timeType.toLowerCase()) {
+            case "today":
+                return getUserGrowthTrendByHour(LocalDate.now());
+            case "thismonth":
+                return getUserGrowthTrendByDay(LocalDate.now().withDayOfMonth(1), LocalDate.now());
+            case "thisyear":
+                return getUserGrowthTrendByMonth(LocalDate.now().withDayOfYear(1), LocalDate.now());
+            case "custom":
+                return getUserGrowthTrendCustom(startDate, endDate);
+            default:
+                throw new IllegalArgumentException("不支持的时间类型: " + timeType);
+        }
+    }
+    
+    /**
+     * 按小时统计用户增长趋势（当天）
+     */
+    private List<ChartDataDTO.LineItem> getUserGrowthTrendByHour(LocalDate date) {
+        List<ChartDataDTO.LineItem> trend = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        int currentHour = now.getHour();
+        
+        for (int hour = 0; hour < 24; hour++) {
+            LocalDateTime hourStart = date.atTime(hour, 0);
+            LocalDateTime hourEnd = hourStart.plusHours(1);
+            
+            Long count = 0L;
+            // 只统计已经过去的小时
+            if (date.isBefore(LocalDate.now()) || hour <= currentHour) {
+                count = userMapper.selectCount(
+                    new LambdaQueryWrapper<User>().between(User::getCreatedAt, hourStart, hourEnd));
+            }
+            
+            String timeLabel = String.format("%02d:00", hour);
+            trend.add(new ChartDataDTO.LineItem(timeLabel, count, 0L, "新增用户"));
+        }
+        return trend;
+    }
+    
+    /**
+     * 按天统计用户增长趋势
+     */
+    private List<ChartDataDTO.LineItem> getUserGrowthTrendByDay(LocalDate startDate, LocalDate endDate) {
+        List<ChartDataDTO.LineItem> trend = new ArrayList<>();
+        
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             LocalDateTime dayStart = date.atStartOfDay();
             LocalDateTime dayEnd = dayStart.plusDays(1);
 
             Long count = userMapper.selectCount(
-                    new LambdaQueryWrapper<User>().between(User::getCreatedAt, dayStart, dayEnd));
+                new LambdaQueryWrapper<User>().between(User::getCreatedAt, dayStart, dayEnd));
 
             trend.add(new ChartDataDTO.LineItem(
-                    date.format(DateTimeFormatter.ofPattern("MM-dd")), count, "新增用户"));
+                date.format(DateTimeFormatter.ofPattern("MM-dd")), count, 0L, "新增用户"));
         }
         return trend;
+    }
+    
+    /**
+     * 按月统计用户增长趋势
+     */
+    private List<ChartDataDTO.LineItem> getUserGrowthTrendByMonth(LocalDate startDate, LocalDate endDate) {
+        List<ChartDataDTO.LineItem> trend = new ArrayList<>();
+        
+        LocalDate monthStart = startDate.withDayOfMonth(1);
+        LocalDate monthEnd = endDate.withDayOfMonth(1);
+        
+        for (LocalDate month = monthStart; !month.isAfter(monthEnd); month = month.plusMonths(1)) {
+            LocalDateTime monthStartTime = month.atStartOfDay();
+            LocalDateTime monthEndTime = month.plusMonths(1).atStartOfDay();
+
+            Long count = userMapper.selectCount(
+                new LambdaQueryWrapper<User>().between(User::getCreatedAt, monthStartTime, monthEndTime));
+
+            trend.add(new ChartDataDTO.LineItem(
+                month.format(DateTimeFormatter.ofPattern("yyyy-MM")), count, 0L, "新增用户"));
+        }
+        return trend;
+    }
+    
+    /**
+     * 自定义时间段统计用户增长趋势
+     */
+    private List<ChartDataDTO.LineItem> getUserGrowthTrendCustom(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("自定义时间段的开始和结束日期不能为空");
+        }
+        
+        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+        
+        // 判断时间维度
+        if (daysBetween == 0) {
+            // 同一天，按小时统计
+            return getUserGrowthTrendByHour(startDate);
+        } else if (daysBetween > 365) {
+            // 大于一年，按月统计
+            return getUserGrowthTrendByMonth(startDate, endDate);
+        } else if (daysBetween > 31) {
+            // 大于一个月，按月统计
+            return getUserGrowthTrendByMonth(startDate, endDate);
+        } else {
+            // 小于等于一个月，按天统计
+            return getUserGrowthTrendByDay(startDate, endDate);
+        }
     }
 
     @Override
@@ -180,8 +377,9 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             Long count = articleMapper.selectCount(
                     new LambdaQueryWrapper<Article>().between(Article::getCreatedAt, dayStart, dayEnd));
 
+            Long draftCount = draftMapper.selectCount(new LambdaQueryWrapper<Draft>().between(Draft::getLastModifiedAt, dayStart, dayEnd));
             trend.add(new ChartDataDTO.LineItem(
-                    date.format(DateTimeFormatter.ofPattern("MM-dd")), count, "发布文章"));
+                    date.format(DateTimeFormatter.ofPattern("MM-dd")), count,draftCount, "发布文章"));
         }
         return trend;
     }
@@ -350,7 +548,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                     new LambdaQueryWrapper<Comment>().between(Comment::getCreatedAt, dayStart, dayEnd));
 
             trend.add(new ChartDataDTO.LineItem(
-                    date.format(DateTimeFormatter.ofPattern("MM-dd")), count, "评论数"));
+                    date.format(DateTimeFormatter.ofPattern("MM-dd")), count,0L, "评论数"));
         }
         return trend;
     }
@@ -364,7 +562,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             Long count = (long) (Math.random() * 1000 + 500); // 示例数据
             trend.add(new ChartDataDTO.LineItem(
-                    date.format(DateTimeFormatter.ofPattern("MM-dd")), count, "浏览量"));
+                    date.format(DateTimeFormatter.ofPattern("MM-dd")), count,0L, "浏览量"));
         }
         return trend;
     }

@@ -49,11 +49,11 @@ public class DashboardDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OverviewData {
-        // 本月数据
-        private Long currentMonthUsers;      // 本月新增用户数
-        private Long currentMonthArticles;   // 本月新增文章数
-        private Long currentMonthComments;   // 本月新增评论数
-        private Long currentMonthViews;      // 本月浏览量
+        // 总量数据（原本月数据字段现在显示总量）
+        private Long currentMonthUsers;      // 总用户数
+        private Long currentMonthArticles;   // 总文章数
+        private Long currentMonthComments;   // 总评论数
+        private Long currentMonthViews;      // 总浏览量
         
         // 上月数据
         private Long lastMonthUsers;         // 上月新增用户数
@@ -61,11 +61,11 @@ public class DashboardDTO {
         private Long lastMonthComments;      // 上月新增评论数
         private Long lastMonthViews;         // 上月浏览量
         
-        // 增长比例 (百分比)
-        private BigDecimal userGrowthRate;     // 用户增长率
-        private BigDecimal articleGrowthRate;  // 文章增长率
-        private BigDecimal commentGrowthRate;  // 评论增长率
-        private BigDecimal viewGrowthRate;     // 浏览量增长率
+        // 增长比例 (百分比) - 本月与上月对比
+        private BigDecimal userGrowthRate;     // 用户增长率（本月vs上月）
+        private BigDecimal articleGrowthRate;  // 文章增长率（本月vs上月）
+        private BigDecimal commentGrowthRate;  // 评论增长率（本月vs上月）
+        private BigDecimal viewGrowthRate;     // 浏览量增长率（本月vs上月）
         
         // 总计数据
         private Long totalUsers;        // 总用户数
@@ -79,7 +79,22 @@ public class DashboardDTO {
         private Long todayComments;     // 今日新增评论
         private Long todayViews;        // 今日浏览量
         
+        // 今日用户活跃度数据（24小时，每小时的登录人数）
+        private List<HourlyLoginData> todayLoginActivity;
+        
         // 实时数据
         private Long onlineUsers;       // 在线用户数
+    }
+    
+    /**
+     * 每小时登录数据
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class HourlyLoginData {
+        private Integer hour;           // 小时 (0-23)
+        private Long loginCount;        // 该小时的登录人数
+        private String timeLabel;       // 时间标签，如 "00:00", "01:00"
     }
 }

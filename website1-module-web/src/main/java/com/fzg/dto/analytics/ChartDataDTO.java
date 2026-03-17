@@ -34,6 +34,7 @@ public class ChartDataDTO {
     public static class LineItem {
         private String date;    // 日期
         private Long value;     // 数值
+        private Long draftValue;
         private String label;   // 标签（可选）
     }
     

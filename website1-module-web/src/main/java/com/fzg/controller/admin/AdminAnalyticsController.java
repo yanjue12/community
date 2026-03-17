@@ -42,15 +42,30 @@ public class AdminAnalyticsController {
     }
 
     /**
-     * 获取用户增长趋势
+     * 获取用户增长趋势（支持多种时间维度）
      */
     @GetMapping("/user-growth-trend")
-    @Operation(summary = "获取用户增长趋势", description = "获取指定天数内的用户增长趋势数据")
+    @Operation(summary = "获取用户增长趋势", description = "支持本日、本月、本年或自定义时间段的用户增长趋势")
     public Result<List<ChartDataDTO.LineItem>> getUserGrowthTrend(
-            @Parameter(description = "统计天数", example = "7")
-            @RequestParam(defaultValue = "7") int days) {
+            @Parameter(description = "时间类型：today/thisMonth/thisYear/custom", example = "today")
+            @RequestParam String timeType,
+            @Parameter(description = "开始日期（自定义时间段时使用，格式：yyyy-MM-dd）", example = "2026-01-01")
+            @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期（自定义时间段时使用，格式：yyyy-MM-dd）", example = "2026-01-31")
+            @RequestParam(required = false) String endDate) {
         try {
-            List<ChartDataDTO.LineItem> trend = analyticsService.getUserGrowthTrend(days);
+            java.time.LocalDate start = null;
+            java.time.LocalDate end = null;
+            
+            if ("custom".equalsIgnoreCase(timeType)) {
+                if (startDate == null || endDate == null) {
+                    return Result.fail(EnumReturn.valueOf("自定义时间段需要提供开始和结束日期"));
+                }
+                start = java.time.LocalDate.parse(startDate);
+                end = java.time.LocalDate.parse(endDate);
+            }
+            
+            List<ChartDataDTO.LineItem> trend = analyticsService.getUserGrowthTrend(timeType, start, end);
             return Result.success(trend);
         } catch (Exception e) {
             log.error("获取用户增长趋势失败: {}", e.getMessage(), e);

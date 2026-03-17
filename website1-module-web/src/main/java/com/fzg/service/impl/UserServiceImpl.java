@@ -118,7 +118,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             // 2. 创建审核记录
             auditRecordService.createAudit(articleVO.getId());
 
-            // 3. 立即执行自动审核（同步）
+            // TODO 去除这个 3. 立即执行自动审核（同步）
             auditRecordService.autoAudit(articleVO);
         } catch (Exception e) {
             log.error("UserServiceImpl.publishArticle发布文章异常",e);
@@ -399,6 +399,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if(null != userRole.getRoleName()){
             code = userRole.getRoleName();
         }
+
+        user.setLastLoginTime(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+        baseMapper.updateById(user);
         //登录成功，记录token
         StpUtil.login(user.getId());
         SaTokenInfo tokenInfo = StpUtil.getTokenInfo();

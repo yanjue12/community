@@ -11,6 +11,7 @@ import com.fzg.model.AuditRecord;
 import com.fzg.model.Result;
 import com.fzg.vo.ArticleRequest;
 import com.fzg.vo.ArticleVO;
+import com.fzg.vo.ArticlePageVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -170,9 +171,17 @@ public class AdminArticleController {
         int pageSize = request.getPageSize() == null ? 10 : request.getPageSize();
         int offset = (pageNum - 1) * pageSize;
 
-        List<ArticleVO> list = articleMapper.queryArticleByCondition(request,offset);
-
+        // 查询数据列表
+        List<ArticleVO> list = articleMapper.queryArticleByCondition(request, offset);
         
-        return Result.success(list);
+        // 查询总数
+        Long total = articleMapper.countArticleByCondition(request);
+        
+        // 构建分页结果
+        ArticlePageVO pageVO = new ArticlePageVO();
+        pageVO.setArticleVOList(list);
+        pageVO.setTotal(total.intValue());
+        
+        return Result.success(pageVO);
     }
 }

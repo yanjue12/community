@@ -90,4 +90,6 @@ public interface Articlemapper extends BaseMapper<Article> {
 
     List<ArticleVO> queryArticleByCondition(@Param("request") ArticleRequest request,
                                             @Param("offset") int offset);
+    
+    Long countArticleByCondition(@Param("request") ArticleRequest request);
 }

@@ -768,11 +768,11 @@
 
     </select>
     <select id="queryArticleByCondition" resultType="com.fzg.vo.ArticleVO">
-        select a.id,a.user_id,a.title,a.summary,a.status,a.view_count as viewCount,
-               a.like_count as likeCount,a.comment_count as commentCount,a.share_count as shareCount
-        a.published_at as publishedAt ,u.nickname c.name
+        select a.id,a.user_id as userId,a.title,a.summary,a.status,a.view_count as viewCount,
+               a.like_count as likeCount,a.comment_count as commentCount,a.share_count as shareCount,
+        a.published_at as publishedAt ,a.cover_image as coverImage,u.nickname,u.avatar, c.name as categoryName
         from article a
-        left join category c on c.id = a.category_id
+        left join category c on a.category_id = c.id
         left join user u on u.id = a.user_id
         <where>
             1=1
@@ -793,7 +793,32 @@
             </if>
         </where>
         order by  a.published_at desc
-        limit #{request.pageNum} offset #{offset}
+        limit #{request.pageSize} offset #{offset}
+    </select>
+
+    <select id="countArticleByCondition" resultType="java.lang.Long">
+        select count(*)
+        from article a
+        left join category c on a.category_id = c.id
+        left join user u on u.id = a.user_id
+        <where>
+            1=1
+            <if test="request.status != null and request.status != ''">
+              and  a.status = #{request.status}
+            </if>
+            <if test="request.categoryName != null and request.categoryName != ''">
+              and  c.name = #{request.categoryName}
+            </if>
+            <if test="request.title != null and request.title != ''">
+                and (a.title like CONCAT('%', #{request.title}, '%') or u.nickname like concat('%', #{request.title}, '%'))
+            </if>
+            <if test="request.startTime != null and request.startTime != ''">
+                and a.published_at >= #{request.startTime}
+            </if>
+            <if test="request.endTime != null and request.endTime != ''">
+                and a.published_at &lt; #{request.endTime}
+            </if>
+        </where>
     </select>
 
 

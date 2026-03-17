@@ -17,10 +17,12 @@ public interface AnalyticsService {
     DashboardDTO getDashboardData();
     
     /**
-     * 获取用户增长趋势
-     * @param days 天数
+     * 获取用户增长趋势（支持多种时间维度）
+     * @param timeType 时间类型：today/thisMonth/thisYear/custom
+     * @param startDate 开始日期（自定义时间段时使用）
+     * @param endDate 结束日期（自定义时间段时使用）
      */
-    List<ChartDataDTO.LineItem> getUserGrowthTrend(int days);
+    List<ChartDataDTO.LineItem> getUserGrowthTrend(String timeType, LocalDate startDate, LocalDate endDate);
     
     /**
      * 获取文章发布趋势
