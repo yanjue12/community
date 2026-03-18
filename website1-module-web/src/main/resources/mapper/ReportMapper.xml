@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.ReportMapper">
+
+    <!-- 检查用户是否已经举报过该目标 -->
+    <select id="checkUserReported" resultType="int">
+        SELECT COUNT(*)
+        FROM report
+        WHERE reporter_id = #{reporterId}
+          AND target_type = #{targetType}
+          AND target_id = #{targetId}
+          AND status != 'rejected'
+    </select>
+
+    <!-- 获取用户的举报历史 -->
+    <select id="getUserReportHistory" resultType="com.fzg.model.Report">
+        SELECT r.*, u.nickname as reporterName, tu.nickname as targetUserName
+        FROM report r
+        LEFT JOIN user u ON r.reporter_id = u.id
+        LEFT JOIN user tu ON r.target_user_id = tu.id
+        WHERE r.reporter_id = #{reporterId}
+        ORDER BY r.created_at DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- 管理端查询举报列表 -->
+    <select id="queryReportList" resultType="com.fzg.model.Report">
+        SELECT r.*, 
+               u.nickname as reporterName, 
+               tu.nickname as targetUserName,
+               au.nickname as adminName,
+               CASE r.target_type
+                   WHEN 'article' THEN a.title
+                   WHEN 'comment' THEN CONCAT('评论: ', SUBSTRING(c.content, 1, 50))
+                   WHEN 'user' THEN CONCAT('用户: ', tu.nickname)
+                   ELSE '未知'
+               END as targetTitle
+        FROM report r
+        LEFT JOIN user u ON r.reporter_id = u.id
+        LEFT JOIN user tu ON r.target_user_id = tu.id
+        LEFT JOIN user au ON r.admin_id = au.id
+        LEFT JOIN article a ON r.target_type = 'article' AND r.target_id = a.id
+        LEFT JOIN comment c ON r.target_type = 'comment' AND r.target_id = c.id
+        <where>
+            1=1
+            <if test="status != null and status != ''">
+                AND r.status = #{status}
+            </if>
+            <if test="targetType != null and targetType != ''">
+                AND r.target_type = #{targetType}
+            </if>
+        </where>
+        ORDER BY r.created_at DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- 统计举报数量 -->
+    <select id="countReportList" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM report r
+        <where>
+            1=1
+            <if test="status != null and status != ''">
+                AND r.status = #{status}
+            </if>
+            <if test="targetType != null and targetType != ''">
+                AND r.target_type = #{targetType}
+            </if>
+        </where>
+    </select>
+
+</mapper>

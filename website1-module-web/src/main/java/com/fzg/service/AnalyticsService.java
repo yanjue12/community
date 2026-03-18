@@ -2,6 +2,7 @@ package com.fzg.service;
 
 import com.fzg.dto.analytics.ChartDataDTO;
 import com.fzg.dto.analytics.DashboardDTO;
+import com.fzg.dto.analytics.RealtimeActivityDTO;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -29,6 +30,14 @@ public interface AnalyticsService {
      * @param days 天数
      */
     List<ChartDataDTO.LineItem> getArticlePublishTrend(int days);
+
+    /**
+     * 获取文章发布趋势（支持多种时间维度）
+     * @param timeType 时间类型：today/thisMonth/thisYear/custom
+     * @param startDate 开始日期（自定义时间段时使用）
+     * @param endDate 结束日期（自定义时间段时使用）
+     */
+    List<ChartDataDTO.LineItem> getArticlePublishTrend(String timeType, LocalDate startDate, LocalDate endDate);
     
     /**
      * 获取文章分类分布
@@ -78,4 +87,10 @@ public interface AnalyticsService {
      * @param days 天数
      */
     List<ChartDataDTO.LineItem> getViewTrend(int days);
+    
+    /**
+     * 获取实时动态
+     * @param limit 限制数量，默认5条
+     */
+    List<RealtimeActivityDTO> getRealtimeActivities(int limit);
 }

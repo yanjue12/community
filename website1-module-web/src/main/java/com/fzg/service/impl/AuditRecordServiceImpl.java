@@ -1,134 +1,396 @@
 package com.fzg.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fzg.converter.ArticleEsConverter;
-import com.fzg.mapper.Articlemapper;
-import com.fzg.mapper.AuditLogMapper;
+import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.AuditRecordMapper;
+import com.fzg.mapper.Articlemapper;
 import com.fzg.model.Article;
-import com.fzg.model.AuditLog;
 import com.fzg.model.AuditRecord;
-import com.fzg.service.ArticleTagService;
+import com.fzg.model.Result;
 import com.fzg.service.AuditRecordService;
-import com.fzg.service.SensitiveService;
+import com.fzg.vo.AuditQueryRequest;
+import com.fzg.vo.AuditRecordVO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * @description 针对表【audit_record(审核表)】的数据库操作Service实现
+ */
 @Service
 @Slf4j
-public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, AuditRecord> implements AuditRecordService{
+@RequiredArgsConstructor
+public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, AuditRecord> implements AuditRecordService {
 
+    private final AuditRecordMapper auditRecordMapper;
+    private final Articlemapper articleMapper;
 
-    @Autowired
-    private Articlemapper articleMapper;
-    @Autowired
-    private AuditLogMapper auditLogMapper;
-    @Autowired
-    private ElasticsearchRestTemplate elasticsearchRestTemplate;
-    @Autowired
-    private SensitiveService sensitiveService;
-    @Autowired
-    private ArticleTagService articleTagService;
+    @Override
+    public Result getPendingAuditList(Byte auditStatus, Integer pageNum, Integer pageSize) {
+        try {
+            pageNum = pageNum == null ? 1 : pageNum;
+            pageSize = pageSize == null ? 10 : pageSize;
+            int offset = (pageNum - 1) * pageSize;
+
+            List<AuditRecordVO> auditList = auditRecordMapper.queryPendingAuditList(auditStatus, pageSize, offset);
+            Long total = auditRecordMapper.countPendingAudit(auditStatus);
+
+            // 处理状态文本
+            auditList.forEach(this::processAuditRecordVO);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("list", auditList);
+            result.put("total", total);
+
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("获取审核列表失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("获取审核列表失败"));
+        }
+    }
+
+    @Override
+    public Result getAuditListByCondition(AuditQueryRequest request) {
+        try {
+            // 设置默认值
+            Integer pageNum = request.getPageNum() == null ? 1 : request.getPageNum();
+            Integer pageSize = request.getPageSize() == null ? 10 : request.getPageSize();
+            int offset = (pageNum- 1) * pageSize;
+
+            List<AuditRecordVO> auditList = auditRecordMapper.queryAuditListByCondition(request, offset);
+            Long total = auditRecordMapper.countAuditListByCondition(request);
+
+            // 处理状态文本
+            auditList.forEach(this::processAuditRecordVO);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("list", auditList);
+            result.put("total", total);
+
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("多条件查询审核列表失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("查询审核列表失败"));
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result approveAudit(Long auditId, Long auditorId, String reason) {
+        try {
+            AuditRecord auditRecord = this.getById(auditId);
+            if (auditRecord == null) {
+                return Result.fail(EnumReturn.valueOf("审核记录不存在"));
+            }
+
+            if (auditRecord.getAuditStatus() != 0) {
+                return Result.fail(EnumReturn.valueOf("该记录已审核，无法重复操作"));
+            }
+
+            // 更新审核记录
+            auditRecord.setAuditStatus((byte) 1);
+            auditRecord.setAuditorId(auditorId);
+            auditRecord.setReason(reason);
+            auditRecord.setUpdatedAt(new Date());
+
+            boolean updateSuccess = this.updateById(auditRecord);
+            if (!updateSuccess) {
+                return Result.fail(EnumReturn.valueOf("更新审核记录失败"));
+            }
+
+            // 更新文章状态为已发布
+            Article article = articleMapper.selectById(auditRecord.getArticleId());
+            if (article != null) {
+                article.setStatus("1"); // 1-已发布
+                article.setPublishedAt(new Date());
+                article.setUpdatedAt(new Date());
+                articleMapper.updateById(article);
+            }
+
+            log.info("审核通过成功: auditId={}, auditorId={}", auditId, auditorId);
+            return Result.success("审核通过成功");
+        } catch (Exception e) {
+            log.error("审核通过失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("审核通过失败"));
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result rejectAudit(Long auditId, Long auditorId, String reason) {
+        try {
+            if (!StringUtils.hasText(reason)) {
+                return Result.fail(EnumReturn.valueOf("拒绝原因不能为空"));
+            }
+
+            AuditRecord auditRecord = this.getById(auditId);
+            if (auditRecord == null) {
+                return Result.fail(EnumReturn.valueOf("审核记录不存在"));
+            }
+
+            if (auditRecord.getAuditStatus() != 0) {
+                return Result.fail(EnumReturn.valueOf("该记录已审核，无法重复操作"));
+            }
+
+            // 更新审核记录
+            auditRecord.setAuditStatus((byte) 2);
+            auditRecord.setAuditorId(auditorId);
+            auditRecord.setReason(reason);
+            auditRecord.setUpdatedAt(new Date());
+
+            boolean updateSuccess = this.updateById(auditRecord);
+            if (!updateSuccess) {
+                return Result.fail(EnumReturn.valueOf("更新审核记录失败"));
+            }
+
+            // 更新文章状态为审核拒绝
+            Article article = articleMapper.selectById(auditRecord.getArticleId());
+            if (article != null) {
+                article.setStatus("2"); // 2-审核拒绝
+                article.setUpdatedAt(new Date());
+                articleMapper.updateById(article);
+            }
+
+            log.info("审核拒绝成功: auditId={}, auditorId={}, reason={}", auditId, auditorId, reason);
+            return Result.success("审核拒绝成功");
+        } catch (Exception e) {
+            log.error("审核拒绝失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("审核拒绝失败"));
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result batchAudit(List<Long> auditIds, Long auditorId, Byte auditStatus, String reason) {
+        try {
+            if (auditIds == null || auditIds.isEmpty()) {
+                return Result.fail(EnumReturn.valueOf("审核ID列表不能为空"));
+            }
+
+            if (auditStatus == 2 && !StringUtils.hasText(reason)) {
+                return Result.fail(EnumReturn.valueOf("批量拒绝时原因不能为空"));
+            }
+
+            int successCount = 0;
+            for (Long auditId : auditIds) {
+                Result result;
+                if (auditStatus == 1) {
+                    result = approveAudit(auditId, auditorId, reason);
+                } else {
+                    result = rejectAudit(auditId, auditorId, reason);
+                }
+                
+                if (result.getCode() == 200) {
+                    successCount++;
+                }
+            }
+
+            return Result.success("批量审核完成，成功处理" + successCount + "条记录");
+        } catch (Exception e) {
+            log.error("批量审核失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("批量审核失败"));
+        }
+    }
+
+    @Override
+    public Result getAuditHistory(Byte auditStatus, Long auditorId, Integer pageNum, Integer pageSize) {
+        try {
+            pageNum = pageNum == null ? 1 : pageNum;
+            pageSize = pageSize == null ? 10 : pageSize;
+            int offset = (pageNum - 1) * pageSize;
+
+            List<AuditRecordVO> auditList = auditRecordMapper.queryAuditHistory(auditStatus, auditorId, pageSize, offset);
+            Long total = auditRecordMapper.countAuditHistory(auditStatus, auditorId);
+
+            // 处理状态文本
+            auditList.forEach(this::processAuditRecordVO);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("list", auditList);
+            result.put("total", total);
+
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("获取审核历史失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("获取审核历史失败"));
+        }
+    }
+
+    @Override
+    public AuditRecord createAuditRecord(Long articleId) {
+        try {
+            // 检查是否已存在审核记录
+            AuditRecord existingRecord = getByArticleId(articleId);
+            if (existingRecord != null) {
+                return existingRecord;
+            }
+
+            AuditRecord auditRecord = new AuditRecord();
+            auditRecord.setBizType("ARTICLE");
+            auditRecord.setArticleId(articleId);
+            auditRecord.setAuditStatus((byte) 0); // 0-待审核
+            auditRecord.setAuditType((byte) 2);
+            auditRecord.setCreatedAt(new Date());
+            auditRecord.setUpdatedAt(new Date());
+
+            this.save(auditRecord);
+            return auditRecord;
+        } catch (Exception e) {
+            log.error("创建审核记录失败: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    @Override
+    public AuditRecord getByArticleId(Long articleId) {
+        return auditRecordMapper.getByArticleId(articleId);
+    }
+
+    @Override
+    public Result getAuditStatistics() {
+        try {
+            // 待审核数量
+            LambdaQueryWrapper<AuditRecord> pendingWrapper = new LambdaQueryWrapper<>();
+            pendingWrapper.eq(AuditRecord::getAuditStatus, 0);
+            long pendingCount = this.count(pendingWrapper);
+
+            // 今日审核数量
+            LambdaQueryWrapper<AuditRecord> todayWrapper = new LambdaQueryWrapper<>();
+            todayWrapper.ge(AuditRecord::getUpdatedAt, getTodayStart())
+                       .in(AuditRecord::getAuditStatus, 1, 2);
+            long todayCount = this.count(todayWrapper);
+
+            // 总审核数量
+            long totalCount = this.count();
+
+            // 已通过数量
+            LambdaQueryWrapper<AuditRecord> approvedWrapper = new LambdaQueryWrapper<>();
+            approvedWrapper.eq(AuditRecord::getAuditStatus, 1);
+            long approvedCount = this.count(approvedWrapper);
+
+            // 已拒绝数量
+            LambdaQueryWrapper<AuditRecord> rejectedWrapper = new LambdaQueryWrapper<>();
+            rejectedWrapper.eq(AuditRecord::getAuditStatus, 2);
+            long rejectedCount = this.count(rejectedWrapper);
+
+            // 计算通过率
+            double approveRate = totalCount > 0 ? (double) approvedCount / totalCount * 100 : 0;
+
+            Map<String, Object> statistics = new HashMap<>();
+            statistics.put("pendingCount", pendingCount);
+            statistics.put("todayCount", todayCount);
+            statistics.put("totalCount", totalCount);
+            statistics.put("approvedCount", approvedCount);
+            statistics.put("rejectedCount", rejectedCount);
+            statistics.put("approveRate", String.format("%.1f%%", approveRate));
+
+            return Result.success(statistics);
+        } catch (Exception e) {
+            log.error("获取审核统计失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("获取审核统计失败"));
+        }
+    }
 
     /**
-     * 创建审核记录
-     * @param
+     * 处理审核记录VO的状态文本
      */
-    @Override
-    public void createAudit(Long articleId) {
-        AuditRecord record = new AuditRecord();
-        record.setBizType("ARTICLE");
-        record.setArticleId(articleId);
-        record.setAuditStatus((byte) 0); // 待审核
-        record.setAuditType((byte) 1);   // 默认自动
-        baseMapper.insert(record);
+    private void processAuditRecordVO(AuditRecordVO vo) {
+        // 审核状态文本
+        switch (vo.getAuditStatus()) {
+            case 0:
+                vo.setAuditStatusText("待审核");
+                break;
+            case 1:
+                vo.setAuditStatusText("已通过");
+                break;
+            case 2:
+                vo.setAuditStatusText("已拒绝");
+                break;
+            default:
+                vo.setAuditStatusText("未知");
+        }
+
+        // 审核类型文本
+        switch (vo.getAuditType()) {
+            case 1:
+                vo.setAuditTypeText("自动审核");
+                break;
+            case 2:
+                vo.setAuditTypeText("人工审核");
+                break;
+            default:
+                vo.setAuditTypeText("未知");
+        }
     }
 
     /**
-     * 自动审核
-     * @param article
+     * 获取今日开始时间
      */
+    private Date getTodayStart() {
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        calendar.set(java.util.Calendar.MINUTE, 0);
+        calendar.set(java.util.Calendar.SECOND, 0);
+        calendar.set(java.util.Calendar.MILLISECOND, 0);
+        return calendar.getTime();
+    }
+
     @Override
-    @Transactional
-    public void autoAudit(Article article) {
-        AuditRecord record = baseMapper.selectByArticleId(article.getId());
-        if(record == null){
-            throw new RuntimeException("审核记录不存在");
+    public Result getRecentAuditRecords(Integer limit) {
+        try {
+            // 默认显示3条记录
+            limit = limit == null ? 3 : limit;
+            
+            List<AuditRecordVO> recentRecords = auditRecordMapper.getRecentAuditRecords(limit);
+            
+            // 处理状态文本和时间描述
+            recentRecords.forEach(record -> {
+                processAuditRecordVO(record);
+                // 添加时间描述
+                if (record.getUpdatedAt() != null) {
+                    record.setTimeDescription(getTimeDescription(record.getUpdatedAt()));
+                }
+            });
+            
+            return Result.success(recentRecords);
+        } catch (Exception e) {
+            log.error("获取最近审核记录失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("获取最近审核记录失败"));
         }
+    }
 
-        //1.敏感词检测
-        String hitWord = sensitiveService.hit(article.getTitle() , article.getContent());
-        if (hitWord != null) {
-            doReject(record, article, "命中敏感词：" + hitWord, true);
-            return;
+
+
+    /**
+     * 获取时间描述
+     */
+    private String getTimeDescription(Date date) {
+        if (date == null) return "";
+        
+        long diff = System.currentTimeMillis() - date.getTime();
+        long minutes = diff / (1000 * 60);
+        long hours = diff / (1000 * 60 * 60);
+        long days = diff / (1000 * 60 * 60 * 24);
+        
+        if (minutes < 1) {
+            return "刚刚";
+        } else if (minutes < 60) {
+            return minutes + "分钟前";
+        } else if (hours < 24) {
+            return hours + "小时前";
+        } else if (days < 7) {
+            return days + "天前";
+        } else {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MM-dd HH:mm");
+            return sdf.format(date);
         }
-
-        //2.通过
-        doPass(record, article, true);
     }
-
-    private void doReject(AuditRecord record,
-                          Article article,
-                          String reason,
-                          boolean auto) {
-
-        record.setAuditStatus((byte) 2); // 拒绝
-        record.setAuditType((byte) (auto ? 1 : 2));
-        record.setReason(reason);
-        record.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
-        baseMapper.updateById(record);
-
-        article.setStatus("3"); // 审核拒绝
-        articleMapper.updateById(article);
-
-        auditLogMapper.insert(
-                new AuditLog(
-                        record.getId(),
-                        auto ? (byte) 2 : (byte) 4,
-                        null,
-                        reason
-                )
-        );
-    }
-
-
-
-
-    private void doPass(AuditRecord record,
-                        Article article,
-                        boolean auto) {
-
-        record.setAuditStatus((byte) 1); // 通过
-        record.setAuditType((byte) (auto ? 1 : 2));
-        record.setUpdatedAt(new Date());
-        baseMapper.updateById(record);
-
-        article.setStatus("1"); // 已发布
-        articleMapper.updateById(article);
-
-        auditLogMapper.insert(
-                new AuditLog(
-                        record.getId(),
-                        auto ? (byte) 1 : (byte) 3,
-                        null,
-                        "通过"
-                )
-        );
-
-        List<String> tags = articleTagService.listTagNamesByArticleId(article.getId());
-        log.info("开始同步es");
-        // 同步 ES（唯一入口）
-        elasticsearchRestTemplate.save(ArticleEsConverter.toEs(article, tags));
-    }
-
-
 }

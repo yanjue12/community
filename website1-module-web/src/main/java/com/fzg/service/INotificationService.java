@@ -1,6 +1,8 @@
 package com.fzg.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.fzg.model.Article;
 import com.fzg.model.Notification;
 
 import java.util.List;
@@ -10,7 +12,7 @@ import java.util.Map;
  * 通知服务接口
  * 职责：通知查询、管理、缓存等业务逻辑
  */
-public interface INotificationService {
+public interface INotificationService extends IService<Notification> {
 
     /**
      * 获取未读数量（带缓存）

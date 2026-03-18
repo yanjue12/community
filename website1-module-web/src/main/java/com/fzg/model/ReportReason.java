@@ -9,52 +9,52 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
 
 /**
- * 审核表
- * audit_record
+ * 举报原因配置表
+ * report_reason
  */
 @Data
-public class AuditRecord implements Serializable {
+public class ReportReason implements Serializable {
     /**
-     * 审核记录ID
+     * 原因ID
      */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
-     * 业务类型：ARTICLE-文章
+     * 原因代码
      */
-    @TableField("biz_type")
-    private String bizType;
+    @TableField("code")
+    private String code;
 
     /**
-     * 文章ID
+     * 原因名称
      */
-    @TableField("article_id")
-    private Long articleId;
+    @TableField("name")
+    private String name;
 
     /**
-     * 审核状态：0-待审核, 1-通过, 2-拒绝
+     * 原因描述
      */
-    @TableField("audit_status")
-    private Byte auditStatus;
+    @TableField("description")
+    private String description;
 
     /**
-     * 审核类型：1-自动, 2-人工
+     * 适用的目标类型，多个用逗号分隔
      */
-    @TableField("audit_type")
-    private Byte auditType;
+    @TableField("target_types")
+    private String targetTypes;
 
     /**
-     * 审核人ID
+     * 排序
      */
-    @TableField("auditor_id")
-    private Long auditorId;
+    @TableField("sort")
+    private Integer sort;
 
     /**
-     * 审核原因/备注
+     * 状态：active-启用, inactive-禁用
      */
-    @TableField("reason")
-    private String reason;
+    @TableField("status")
+    private String status;
 
     /**
      * 创建时间

@@ -48,35 +48,9 @@ public class AdminUserController {
                            @RequestParam(required = false) String keyword,
                            @RequestParam(required = false) String status,
                            @RequestParam(required = false) Long roleId) {
-        Page<User> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+
         
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            wrapper.and(w -> w.like(User::getUsername, keyword)
-                   .or().like(User::getNickname, keyword)
-                   .or().like(User::getEmail, keyword));
-        }
-        if (status != null && !status.trim().isEmpty()) {
-            wrapper.eq(User::getStatus, status);
-        }
-        
-        wrapper.orderByDesc(User::getCreatedAt);
-        Page<User> result = userMapper.selectPage(page, wrapper);
-        
-        // 如果需要按角色筛选，需要关联查询
-        if (roleId != null) {
-            List<Long> userIds = userRoleMapper.selectList(
-                new LambdaQueryWrapper<UserRole>().eq(UserRole::getRoleId, roleId)
-            ).stream().map(UserRole::getUserId).collect(Collectors.toList());
-            
-            if (!CollectionUtils.isEmpty(userIds)) {
-                wrapper.in(User::getId, userIds);
-            } else {
-                return Result.success(new Page<>(pageNum, pageSize));
-            }
-        }
-        
-        return Result.success(result);
+        return Result.success(true);
     }
 
     /**

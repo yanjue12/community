@@ -2,20 +2,18 @@ package com.fzg.service.impl;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
-import cn.dev33.satoken.stp.StpInterface;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.constant.RedisVerificationKey;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
-import com.fzg.mapper.UserPrivacyMapper;
 import com.fzg.mapper.UserRolemapper;
 import com.fzg.model.*;
 import com.fzg.service.AuditRecordService;
+import com.fzg.service.INotificationService;
 import com.fzg.service.UserPrivacyService;
 import com.fzg.service.UserService;
 import com.fzg.mapper.UserMapper;
@@ -37,7 +35,6 @@ import javax.annotation.Resource;
 import javax.mail.internet.MimeMessage;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -67,6 +64,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private UserPrivacyService userPrivacyService;
     @Autowired
     private AuditRecordService auditRecordService;
+    @Autowired
+    private INotificationService notificationService;
 
 
     /**
@@ -115,11 +114,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             articleVO.setStatus("2");
             insert = articlemapper.insert(articleVO);
 
-            // 2. 创建审核记录
-            auditRecordService.createAudit(articleVO.getId());
+            // 2. 创建审核记录 默认人工审核
+            auditRecordService.createAuditRecord(articleVO.getId());
 
-            // TODO 去除这个 3. 立即执行自动审核（同步）
-            auditRecordService.autoAudit(articleVO);
+            // TODO 自动审核 3. 立即执行自动审核（同步）
+            //auditRecordService.autoAudit(articleVO);
         } catch (Exception e) {
             log.error("UserServiceImpl.publishArticle发布文章异常",e);
             throw new RuntimeException(e);
@@ -200,6 +199,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setAvatar("http://127.0.0.1:9000/website/908470.jpg");
 
         if(this.save(user)){
+            // 创建注册通知
+            try {
+                Notification notification = new Notification();
+                notification.setUserId(user.getId());
+                notification.setFromUserId(user.getId());
+                notification.setType("system");
+                notification.setActionType("user_register");
+                notification.setTitle("新用户注册");
+                notification.setContent(user.getUsername() + " 注册了账号");
+                notification.setTargetType("user");
+                notification.setTargetId(user.getId());
+                notification.setIsRead("1");
+                notification.setIsDeleted("0");
+                notification.setNotifyLevel("normal");
+                notification.setCreatedAt(new Date());
+                notificationService.save(notification);
+            } catch (Exception e) {
+                log.warn("创建注册通知失败: {}", e.getMessage());
+            }
+            
             StpUtil.login(user.getId());
             SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
 
@@ -426,6 +445,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //保存登录时间和登录ip TODO
         user.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
         this.updateById(user);
+        
+        // 创建登录通知
+        try {
+            Notification notification = new Notification();
+            notification.setUserId(user.getId());
+            notification.setFromUserId(user.getId());
+            notification.setType("system");
+            notification.setActionType("user_login");
+            notification.setTitle("用户登录");
+            notification.setContent(user.getUsername() + " 登录了系统");
+            notification.setTargetType("user");
+            notification.setTargetId(user.getId());
+            notification.setIsRead("0");
+            notification.setIsDeleted("0");
+            notification.setNotifyLevel("normal");
+            notification.setCreatedAt(new Date());
+            notificationService.save(notification);
+        } catch (Exception e) {
+            log.warn("创建登录通知失败: {}", e.getMessage());
+        }
+        
         return Result.success(loginResponse);
     }
 

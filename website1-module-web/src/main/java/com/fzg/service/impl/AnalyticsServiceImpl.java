@@ -3,6 +3,7 @@ package com.fzg.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fzg.dto.analytics.ChartDataDTO;
 import com.fzg.dto.analytics.DashboardDTO;
+import com.fzg.dto.analytics.RealtimeActivityDTO;
 import com.fzg.mapper.*;
 import com.fzg.model.*;
 import com.fzg.service.AnalyticsService;
@@ -32,6 +33,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     private final Commentmapper commentMapper;
     private final Categorymapper categoryMapper;
     private final DraftMapper draftMapper;
+    private final Notificationmapper notificationMapper;
     
     @Override
     public DashboardDTO getDashboardData() {
@@ -366,22 +368,173 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public List<ChartDataDTO.LineItem> getArticlePublishTrend(int days) {
-        List<ChartDataDTO.LineItem> trend = new ArrayList<>();
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(days - 1);
+        try {
+            List<ChartDataDTO.LineItem> trend = new ArrayList<>();
+            LocalDate endDate = LocalDate.now();
+            LocalDate startDate = endDate.minusDays(days - 1);
 
+            for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+                LocalDateTime dayStart = date.atStartOfDay();
+                LocalDateTime dayEnd = dayStart.plusDays(1);
+
+                // 统计已发布文章数量（使用published_at字段）
+                LambdaQueryWrapper<Article> articleWrapper = new LambdaQueryWrapper<>();
+                articleWrapper.between(Article::getPublishedAt, dayStart, dayEnd)
+                             .eq(Article::getStatus, "1"); // 1-已发布
+                Long publishedCount = articleMapper.selectCount(articleWrapper);
+
+                // 统计草稿数量（使用created_at字段）
+                LambdaQueryWrapper<Draft> draftWrapper = new LambdaQueryWrapper<>();
+                draftWrapper.between(Draft::getCreatedAt, dayStart, dayEnd);
+                Long draftCount = draftMapper.selectCount(draftWrapper);
+
+                String dateLabel = date.format(DateTimeFormatter.ofPattern("MM-dd"));
+                trend.add(new ChartDataDTO.LineItem(dateLabel, publishedCount, draftCount, "发布文章"));
+            }
+            return trend;
+        } catch (Exception e) {
+            log.error("获取文章发布趋势失败: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public List<ChartDataDTO.LineItem> getArticlePublishTrend(String timeType, LocalDate startDate, LocalDate endDate) {
+        try {
+            switch (timeType.toLowerCase()) {
+                case "today":
+                    return getArticlePublishTrendByHour(LocalDate.now());
+                case "thismonth":
+                    return getArticlePublishTrendByDay(LocalDate.now().withDayOfMonth(1), LocalDate.now());
+                case "thisyear":
+                    return getArticlePublishTrendByMonth(LocalDate.now().withDayOfYear(1), LocalDate.now());
+                case "custom":
+                    return getArticlePublishTrendCustom(startDate, endDate);
+                default:
+                    throw new IllegalArgumentException("不支持的时间类型: " + timeType);
+            }
+        } catch (Exception e) {
+            log.error("获取文章发布趋势失败: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 按小时统计文章发布趋势
+     */
+    private List<ChartDataDTO.LineItem> getArticlePublishTrendByHour(LocalDate date) {
+        List<ChartDataDTO.LineItem> trend = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        int currentHour = now.getHour();
+        
+        for (int hour = 0; hour < 24; hour++) {
+            LocalDateTime hourStart = date.atTime(hour, 0);
+            LocalDateTime hourEnd = hourStart.plusHours(1);
+            
+            Long publishedCount = 0L;
+            Long draftCount = 0L;
+            
+            // 只统计已经过去的小时
+            if (date.isBefore(LocalDate.now()) || hour <= currentHour) {
+                // 统计已发布文章数量
+                LambdaQueryWrapper<Article> articleWrapper = new LambdaQueryWrapper<>();
+                articleWrapper.between(Article::getPublishedAt, hourStart, hourEnd)
+                             .eq(Article::getStatus, "1");
+                publishedCount = articleMapper.selectCount(articleWrapper);
+
+                // 统计草稿数量
+                LambdaQueryWrapper<Draft> draftWrapper = new LambdaQueryWrapper<>();
+                draftWrapper.between(Draft::getCreatedAt, hourStart, hourEnd);
+                draftCount = draftMapper.selectCount(draftWrapper);
+            }
+            
+            String timeLabel = String.format("%02d:00", hour);
+            trend.add(new ChartDataDTO.LineItem(timeLabel, publishedCount, draftCount, "文章发布"));
+        }
+        return trend;
+    }
+
+    /**
+     * 按天统计文章发布趋势
+     */
+    private List<ChartDataDTO.LineItem> getArticlePublishTrendByDay(LocalDate startDate, LocalDate endDate) {
+        List<ChartDataDTO.LineItem> trend = new ArrayList<>();
+        
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             LocalDateTime dayStart = date.atStartOfDay();
             LocalDateTime dayEnd = dayStart.plusDays(1);
 
-            Long count = articleMapper.selectCount(
-                    new LambdaQueryWrapper<Article>().between(Article::getCreatedAt, dayStart, dayEnd));
+            // 统计已发布文章数量
+            LambdaQueryWrapper<Article> articleWrapper = new LambdaQueryWrapper<>();
+            articleWrapper.between(Article::getPublishedAt, dayStart, dayEnd)
+                         .eq(Article::getStatus, "1");
+            Long publishedCount = articleMapper.selectCount(articleWrapper);
 
-            Long draftCount = draftMapper.selectCount(new LambdaQueryWrapper<Draft>().between(Draft::getLastModifiedAt, dayStart, dayEnd));
-            trend.add(new ChartDataDTO.LineItem(
-                    date.format(DateTimeFormatter.ofPattern("MM-dd")), count,draftCount, "发布文章"));
+            // 统计草稿数量
+            LambdaQueryWrapper<Draft> draftWrapper = new LambdaQueryWrapper<>();
+            draftWrapper.between(Draft::getCreatedAt, dayStart, dayEnd);
+            Long draftCount = draftMapper.selectCount(draftWrapper);
+
+            String dateLabel = date.format(DateTimeFormatter.ofPattern("MM-dd"));
+            trend.add(new ChartDataDTO.LineItem(dateLabel, publishedCount, draftCount, "文章发布"));
         }
         return trend;
+    }
+
+    /**
+     * 按月统计文章发布趋势
+     */
+    private List<ChartDataDTO.LineItem> getArticlePublishTrendByMonth(LocalDate startDate, LocalDate endDate) {
+        List<ChartDataDTO.LineItem> trend = new ArrayList<>();
+        
+        LocalDate monthStart = startDate.withDayOfMonth(1);
+        LocalDate monthEnd = endDate.withDayOfMonth(1);
+        
+        for (LocalDate month = monthStart; !month.isAfter(monthEnd); month = month.plusMonths(1)) {
+            LocalDateTime monthStartTime = month.atStartOfDay();
+            LocalDateTime monthEndTime = month.plusMonths(1).atStartOfDay();
+
+            // 统计已发布文章数量
+            LambdaQueryWrapper<Article> articleWrapper = new LambdaQueryWrapper<>();
+            articleWrapper.between(Article::getPublishedAt, monthStartTime, monthEndTime)
+                         .eq(Article::getStatus, "1");
+            Long publishedCount = articleMapper.selectCount(articleWrapper);
+
+            // 统计草稿数量
+            LambdaQueryWrapper<Draft> draftWrapper = new LambdaQueryWrapper<>();
+            draftWrapper.between(Draft::getCreatedAt, monthStartTime, monthEndTime);
+            Long draftCount = draftMapper.selectCount(draftWrapper);
+
+            String monthLabel = month.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            trend.add(new ChartDataDTO.LineItem(monthLabel, publishedCount, draftCount, "文章发布"));
+        }
+        return trend;
+    }
+
+    /**
+     * 自定义时间段统计文章发布趋势
+     */
+    private List<ChartDataDTO.LineItem> getArticlePublishTrendCustom(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("自定义时间段的开始和结束日期不能为空");
+        }
+        
+        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+        
+        // 判断时间维度
+        if (daysBetween == 0) {
+            // 同一天，按小时统计
+            return getArticlePublishTrendByHour(startDate);
+        } else if (daysBetween > 365) {
+            // 大于一年，按月统计
+            return getArticlePublishTrendByMonth(startDate, endDate);
+        } else if (daysBetween > 31) {
+            // 大于一个月，按月统计
+            return getArticlePublishTrendByMonth(startDate, endDate);
+        } else {
+            // 小于等于一个月，按天统计
+            return getArticlePublishTrendByDay(startDate, endDate);
+        }
     }
 
     @Override
@@ -584,6 +737,125 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         }
 
         return new ChartDataDTO.TrendData(current, previous, changeRate, changeType, period);
+    }
+
+    @Override
+    public List<RealtimeActivityDTO> getRealtimeActivities(int limit) {
+        try {
+            // 查询最新的通知记录，包括登录和注册
+            LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Notification::getIsDeleted, "0")
+                   .orderByDesc(Notification::getCreatedAt)
+                   .last("LIMIT " + limit);
+            
+            List<Notification> notifications = notificationMapper.selectList(wrapper);
+            
+            return notifications.stream().map(this::convertToRealtimeActivityDTO).collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("获取实时动态失败: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
+     * 将通知转换为实时动态DTO
+     */
+    private RealtimeActivityDTO convertToRealtimeActivityDTO(Notification notification) {
+        RealtimeActivityDTO dto = new RealtimeActivityDTO();
+        dto.setId(notification.getId());
+        dto.setCreatedAt(notification.getCreatedAt());
+        dto.setActionType(notification.getActionType());
+        
+        // 根据动作类型设置描述和状态
+        String actionDescription = getActionDescription(notification.getContent());
+        dto.setActionDescription(actionDescription);
+        
+        // 获取用户信息
+        if (notification.getFromUserId() != null) {
+            User user = userMapper.selectById(notification.getFromUserId());
+            if (user != null) {
+                dto.setUserId(user.getId());
+                dto.setUsername(user.getUsername());
+                dto.setAvatar(user.getAvatar());
+            }
+        }
+        
+        // 获取目标信息
+        if (notification.getTargetId() != null && notification.getTargetType() != null) {
+            String targetTitle = getTargetTitle(notification.getTargetType(), notification.getTargetId());
+            dto.setTargetTitle(targetTitle);
+        }
+        
+        // 设置时间描述
+        dto.setTimeDescription(getTimeDescription(notification.getCreatedAt()));
+        
+        // 设置状态
+        dto.setStatus(notification.getActionType());
+        
+        return dto;
+    }
+    
+    /**
+     * 根据动作类型获取描述
+     */
+    private String getActionDescription(String actionType) {
+        if (actionType == null) return "进行了操作";
+
+        String cleaned = actionType.replace("你的", "")
+                .replace("你", "");
+
+        // 进一步清理可能出现的多余空格
+        cleaned = cleaned.replaceAll("\\s+", " ").trim();
+
+        return cleaned;
+    }
+    
+    /**
+     * 根据目标类型和ID获取目标标题
+     */
+    private String getTargetTitle(String targetType, Long targetId) {
+        try {
+            switch (targetType) {
+                case "article":
+                    Article article = articleMapper.selectById(targetId);
+                    return article != null ? article.getTitle() : "文章";
+                case "comment":
+                    Comment comment = commentMapper.selectById(targetId);
+                    return comment != null ? "评论" : "评论";
+                case "user":
+                    User user = userMapper.selectById(targetId);
+                    return user != null ? user.getUsername() : "用户";
+                default:
+                    return "";
+            }
+        } catch (Exception e) {
+            log.warn("获取目标标题失败: targetType={}, targetId={}", targetType, targetId);
+            return "";
+        }
+    }
+    
+    /**
+     * 获取时间描述
+     */
+    private String getTimeDescription(Date createdAt) {
+        if (createdAt == null) return "";
+        
+        long diff = System.currentTimeMillis() - createdAt.getTime();
+        long minutes = diff / (1000 * 60);
+        long hours = diff / (1000 * 60 * 60);
+        long days = diff / (1000 * 60 * 60 * 24);
+        
+        if (minutes < 1) {
+            return "刚刚";
+        } else if (minutes < 60) {
+            return minutes + "分钟前";
+        } else if (hours < 24) {
+            return hours + "小时前";
+        } else if (days < 7) {
+            return days + "天前";
+        } else {
+            return DateTimeFormatter.ofPattern("MM-dd").format(createdAt.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate());
+        }
     }
 
 }

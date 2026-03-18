@@ -14,6 +14,10 @@ public class ArticleVO {
     private Date updatedAt;
     private Date publishedAt;
 
+    private String status;
+    private String isTop;
+    private String isRecommend;
+
     private String categoryName;
 
     private Long userId;

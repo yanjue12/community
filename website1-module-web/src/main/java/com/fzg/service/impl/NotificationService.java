@@ -3,6 +3,7 @@ package com.fzg.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.mapper.Notificationmapper;
 import com.fzg.model.Notification;
 import com.fzg.service.INotificationService;
@@ -24,7 +25,7 @@ import java.time.format.DateTimeFormatter;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class NotificationService implements INotificationService {
+public class NotificationService extends ServiceImpl<Notificationmapper,Notification> implements INotificationService {
 
     private final Notificationmapper notificationMapper;
     private final RedisTemplate<String, Object> redisTemplate;

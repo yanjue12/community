@@ -1,10 +1,16 @@
 package com.fzg.controller.admin;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fzg.dto.analytics.ChartDataDTO;
 import com.fzg.dto.analytics.DashboardDTO;
+import com.fzg.dto.analytics.RealtimeActivityDTO;
 import com.fzg.enums.EnumReturn;
+import com.fzg.model.AuditRecord;
+import com.fzg.model.Report;
 import com.fzg.model.Result;
 import com.fzg.service.AnalyticsService;
+import com.fzg.service.AuditRecordService;
+import com.fzg.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,7 +18,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 管理端数据分析控制器
@@ -25,6 +34,8 @@ import java.util.List;
 public class AdminAnalyticsController {
 
     private final AnalyticsService analyticsService;
+    private final ReportService reportService;
+    private final AuditRecordService auditRecordService;
 
     /**
      * 获取仪表板数据
@@ -54,15 +65,15 @@ public class AdminAnalyticsController {
             @Parameter(description = "结束日期（自定义时间段时使用，格式：yyyy-MM-dd）", example = "2026-01-31")
             @RequestParam(required = false) String endDate) {
         try {
-            java.time.LocalDate start = null;
-            java.time.LocalDate end = null;
+            LocalDate start = null;
+            LocalDate end = null;
             
             if ("custom".equalsIgnoreCase(timeType)) {
                 if (startDate == null || endDate == null) {
                     return Result.fail(EnumReturn.valueOf("自定义时间段需要提供开始和结束日期"));
                 }
-                start = java.time.LocalDate.parse(startDate);
-                end = java.time.LocalDate.parse(endDate);
+                start = LocalDate.parse(startDate);
+                end = LocalDate.parse(endDate);
             }
             
             List<ChartDataDTO.LineItem> trend = analyticsService.getUserGrowthTrend(timeType, start, end);
@@ -91,70 +102,39 @@ public class AdminAnalyticsController {
     }
 
     /**
-     * 获取评论活跃度趋势
+     * 获取文章发布趋势（支持多种时间维度）
      */
-    @GetMapping("/comment-activity-trend")
-    @Operation(summary = "获取评论活跃度趋势", description = "获取指定天数内的评论活跃度趋势数据")
-    public Result<List<ChartDataDTO.LineItem>> getCommentActivityTrend(
-            @Parameter(description = "统计天数", example = "7")
-            @RequestParam(defaultValue = "7") int days) {
+    @GetMapping("/article-publish-trend-advanced")
+    @Operation(summary = "获取文章发布趋势（高级）", description = "支持本日、本月、本年或自定义时间段的文章发布趋势，包含草稿数据")
+    public Result<List<ChartDataDTO.LineItem>> getArticlePublishTrendAdvanced(
+            @Parameter(description = "时间类型：today/thisMonth/thisYear/custom", example = "today")
+            @RequestParam String timeType,
+            @Parameter(description = "开始日期（自定义时间段时使用，格式：yyyy-MM-dd）", example = "2026-01-01")
+            @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期（自定义时间段时使用，格式：yyyy-MM-dd）", example = "2026-01-31")
+            @RequestParam(required = false) String endDate) {
         try {
-            List<ChartDataDTO.LineItem> trend = analyticsService.getCommentActivityTrend(days);
+            LocalDate start = null;
+            LocalDate end = null;
+            
+            if ("custom".equalsIgnoreCase(timeType)) {
+                if (startDate == null || endDate == null) {
+                    return Result.fail(EnumReturn.valueOf("自定义时间段需要提供开始和结束日期"));
+                }
+                start = LocalDate.parse(startDate);
+                end = LocalDate.parse(endDate);
+            }
+            
+            List<ChartDataDTO.LineItem> trend = analyticsService.getArticlePublishTrend(timeType, start, end);
             return Result.success(trend);
         } catch (Exception e) {
-            log.error("获取评论活跃度趋势失败: {}", e.getMessage(), e);
-            return Result.fail(EnumReturn.valueOf("获取评论活跃度趋势失败"));
+            log.error("获取文章发布趋势失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("获取文章发布趋势失败"));
         }
     }
 
-    /**
-     * 获取浏览量趋势
-     */
-    @GetMapping("/view-trend")
-    @Operation(summary = "获取浏览量趋势", description = "获取指定天数内的浏览量趋势数据")
-    public Result<List<ChartDataDTO.LineItem>> getViewTrend(
-            @Parameter(description = "统计天数", example = "7")
-            @RequestParam(defaultValue = "7") int days) {
-        try {
-            List<ChartDataDTO.LineItem> trend = analyticsService.getViewTrend(days);
-            return Result.success(trend);
-        } catch (Exception e) {
-            log.error("获取浏览量趋势失败: {}", e.getMessage(), e);
-            return Result.fail(EnumReturn.valueOf("获取浏览量趋势失败"));
-        }
-    }
 
-    /**
-     * 获取文章分类分布
-     */
-    @GetMapping("/category-distribution")
-    @Operation(summary = "获取文章分类分布", description = "获取文章按分类的分布统计，用于扇形图")
-    public Result<List<ChartDataDTO.PieItem>> getCategoryDistribution() {
-        try {
-            List<ChartDataDTO.PieItem> distribution = analyticsService.getCategoryDistribution();
-            return Result.success(distribution);
-        } catch (Exception e) {
-            log.error("获取文章分类分布失败: {}", e.getMessage(), e);
-            return Result.fail(EnumReturn.valueOf("获取文章分类分布失败"));
-        }
-    }
 
-    /**
-     * 获取标签使用分布
-     */
-    @GetMapping("/tag-distribution")
-    @Operation(summary = "获取标签使用分布", description = "获取标签使用频率分布统计，用于扇形图")
-    public Result<List<ChartDataDTO.PieItem>> getTagDistribution(
-            @Parameter(description = "限制数量", example = "10")
-            @RequestParam(defaultValue = "10") int limit) {
-        try {
-            List<ChartDataDTO.PieItem> distribution = analyticsService.getTagDistribution(limit);
-            return Result.success(distribution);
-        } catch (Exception e) {
-            log.error("获取标签使用分布失败: {}", e.getMessage(), e);
-            return Result.fail(EnumReturn.valueOf("获取标签使用分布失败"));
-        }
-    }
 
     /**
      * 获取热门文章排行
@@ -227,4 +207,69 @@ public class AdminAnalyticsController {
             return Result.fail(EnumReturn.valueOf("获取文章发布对比失败"));
         }
     }
+
+    /**
+     * 获取实时动态
+     */
+    @GetMapping("/realtime-activities")
+    @Operation(summary = "获取实时动态", description = "获取系统最新的用户活动动态，包括登录、注册、点赞、评论等")
+    public Result<List<RealtimeActivityDTO>> getRealtimeActivities(
+            @Parameter(description = "限制数量", example = "5")
+            @RequestParam(defaultValue = "5") int limit) {
+        try {
+            List<RealtimeActivityDTO> activities = analyticsService.getRealtimeActivities(limit);
+            return Result.success(activities);
+        } catch (Exception e) {
+            log.error("获取实时动态失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("获取实时动态失败"));
+        }
+    }
+
+
+
+
+    /**
+     * 获取待处理事项统计
+     */
+    @PostMapping("/pending-tasks")
+    @Operation(summary = "获取待处理事项统计", description = "获取仪表盘待处理事项的统计数据")
+    public Result getPendingTasks() {
+        try {
+            Map<String, Object> pendingTasks = new HashMap<>();
+
+            // 1. 处理用户举报 - 累加所有待处理的举报（不限时间）
+            LambdaQueryWrapper<Report> reportWrapper = new LambdaQueryWrapper<>();
+            reportWrapper.eq(Report::getStatus, "pending");
+            long pendingReports = reportService.count(reportWrapper);
+
+
+            // 2. 审核待发布文章 - 统计所有待审核的文章
+            LambdaQueryWrapper<AuditRecord> auditWrapper = new LambdaQueryWrapper<>();
+            auditWrapper.eq(AuditRecord::getAuditStatus, 0); // 0-待审核
+            long pendingAudits = auditRecordService.count(auditWrapper);
+
+
+
+            // 3. TODO 可以搞个系统表 系统维护提醒 - 这里可以根据实际需求添加
+            Map<String, Object> systemTask = new HashMap<>();
+            systemTask.put("title", "系统维护提醒");
+            systemTask.put("description", "定期数据库清理");
+            systemTask.put("count", 0);
+            systemTask.put("type", "system");
+            systemTask.put("urgent", false);
+
+            pendingTasks.put("reportsCount", pendingReports);
+            pendingTasks.put("auditsCount", pendingAudits);
+            pendingTasks.put("system", systemTask);
+
+            // 总待处理数量
+            pendingTasks.put("totalCount", pendingReports + pendingAudits);
+
+            return Result.success(pendingTasks);
+        } catch (Exception e) {
+            log.error("获取待处理事项统计失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("获取统计数据失败"));
+        }
+    }
+
 }

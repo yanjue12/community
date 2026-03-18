@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.ReportReasonMapper">
+
+    <!-- 根据目标类型获取可用的举报原因 -->
+    <select id="getReasonsByTargetType" resultType="com.fzg.model.ReportReason">
+        SELECT *
+        FROM report_reason
+        WHERE status = 'active'
+          AND (target_types LIKE CONCAT('%', #{targetType}, '%') OR target_types = '*')
+        ORDER BY sort ASC
+    </select>
+
+</mapper>

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.AuditRecordMapper;
+import com.fzg.mapper.Categorymapper;
 import com.fzg.model.Article;
 import com.fzg.model.AuditRecord;
 import com.fzg.model.Result;
@@ -32,6 +33,8 @@ public class AdminArticleController {
     private Articlemapper articleMapper;
     @Autowired
     private AuditRecordMapper auditRecordMapper;
+    @Autowired
+    private Categorymapper categorymapper;
 
 
 
@@ -77,7 +80,7 @@ public class AdminArticleController {
     /**
      * 更新文章状态
      */
-    @PutMapping("/update/status")
+    @PutMapping("/update/status/{id}")
     public Result updateStatus(@PathVariable Long id, @RequestParam String status) {
         Article article = articleMapper.selectById(id);
         if(null == article){
@@ -170,6 +173,11 @@ public class AdminArticleController {
         int pageNum = request.getPageNum() == null ? 1 : request.getPageNum();
         int pageSize = request.getPageSize() == null ? 10 : request.getPageSize();
         int offset = (pageNum - 1) * pageSize;
+
+        if(null == request){
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+
 
         // 查询数据列表
         List<ArticleVO> list = articleMapper.queryArticleByCondition(request, offset);

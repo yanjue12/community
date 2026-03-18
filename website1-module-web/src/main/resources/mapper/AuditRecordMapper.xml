@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.AuditRecordMapper">
+
+    <!-- 查询待审核的文章列表（包含文章详细信息） -->
+    <select id="queryPendingAuditList" resultType="com.fzg.vo.AuditRecordVO">
+        SELECT 
+            ar.id,
+            ar.biz_type as bizType,
+            ar.article_id as articleId,
+            ar.audit_status as auditStatus,
+            ar.audit_type as auditType,
+            ar.auditor_id as auditorId,
+            ar.reason,
+            ar.created_at as createdAt,
+            ar.updated_at as updatedAt,
+            
+            a.title,
+            a.summary,
+            a.cover_image as coverImage,
+            a.word_count as wordCount,
+            a.created_at as articleCreatedAt,
+            
+            u.id as authorId,
+            u.nickname as authorNickname,
+            u.avatar as authorAvatar,
+            
+            au.nickname as auditorNickname,
+            
+            GROUP_CONCAT(at.name SEPARATOR ', ') as tags
+            
+        FROM audit_record ar
+        LEFT JOIN article a ON ar.article_id = a.id
+        LEFT JOIN user u ON a.user_id = u.id
+        LEFT JOIN user au ON ar.auditor_id = au.id
+        LEFT JOIN article_tag_relation atr ON a.id = atr.article_id
+        LEFT JOIN article_tag at ON atr.tag_id = at.id
+        <where>
+            ar.biz_type = 'ARTICLE'
+            <if test="auditStatus != null">
+                AND ar.audit_status = #{auditStatus}
+            </if>
+        </where>
+        GROUP BY ar.id, a.id, u.id, au.id
+        ORDER BY ar.created_at DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- 统计待审核记录数量 -->
+    <select id="countPendingAudit" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM audit_record ar
+        <where>
+            ar.biz_type = 'ARTICLE'
+            <if test="auditStatus != null">
+                AND ar.audit_status = #{auditStatus}
+            </if>
+        </where>
+    </select>
+
+    <!-- 查询审核历史记录 -->
+    <select id="queryAuditHistory" resultType="com.fzg.vo.AuditRecordVO">
+        SELECT 
+            ar.id,
+            ar.biz_type as bizType,
+            ar.article_id as articleId,
+            ar.audit_status as auditStatus,
+            ar.audit_type as auditType,
+            ar.auditor_id as auditorId,
+            ar.reason,
+            ar.created_at as createdAt,
+            ar.updated_at as updatedAt,
+            
+            a.title,
+            a.summary,
+            a.cover_image as coverImage,
+            a.word_count as wordCount,
+            a.created_at as articleCreatedAt,
+            
+            u.id as authorId,
+            u.nickname as authorNickname,
+            u.avatar as authorAvatar,
+            
+            au.nickname as auditorNickname,
+            
+            GROUP_CONCAT(at.name SEPARATOR ', ') as tags
+            
+        FROM audit_record ar
+        LEFT JOIN article a ON ar.article_id = a.id
+        LEFT JOIN user u ON a.user_id = u.id
+        LEFT JOIN user au ON ar.auditor_id = au.id
+        LEFT JOIN article_tag_relation atr ON a.id = atr.article_id
+        LEFT JOIN article_tag at ON atr.tag_id = at.id
+        <where>
+            ar.biz_type = 'ARTICLE'
+            <if test="auditStatus != null">
+                AND ar.audit_status = #{auditStatus}
+            </if>
+            <if test="auditorId != null">
+                AND ar.auditor_id = #{auditorId}
+            </if>
+        </where>
+        GROUP BY ar.id, a.id, u.id, au.id
+        ORDER BY ar.updated_at DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- 统计审核历史记录数量 -->
+    <select id="countAuditHistory" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM audit_record ar
+        <where>
+            ar.biz_type = 'ARTICLE'
+            <if test="auditStatus != null">
+                AND ar.audit_status = #{auditStatus}
+            </if>
+            <if test="auditorId != null">
+                AND ar.auditor_id = #{auditorId}
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据文章ID查询审核记录 -->
+    <select id="getByArticleId" resultType="com.fzg.model.AuditRecord">
+        SELECT *
+        FROM audit_record
+        WHERE biz_type = 'ARTICLE' AND article_id = #{articleId}
+        LIMIT 1
+    </select>
+
+    <!-- 多条件查询审核列表 -->
+    <select id="queryAuditListByCondition" resultType="com.fzg.vo.AuditRecordVO">
+        SELECT 
+            ar.id,
+            ar.biz_type as bizType,
+            ar.article_id as articleId,
+            ar.audit_status as auditStatus,
+            ar.audit_type as auditType,
+            ar.auditor_id as auditorId,
+            ar.reason,
+            ar.created_at as createdAt,
+            ar.updated_at as updatedAt,
+            
+            a.title,
+            a.summary,
+            a.cover_image as coverImage,
+            a.word_count as wordCount,
+            a.created_at as articleCreatedAt,
+            
+            u.id as authorId,
+            u.nickname as authorNickname,
+            u.avatar as authorAvatar,
+            
+            au.nickname as auditorNickname,
+            
+            c.name as categoryName,
+            
+            GROUP_CONCAT(at.name SEPARATOR ', ') as tags
+            
+        FROM audit_record ar
+        LEFT JOIN article a ON ar.article_id = a.id
+        LEFT JOIN user u ON a.user_id = u.id
+        LEFT JOIN user au ON ar.auditor_id = au.id
+        LEFT JOIN category c ON a.category_id = c.id
+        LEFT JOIN article_tag_relation atr ON a.id = atr.article_id
+        LEFT JOIN article_tag at ON atr.tag_id = at.id
+        <where>
+            ar.biz_type = 'ARTICLE'
+            <if test="request.auditStatus != null">
+                AND ar.audit_status = #{request.auditStatus}
+            </if>
+            <if test="request.title != null and request.title != ''">
+                AND a.title LIKE CONCAT('%', #{request.title}, '%')
+            </if>
+            <if test="request.authorName != null and request.authorName != ''">
+                AND u.nickname LIKE CONCAT('%', #{request.authorName}, '%')
+            </if>
+            <if test="request.categoryId != null">
+                AND a.category_id = #{request.categoryId}
+            </if>
+            <if test="request.auditType != null">
+                AND ar.audit_type = #{request.auditType}
+            </if>
+            <if test="request.auditorId != null">
+                AND ar.auditor_id = #{request.auditorId}
+            </if>
+            <if test="request.startTime != null and request.startTime != ''">
+                AND a.created_at >= #{request.startTime}
+            </if>
+            <if test="request.endTime != null and request.endTime != ''">
+                AND a.created_at &lt;= #{request.endTime}
+            </if>
+            <if test="request.auditStartTime != null and request.auditStartTime != ''">
+                AND ar.updated_at >= #{request.auditStartTime}
+            </if>
+            <if test="request.auditEndTime != null and request.auditEndTime != ''">
+                AND ar.updated_at &lt;= #{request.auditEndTime}
+            </if>
+        </where>
+        GROUP BY ar.id, a.id, u.id, au.id, c.id
+        ORDER BY ar.created_at DESC
+        LIMIT #{request.pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- 多条件统计审核记录数量 -->
+    <select id="countAuditListByCondition" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT ar.id)
+        FROM audit_record ar
+        LEFT JOIN article a ON ar.article_id = a.id
+        LEFT JOIN user u ON a.user_id = u.id
+        LEFT JOIN category c ON a.category_id = c.id
+        <where>
+            ar.biz_type = 'ARTICLE'
+            <if test="request.auditStatus != null">
+                AND ar.audit_status = #{request.auditStatus}
+            </if>
+            <if test="request.title != null and request.title != ''">
+                AND a.title LIKE CONCAT('%', #{request.title}, '%')
+            </if>
+            <if test="request.authorName != null and request.authorName != ''">
+                AND u.nickname LIKE CONCAT('%', #{request.authorName}, '%')
+            </if>
+            <if test="request.categoryId != null">
+                AND a.category_id = #{request.categoryId}
+            </if>
+            <if test="request.auditType != null">
+                AND ar.audit_type = #{request.auditType}
+            </if>
+            <if test="request.auditorId != null">
+                AND ar.auditor_id = #{request.auditorId}
+            </if>
+            <if test="request.startTime != null and request.startTime != ''">
+                AND a.created_at >= #{request.startTime}
+            </if>
+            <if test="request.endTime != null and request.endTime != ''">
+                AND a.created_at &lt;= #{request.endTime}
+            </if>
+            <if test="request.auditStartTime != null and request.auditStartTime != ''">
+                AND ar.updated_at >= #{request.auditStartTime}
+            </if>
+            <if test="request.auditEndTime != null and request.auditEndTime != ''">
+                AND ar.updated_at &lt;= #{request.auditEndTime}
+            </if>
+        </where>
+    </select>
+
+    <!-- 获取最近审核记录 -->
+    <select id="getRecentAuditRecords" resultType="com.fzg.vo.AuditRecordVO">
+        SELECT 
+            ar.id,
+            ar.biz_type as bizType,
+            ar.article_id as articleId,
+            ar.audit_status as auditStatus,
+            ar.audit_type as auditType,
+            ar.auditor_id as auditorId,
+            ar.reason,
+            ar.created_at as createdAt,
+            ar.updated_at as updatedAt,
+            
+            a.title,
+            a.summary,
+            a.cover_image as coverImage,
+            a.word_count as wordCount,
+            a.created_at as articleCreatedAt,
+            
+            u.id as authorId,
+            u.nickname as authorNickname,
+            u.avatar as authorAvatar,
+            
+            au.nickname as auditorNickname
+            
+        FROM audit_record ar
+        LEFT JOIN article a ON ar.article_id = a.id
+        LEFT JOIN user u ON a.user_id = u.id
+        LEFT JOIN user au ON ar.auditor_id = au.id
+        WHERE ar.biz_type = 'ARTICLE'
+          AND ar.audit_status IN (1, 2)  -- 只显示已通过和已拒绝的记录
+          AND ar.auditor_id IS NOT NULL  -- 确保有审核人
+        ORDER BY ar.updated_at DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>
