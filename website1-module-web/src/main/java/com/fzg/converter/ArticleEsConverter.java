@@ -1,9 +1,7 @@
 package com.fzg.converter;
 
-import com.fzg.mapper.ArticleTagRelationmapper;
 import com.fzg.model.Article;
 import com.fzg.model.ArticleEs;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,7 +10,7 @@ public final class ArticleEsConverter {
 
 
     private ArticleEsConverter() {
-        // 工具类，禁止实例化
+
     }
 
     public static ArticleEs toEs(Article article, List<String> tags) {

@@ -246,10 +246,10 @@ public class WebSocketManager {
             // 关闭连接
             session.close();
             removeUser(userId, session);
-            log.info("✅ 成功强制断开用户{}的WebSocket连接", userId);
+            log.info("成功强制断开用户{}的WebSocket连接", userId);
             return true;
         } catch (IOException e) {
-            log.error("❌ 强制断开用户{}连接失败：{}", userId, e.getMessage());
+            log.error("强制断开用户{}连接失败：{}", userId, e.getMessage());
             removeUser(userId, session);
             return false;
         }

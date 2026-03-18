@@ -30,7 +30,7 @@ public class ArticleEsSyncService {
     @Transactional(readOnly = true)
     public void fullSyncToEs() {
 
-        // 1. 查已发布文章（status = 1）
+
         List<Article> articles = articleMapper.selectList(
                 new LambdaQueryWrapper<Article>()
                         .eq(Article::getStatus, "1")
@@ -40,7 +40,7 @@ public class ArticleEsSyncService {
             return;
         }
 
-        // 2. 转成 ES 实体
+
         List<ArticleEs> esList = new ArrayList<>();
 
         for (Article article : articles) {
@@ -50,7 +50,7 @@ public class ArticleEsSyncService {
             esList.add(ArticleEsConverter.toEs(article, tags));
         }
 
-        // 3. 批量写入 ES
+
         elasticsearchRestTemplate.save(esList);
     }
 }

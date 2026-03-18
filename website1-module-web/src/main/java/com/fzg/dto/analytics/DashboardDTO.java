@@ -49,35 +49,35 @@ public class DashboardDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OverviewData {
-        // 总量数据（原本月数据字段现在显示总量）
-        private Long currentMonthUsers;      // 总用户数
-        private Long currentMonthArticles;   // 总文章数
-        private Long currentMonthComments;   // 总评论数
-        private Long currentMonthViews;      // 总浏览量
+
+        private Long currentMonthUsers;
+        private Long currentMonthArticles;
+        private Long currentMonthComments;
+        private Long currentMonthViews;
         
         // 上月数据
-        private Long lastMonthUsers;         // 上月新增用户数
-        private Long lastMonthArticles;      // 上月新增文章数
-        private Long lastMonthComments;      // 上月新增评论数
-        private Long lastMonthViews;         // 上月浏览量
+        private Long lastMonthUsers;
+        private Long lastMonthArticles;
+        private Long lastMonthComments;
+        private Long lastMonthViews;
         
         // 增长比例 (百分比) - 本月与上月对比
-        private BigDecimal userGrowthRate;     // 用户增长率（本月vs上月）
-        private BigDecimal articleGrowthRate;  // 文章增长率（本月vs上月）
-        private BigDecimal commentGrowthRate;  // 评论增长率（本月vs上月）
-        private BigDecimal viewGrowthRate;     // 浏览量增长率（本月vs上月）
+        private BigDecimal userGrowthRate;
+        private BigDecimal articleGrowthRate;
+        private BigDecimal commentGrowthRate;
+        private BigDecimal viewGrowthRate;
         
         // 总计数据
-        private Long totalUsers;        // 总用户数
-        private Long totalArticles;     // 总文章数
-        private Long totalComments;     // 总评论数
-        private Long totalViews;        // 总浏览量
+        private Long totalUsers;
+        private Long totalArticles;
+        private Long totalComments;
+        private Long totalViews;
         
         // 今日数据
-        private Long todayUsers;        // 今日新增用户
-        private Long todayArticles;     // 今日新增文章
-        private Long todayComments;     // 今日新增评论
-        private Long todayViews;        // 今日浏览量
+        private Long todayUsers;
+        private Long todayArticles;
+        private Long todayComments;
+        private Long todayViews;
         
         // 今日用户活跃度数据（24小时，每小时的登录人数）
         private List<HourlyLoginData> todayLoginActivity;

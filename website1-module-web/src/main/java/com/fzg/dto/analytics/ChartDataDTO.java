@@ -20,8 +20,8 @@ public class ChartDataDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class PieItem {
-        private String name;    // 名称
-        private Long value;     // 数值
+        private String name;
+        private Long value;
         private String color;   // 颜色（可选）
     }
     
@@ -32,8 +32,8 @@ public class ChartDataDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class LineItem {
-        private String date;    // 日期
-        private Long value;     // 数值
+        private String date;
+        private Long value;
         private Long draftValue;
         private String label;   // 标签（可选）
     }
@@ -45,9 +45,9 @@ public class ChartDataDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class TrendData {
-        private Long current;           // 当前值
-        private Long previous;          // 上期值
-        private Double changeRate;      // 变化率（百分比）
+        private Long current;
+        private Long previous;
+        private Double changeRate;
         private String changeType;      // 变化类型：increase/decrease/stable
         private String period;          // 统计周期：day/week/month
     }
@@ -59,10 +59,10 @@ public class ChartDataDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class RankItem {
-        private Long id;            // ID
-        private String title;       // 标题
-        private Long value;         // 数值
-        private Integer rank;       // 排名
+        private Long id;
+        private String title;
+        private Long value;
+        private Integer rank;
         private String changeType;  // 排名变化：up/down/new/stable
     }
 }
