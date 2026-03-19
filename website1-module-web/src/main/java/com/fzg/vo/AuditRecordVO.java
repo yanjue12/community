@@ -48,6 +48,12 @@ public class AuditRecordVO {
      * 文章标签
      */
     private String tags;
+    private String categoryName;
+    private Integer viewCount;
+    private Integer likeCount;
+    private Integer commentCount;
+    private Integer shareCount;
+    private Integer collectCount;
 
     /**
      * 作者ID

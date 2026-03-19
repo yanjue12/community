@@ -110,6 +110,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public Boolean publishArticle(Article articleVO) {
         log.info("UserServiceImpl.publishArticle开始发布文章");
         int insert = 0;
+        String lockKey = "pub:art:key:"+articleVO.getUserId();
+        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, articleVO.getTitle(), 30, TimeUnit.SECONDS);
+        if(locked){
+            return false;
+        }
         try {
             articleVO.setStatus("2");
             insert = articlemapper.insert(articleVO);
@@ -122,6 +127,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         } catch (Exception e) {
             log.error("UserServiceImpl.publishArticle发布文章异常",e);
             throw new RuntimeException(e);
+        } finally {
+            redisTemplate.delete(lockKey);
         }
 
         return insert > 0;

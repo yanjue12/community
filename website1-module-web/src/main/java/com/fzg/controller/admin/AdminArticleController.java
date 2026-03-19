@@ -1,8 +1,6 @@
 package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.AuditRecordMapper;
@@ -11,6 +9,7 @@ import com.fzg.model.Article;
 import com.fzg.model.AuditRecord;
 import com.fzg.model.Result;
 import com.fzg.vo.ArticleRequest;
+import com.fzg.vo.ArticleStatsVO;
 import com.fzg.vo.ArticleVO;
 import com.fzg.vo.ArticlePageVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +36,15 @@ public class AdminArticleController {
     private Categorymapper categorymapper;
 
 
+
+    /**
+     * 获取文章统计数据（总数、已发布、待审核、本周新增）
+     */
+    @GetMapping("/statistics")
+    public Result getArticleStats() {
+        ArticleStatsVO stats = articleMapper.queryArticleStats();
+        return Result.success(stats);
+    }
 
     /**
      * 获取文章详情

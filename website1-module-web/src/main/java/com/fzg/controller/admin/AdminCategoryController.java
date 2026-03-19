@@ -2,13 +2,13 @@ package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.Categorymapper;
-import com.fzg.model.Article;
 import com.fzg.model.Category;
 import com.fzg.model.Result;
+import com.fzg.vo.CategoryAdminVO;
+import com.fzg.vo.CategoryQueryRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +19,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -37,6 +38,56 @@ public class AdminCategoryController {
     @Autowired
     private Articlemapper articleMapper;
 
+
+    /**
+     * 分类列表查询（条件筛选 + 默认全量）
+     * 返回：级别文本、父分类名、子分类数、今日/昨日文章数、趋势
+     */
+    @PostMapping("/list")
+    @Operation(summary = "分类列表查询", description = "支持按名称/状态/级别筛选，不传条件默认查全部")
+    public Result getCategoryList(@RequestBody(required = false) CategoryQueryRequest request) {
+        try {
+            if (request == null) request = new CategoryQueryRequest();
+            int pageNum  = request.getPageNum()  == null ? 1  : request.getPageNum();
+            int pageSize = request.getPageSize() == null ? 10 : request.getPageSize();
+            request.setPageNum(pageNum);
+            request.setPageSize(pageSize);
+            int offset = (pageNum - 1) * pageSize;
+
+            List<CategoryAdminVO> list = categoryMapper.queryCategoryList(request, offset);
+            Long total = categoryMapper.countCategoryList(request);
+
+            // 填充文本字段
+            list.forEach(vo -> {
+                vo.setLevelText(levelText(vo.getLevel()));
+                vo.setStatusText("1".equals(vo.getStatus()) ? "启用" : "禁用");
+                // 趋势：今日 vs 昨日
+                int today = vo.getTodayArticleCount() == null ? 0 : vo.getTodayArticleCount();
+                int yesterday = vo.getYesterdayArticleCount() == null ? 0 : vo.getYesterdayArticleCount();
+                if (today > yesterday)      vo.setTrend("up");
+                else if (today < yesterday) vo.setTrend("down");
+                else                        vo.setTrend("stable");
+            });
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("list", list);
+            data.put("total", total);
+            return Result.success(data);
+        } catch (Exception e) {
+            log.error("查询分类列表失败: {}", e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("查询分类列表失败"));
+        }
+    }
+
+    private static String levelText(String level) {
+        if (level == null) return "";
+        switch (level) {
+            case "1": return "一级分类";
+            case "2": return "二级分类";
+            case "3": return "三级分类";
+            default:  return level + "级分类";
+        }
+    }
 
     /**
      * 获取分类管理统计数据
@@ -110,6 +161,8 @@ public class AdminCategoryController {
             return Result.fail(EnumReturn.valueOf("获取统计数据失败"));
         }
     }
+
+
 
 
     /**

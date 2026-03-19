@@ -23,6 +23,69 @@
 
     </select>
 
+    <select id="queryAdminUserList" resultType="com.fzg.vo.UserAdminVO">
+        SELECT
+            u.id,
+            u.username,
+            u.nickname,
+            u.email,
+            u.avatar,
+            u.status,
+            u.created_at AS createdAt,
+            r.id         AS roleId,
+            r.role_name  AS roleName,
+            (SELECT COUNT(*) FROM article a WHERE a.user_id = u.id AND a.status != '4') AS articleCount
+        FROM user u
+        LEFT JOIN user_role ur ON ur.user_id = u.id
+        LEFT JOIN role r ON r.id = ur.role_id
+        <where>
+            <if test="req.keyword != null and req.keyword != ''">
+                AND (u.username LIKE CONCAT('%', #{req.keyword}, '%')
+                  OR u.nickname LIKE CONCAT('%', #{req.keyword}, '%')
+                  OR u.email    LIKE CONCAT('%', #{req.keyword}, '%'))
+            </if>
+            <if test="req.status != null and req.status != ''">
+                AND u.status = #{req.status}
+            </if>
+            <if test="req.roleId != null">
+                AND ur.role_id = #{req.roleId}
+            </if>
+        </where>
+        ORDER BY u.created_at DESC
+        LIMIT #{req.pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countAdminUserList" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT u.id)
+        FROM user u
+        LEFT JOIN user_role ur ON ur.user_id = u.id
+        <where>
+            <if test="req.keyword != null and req.keyword != ''">
+                AND (u.username LIKE CONCAT('%', #{req.keyword}, '%')
+                  OR u.nickname LIKE CONCAT('%', #{req.keyword}, '%')
+                  OR u.email    LIKE CONCAT('%', #{req.keyword}, '%'))
+            </if>
+            <if test="req.status != null and req.status != ''">
+                AND u.status = #{req.status}
+            </if>
+            <if test="req.roleId != null">
+                AND ur.role_id = #{req.roleId}
+            </if>
+        </where>
+    </select>
+
+    <select id="queryUserStats" resultType="com.fzg.vo.UserStatsVO">
+        SELECT
+            COUNT(*)                                          AS totalCount,
+            SUM(CASE WHEN u.status = '0' THEN 1 ELSE 0 END)  AS normalCount,
+            SUM(CASE WHEN u.status = '1' THEN 1 ELSE 0 END)  AS bannedCount,
+            (SELECT COUNT(DISTINCT ur.user_id)
+             FROM user_role ur
+             INNER JOIN role r ON r.id = ur.role_id
+             WHERE r.role_code = 'ADMIN')                     AS adminCount
+        FROM user u
+    </select>
+
     <select id="selectActiveUser" resultType="com.fzg.vo.UserVO">
         select u.id as userId,u.nickname,u.avatar,
             (COUNT(a.id) * 10

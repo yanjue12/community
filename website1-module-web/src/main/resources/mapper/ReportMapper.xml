@@ -2,7 +2,28 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.fzg.mapper.ReportMapper">
 
-    <!-- 检查用户是否已经举报过该目标 -->
+    <!-- 优先级表达式（根据 reason_type 计算，无需数据库字段） -->
+    <!-- high: harassment, copyright | medium: inappropriate | low: spam, other -->
+
+    <sql id="priorityExpr">
+        CASE r.reason_type
+            WHEN 'harassment' THEN 'high'
+            WHEN 'copyright'  THEN 'high'
+            WHEN 'inappropriate' THEN 'medium'
+            ELSE 'low'
+        END
+    </sql>
+
+    <sql id="priorityOrder">
+        CASE r.reason_type
+            WHEN 'harassment' THEN 1
+            WHEN 'copyright'  THEN 1
+            WHEN 'inappropriate' THEN 2
+            ELSE 3
+        END
+    </sql>
+
+    <!-- 检查用户是否已举报 -->
     <select id="checkUserReported" resultType="int">
         SELECT COUNT(*)
         FROM report
@@ -12,61 +33,168 @@
           AND status != 'rejected'
     </select>
 
-    <!-- 获取用户的举报历史 -->
+    <!-- 用户举报历史 -->
     <select id="getUserReportHistory" resultType="com.fzg.model.Report">
-        SELECT r.*, u.nickname as reporterName, tu.nickname as targetUserName
+        SELECT r.*
         FROM report r
-        LEFT JOIN user u ON r.reporter_id = u.id
-        LEFT JOIN user tu ON r.target_user_id = tu.id
         WHERE r.reporter_id = #{reporterId}
         ORDER BY r.created_at DESC
         LIMIT #{pageSize} OFFSET #{offset}
     </select>
 
-    <!-- 管理端查询举报列表 -->
-    <select id="queryReportList" resultType="com.fzg.model.Report">
-        SELECT r.*, 
-               u.nickname as reporterName, 
-               tu.nickname as targetUserName,
-               au.nickname as adminName,
-               CASE r.target_type
-                   WHEN 'article' THEN a.title
-                   WHEN 'comment' THEN CONCAT('评论: ', SUBSTRING(c.content, 1, 50))
-                   WHEN 'user' THEN CONCAT('用户: ', tu.nickname)
-                   ELSE '未知'
-               END as targetTitle
+    <!-- 条件查询举报列表 -->
+    <select id="queryReportListByCondition" resultType="com.fzg.vo.ReportVO">
+        SELECT
+            r.id,
+            r.reporter_id      AS reporterId,
+            ur.nickname        AS reporterName,
+            ur.avatar,
+            r.target_type      AS targetType,
+            r.target_id        AS targetId,
+            r.target_user_id   AS targetUserId,
+            tu.nickname        AS targetUserName,
+            r.reason_type      AS reasonType,
+            r.reason_detail    AS reasonDetail,
+            r.evidence_urls    AS evidenceUrls,
+            r.status,
+            r.admin_id         AS adminId,
+            au.nickname        AS adminName,
+            r.admin_remark     AS adminRemark,
+            r.processed_at     AS processedAt,
+            r.created_at       AS createdAt,
+            r.updated_at       AS updatedAt,
+            CASE r.target_type
+                WHEN 'article' THEN a.title
+                WHEN 'comment' THEN CONCAT('评论: ', LEFT(c.content, 50))
+                WHEN 'user'    THEN CONCAT('用户: ', tu.nickname)
+                ELSE '未知'
+            END AS targetTitle,
+            <include refid="priorityExpr"/> AS priority
         FROM report r
-        LEFT JOIN user u ON r.reporter_id = u.id
+        LEFT JOIN user ur ON r.reporter_id    = ur.id
         LEFT JOIN user tu ON r.target_user_id = tu.id
-        LEFT JOIN user au ON r.admin_id = au.id
+        LEFT JOIN user au ON r.admin_id       = au.id
         LEFT JOIN article a ON r.target_type = 'article' AND r.target_id = a.id
         LEFT JOIN comment c ON r.target_type = 'comment' AND r.target_id = c.id
         <where>
-            1=1
-            <if test="status != null and status != ''">
-                AND r.status = #{status}
+            <if test="req.status != null and req.status != ''">
+                r.status = #{req.status}
             </if>
-            <if test="targetType != null and targetType != ''">
-                AND r.target_type = #{targetType}
+            <if test="req.status == null or req.status == ''">
+                r.status = 'pending'
+            </if>
+            <if test="req.targetType != null and req.targetType != ''">
+                AND r.target_type = #{req.targetType}
+            </if>
+            <if test="req.reasonType != null and req.reasonType != ''">
+                AND r.reason_type = #{req.reasonType}
+            </if>
+            <if test="req.priority != null and req.priority == 'high'">
+                AND r.reason_type IN ('harassment', 'copyright')
+            </if>
+            <if test="req.priority != null and req.priority == 'medium'">
+                AND r.reason_type = 'inappropriate'
+            </if>
+            <if test="req.priority != null and req.priority == 'low'">
+                AND r.reason_type IN ('spam', 'other')
+            </if>
+            <if test="req.keyword != null and req.keyword != ''">
+                AND (
+                    ur.nickname LIKE CONCAT('%', #{req.keyword}, '%')
+                    OR a.title  LIKE CONCAT('%', #{req.keyword}, '%')
+                    OR c.content LIKE CONCAT('%', #{req.keyword}, '%')
+                    OR r.reason_detail LIKE CONCAT('%', #{req.keyword}, '%')
+                )
             </if>
         </where>
-        ORDER BY r.created_at DESC
-        LIMIT #{pageSize} OFFSET #{offset}
+        ORDER BY <include refid="priorityOrder"/>, r.created_at DESC
+        LIMIT #{req.pageSize} OFFSET #{offset}
     </select>
 
-    <!-- 统计举报数量 -->
-    <select id="countReportList" resultType="java.lang.Long">
-        SELECT COUNT(*)
+    <!-- 条件统计 -->
+    <select id="countReportListByCondition" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT r.id)
         FROM report r
+        LEFT JOIN user tu ON r.target_user_id = tu.id
+        LEFT JOIN article a ON r.target_type = 'article' AND r.target_id = a.id
+        LEFT JOIN comment c ON r.target_type = 'comment' AND r.target_id = c.id
         <where>
-            1=1
-            <if test="status != null and status != ''">
-                AND r.status = #{status}
+            <if test="req.status != null and req.status != ''">
+                r.status = #{req.status}
             </if>
-            <if test="targetType != null and targetType != ''">
-                AND r.target_type = #{targetType}
+            <if test="req.status == null or req.status == ''">
+                r.status = 'pending'
+            </if>
+            <if test="req.targetType != null and req.targetType != ''">
+                AND r.target_type = #{req.targetType}
+            </if>
+            <if test="req.reasonType != null and req.reasonType != ''">
+                AND r.reason_type = #{req.reasonType}
+            </if>
+            <if test="req.priority != null and req.priority == 'high'">
+                AND r.reason_type IN ('harassment', 'copyright')
+            </if>
+            <if test="req.priority != null and req.priority == 'medium'">
+                AND r.reason_type = 'inappropriate'
+            </if>
+            <if test="req.priority != null and req.priority == 'low'">
+                AND r.reason_type IN ('spam', 'other')
+            </if>
+            <if test="req.keyword != null and req.keyword != ''">
+                AND (
+                    tu.nickname LIKE CONCAT('%', #{req.keyword}, '%')
+                    OR a.title  LIKE CONCAT('%', #{req.keyword}, '%')
+                    OR c.content LIKE CONCAT('%', #{req.keyword}, '%')
+                    OR r.reason_detail LIKE CONCAT('%', #{req.keyword}, '%')
+                )
             </if>
         </where>
+    </select>
+
+    <!-- 按状态统计 -->
+    <select id="countByStatus" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM report WHERE status = #{status}
+    </select>
+
+    <!-- 今日举报数 -->
+    <select id="countTodayReports" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM report
+        WHERE DATE(created_at) = CURDATE()
+    </select>
+
+    <!-- 总举报数 -->
+    <select id="countTotalReports" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM report
+    </select>
+
+    <!-- 最近处理记录 -->
+    <select id="queryRecentProcessed" resultType="com.fzg.vo.RecentReportVO">
+        SELECT
+            r.id,
+            r.status,
+            r.target_type   AS targetType,
+            r.reason_type   AS reasonType,
+            r.admin_remark  AS adminRemark,
+            ur.nickname     AS reporterName,
+            au.nickname     AS adminName,
+            r.created_at    AS createdAt,
+            r.processed_at  AS processedAt,
+            CASE r.target_type
+                WHEN 'article' THEN a.title
+                WHEN 'comment' THEN CONCAT('评论: ', LEFT(c.content, 50))
+                WHEN 'user'    THEN CONCAT('用户: ', tu.nickname)
+                ELSE '未知'
+            END AS targetTitle
+        FROM report r
+        LEFT JOIN user ur ON r.reporter_id    = ur.id
+        LEFT JOIN user tu ON r.target_user_id = tu.id
+        LEFT JOIN user au ON r.admin_id       = au.id
+        LEFT JOIN article a ON r.target_type = 'article' AND r.target_id = a.id
+        LEFT JOIN comment c ON r.target_type = 'comment' AND r.target_id = c.id
+        WHERE r.status IN ('resolved', 'rejected')
+          AND r.processed_at IS NOT NULL
+        ORDER BY r.processed_at DESC
+        LIMIT #{limit}
     </select>
 
 </mapper>

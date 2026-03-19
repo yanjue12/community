@@ -2,4 +2,74 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.fzg.mapper.Categorymapper">
 
+    <select id="queryCategoryList" resultType="com.fzg.vo.CategoryAdminVO">
+        SELECT
+            c.id,
+            c.name,
+            c.slug,
+            c.icon,
+            c.description,
+            c.level,
+            c.parent_id          AS parentId,
+            p.name               AS parentName,
+            c.article_count      AS articleCount,
+            c.is_recommend       AS isRecommend,
+            c.is_nav             AS isNav,
+            c.status,
+            c.sort,
+            c.created_at         AS createdAt,
+            c.updated_at         AS updatedAt,
+
+            /* 直接子分类数量 */
+            (SELECT COUNT(*) FROM category sub WHERE sub.parent_id = c.id) AS childCount,
+
+            /* 今日（0点到当前）该分类下发布的文章数 */
+            (SELECT COUNT(*) FROM article a
+             WHERE a.category_id = c.id
+               AND a.status = '1'
+               AND a.published_at >= CURDATE()
+               AND a.published_at &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+            ) AS todayArticleCount,
+
+            /* 昨日该分类下发布的文章数 */
+            (SELECT COUNT(*) FROM article a
+             WHERE a.category_id = c.id
+               AND a.status = '1'
+               AND a.published_at >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+               AND a.published_at &lt; CURDATE()
+            ) AS yesterdayArticleCount
+
+        FROM category c
+        LEFT JOIN category p ON c.parent_id = p.id AND c.parent_id != 0
+        <where>
+            <if test="req.name != null and req.name != ''">
+                AND c.name LIKE CONCAT('%', #{req.name}, '%')
+            </if>
+            <if test="req.status != null and req.status != ''">
+                AND c.status = #{req.status}
+            </if>
+            <if test="req.level != null and req.level != ''">
+                AND c.level = #{req.level}
+            </if>
+        </where>
+        ORDER BY c.level ASC, c.sort ASC, c.id ASC
+        LIMIT #{req.pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countCategoryList" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM category c
+        <where>
+            <if test="req.name != null and req.name != ''">
+                AND c.name LIKE CONCAT('%', #{req.name}, '%')
+            </if>
+            <if test="req.status != null and req.status != ''">
+                AND c.status = #{req.status}
+            </if>
+            <if test="req.level != null and req.level != ''">
+                AND c.level = #{req.level}
+            </if>
+        </where>
+    </select>
+
 </mapper>

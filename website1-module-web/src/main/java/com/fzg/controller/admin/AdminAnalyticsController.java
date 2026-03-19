@@ -8,6 +8,7 @@ import com.fzg.enums.EnumReturn;
 import com.fzg.model.AuditRecord;
 import com.fzg.model.Report;
 import com.fzg.model.Result;
+import com.fzg.service.AnalyticsExportService;
 import com.fzg.service.AnalyticsService;
 import com.fzg.service.AuditRecordService;
 import com.fzg.service.ReportService;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +36,7 @@ import java.util.Map;
 public class AdminAnalyticsController {
 
     private final AnalyticsService analyticsService;
+    private final AnalyticsExportService analyticsExportService;
     private final ReportService reportService;
     private final AuditRecordService auditRecordService;
 
@@ -84,22 +87,7 @@ public class AdminAnalyticsController {
         }
     }
 
-    /**
-     * 获取文章发布趋势
-     */
-    @GetMapping("/article-publish-trend")
-    @Operation(summary = "获取文章发布趋势", description = "获取指定天数内的文章发布趋势数据")
-    public Result<List<ChartDataDTO.LineItem>> getArticlePublishTrend(
-            @Parameter(description = "统计天数", example = "7")
-            @RequestParam(defaultValue = "7") int days) {
-        try {
-            List<ChartDataDTO.LineItem> trend = analyticsService.getArticlePublishTrend(days);
-            return Result.success(trend);
-        } catch (Exception e) {
-            log.error("获取文章发布趋势失败: {}", e.getMessage(), e);
-            return Result.fail(EnumReturn.valueOf("获取文章发布趋势失败"));
-        }
-    }
+
 
     /**
      * 获取文章发布趋势（支持多种时间维度）
@@ -136,24 +124,7 @@ public class AdminAnalyticsController {
 
 
 
-    /**
-     * 获取热门文章排行
-     */
-    @GetMapping("/hot-articles")
-    @Operation(summary = "获取热门文章排行", description = "获取指定时间内的热门文章排行榜")
-    public Result<List<ChartDataDTO.RankItem>> getHotArticles(
-            @Parameter(description = "限制数量", example = "10")
-            @RequestParam(defaultValue = "10") int limit,
-            @Parameter(description = "统计天数", example = "7")
-            @RequestParam(defaultValue = "7") int days) {
-        try {
-            List<ChartDataDTO.RankItem> hotArticles = analyticsService.getHotArticles(limit, days);
-            return Result.success(hotArticles);
-        } catch (Exception e) {
-            log.error("获取热门文章排行失败: {}", e.getMessage(), e);
-            return Result.fail(EnumReturn.valueOf("获取热门文章排行失败"));
-        }
-    }
+
 
     /**
      * 获取活跃用户排行
@@ -191,22 +162,7 @@ public class AdminAnalyticsController {
         }
     }
 
-    /**
-     * 获取文章发布对比
-     */
-    @GetMapping("/article-publish-comparison")
-    @Operation(summary = "获取文章发布对比", description = "获取文章发布的同比/环比数据")
-    public Result<ChartDataDTO.TrendData> getArticlePublishComparison(
-            @Parameter(description = "统计周期：day/week/month", example = "day")
-            @RequestParam(defaultValue = "day") String period) {
-        try {
-            ChartDataDTO.TrendData comparison = analyticsService.getArticlePublishComparison(period);
-            return Result.success(comparison);
-        } catch (Exception e) {
-            log.error("获取文章发布对比失败: {}", e.getMessage(), e);
-            return Result.fail(EnumReturn.valueOf("获取文章发布对比失败"));
-        }
-    }
+
 
     /**
      * 获取实时动态
@@ -269,6 +225,32 @@ public class AdminAnalyticsController {
         } catch (Exception e) {
             log.error("获取待处理事项统计失败: {}", e.getMessage(), e);
             return Result.fail(EnumReturn.valueOf("获取统计数据失败"));
+        }
+    }
+
+    /**
+     * 导出 Excel 报告
+     */
+    @GetMapping("/export/excel")
+    @Operation(summary = "导出 Excel 报告", description = "导出包含概览、趋势、排行、分类等多 Sheet 的 Excel 报告")
+    public void exportExcel(HttpServletResponse response) {
+        try {
+            analyticsExportService.exportExcel(response);
+        } catch (Exception e) {
+            log.error("导出 Excel 失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 导出 PDF 报告
+     */
+    @GetMapping("/export/pdf")
+    @Operation(summary = "导出 PDF 报告", description = "导出包含概览、趋势、排行等数据的 PDF 报告")
+    public void exportPdf(HttpServletResponse response) {
+        try {
+            analyticsExportService.exportPdf(response);
+        } catch (Exception e) {
+            log.error("导出 PDF 失败: {}", e.getMessage(), e);
         }
     }
 

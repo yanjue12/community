@@ -43,41 +43,9 @@ public class AdminAuditController {
         return auditRecordService.getAuditListByCondition(request);
     }
 
-    /**
-     * 获取审核列表（GET方式，简单筛选）
-     */
-    @GetMapping("/list")
-    @Operation(summary = "获取审核列表", description = "获取审核列表，支持按状态筛选")
-    public Result getAuditList(
-            @Parameter(description = "审核状态：0-待审核, 1-已通过, 2-已拒绝")
-            @RequestParam(required = false) Byte auditStatus,
-            @Parameter(description = "页码", example = "1")
-            @RequestParam(defaultValue = "1") Integer pageNum,
-            @Parameter(description = "页面大小", example = "10")
-            @RequestParam(defaultValue = "10") Integer pageSize) {
-        return auditRecordService.getPendingAuditList(auditStatus, pageNum, pageSize);
-    }
 
 
-    /**
-     * 获取审核详情
-     */
-    @GetMapping("/{auditId}")
-    @Operation(summary = "获取审核详情", description = "查看具体审核记录详情")
-    public Result getAuditDetail(
-            @Parameter(description = "审核记录ID", example = "1")
-            @PathVariable Long auditId) {
-        try {
-            AuditRecord auditRecord = auditRecordService.getById(auditId);
-            if (auditRecord == null) {
-                return Result.fail(EnumReturn.valueOf("审核记录不存在"));
-            }
-            return Result.success(auditRecord);
-        } catch (Exception e) {
-            log.error("获取审核详情失败: {}", e.getMessage(), e);
-            return Result.fail(EnumReturn.valueOf("获取审核详情失败"));
-        }
-    }
+
 
     /**
      * 审核通过
@@ -181,7 +149,7 @@ public class AdminAuditController {
             @Parameter(description = "文章ID", example = "1")
             @PathVariable Long articleId) {
         try {
-            com.fzg.model.AuditRecord auditRecord = auditRecordService.getByArticleId(articleId);
+            AuditRecord auditRecord = auditRecordService.getByArticleId(articleId);
             if (auditRecord == null) {
                 return Result.fail(EnumReturn.valueOf("该文章暂无审核记录"));
             }

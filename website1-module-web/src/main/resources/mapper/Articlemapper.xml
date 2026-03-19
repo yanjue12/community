@@ -862,5 +862,14 @@
         </where>
     </select>
 
+    <select id="queryArticleStats" resultType="com.fzg.vo.ArticleStatsVO">
+        select
+            count(*) as total,
+            sum(status = '1') as published,
+            sum(status = '2') as pending,
+            sum(created_at >= date_sub(curdate(), interval weekday(curdate()) day)) as weeklyNew
+        from article
+        where status != '4';
+    </select>
 
 </mapper>

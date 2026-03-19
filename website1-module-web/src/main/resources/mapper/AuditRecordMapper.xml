@@ -125,58 +125,54 @@
         SELECT *
         FROM audit_record
         WHERE biz_type = 'ARTICLE' AND article_id = #{articleId}
-        LIMIT 1
     </select>
 
     <!-- 多条件查询审核列表 -->
     <select id="queryAuditListByCondition" resultType="com.fzg.vo.AuditRecordVO">
-        SELECT 
-            ar.id,
-            ar.biz_type as bizType,
-            ar.article_id as articleId,
-            ar.audit_status as auditStatus,
-            ar.audit_type as auditType,
-            ar.auditor_id as auditorId,
-            ar.reason,
-            ar.created_at as createdAt,
-            ar.updated_at as updatedAt,
+        SELECT ar.id,ar.biz_type as bizType,ar.article_id as articleId,
+            ar.audit_status as auditStatus,ar.audit_type as auditType,
+            ar.auditor_id as auditorId,ar.reason,
+            ar.created_at as createdAt,ar.updated_at as updatedAt,
             
-            a.title,
-            a.summary,
-            a.cover_image as coverImage,
-            a.word_count as wordCount,
-            a.created_at as articleCreatedAt,
+            a.title,a.summary,a.cover_image as coverImage,
+            a.view_count as viewCount,a.like_count as likeCount,
+            a.comment_count as commentCount, a.collect_count as collectCount,
+            a.share_count as shareCount,
+            a.word_count as wordCount,a.created_at as articleCreatedAt,
             
-            u.id as authorId,
-            u.nickname as authorNickname,
+            u.id as authorId,u.nickname as authorNickname,
             u.avatar as authorAvatar,
             
             au.nickname as auditorNickname,
-            
-            c.name as categoryName,
-            
-            GROUP_CONCAT(at.name SEPARATOR ', ') as tags
+            GROUP_CONCAT(DISTINCT at.name ORDER BY at.name SEPARATOR ', ') AS tags,
+            c9.name as categoryName
             
         FROM audit_record ar
         LEFT JOIN article a ON ar.article_id = a.id
         LEFT JOIN user u ON a.user_id = u.id
         LEFT JOIN user au ON ar.auditor_id = au.id
-        LEFT JOIN category c ON a.category_id = c.id
-        LEFT JOIN article_tag_relation atr ON a.id = atr.article_id
-        LEFT JOIN article_tag at ON atr.tag_id = at.id
+        LEFT JOIN category c9 ON a.category_id = c9.id
+        left join article_tag_relation atr on a.id = atr.article_id
+        left join article_tag at on at.id = atr.tag_id
         <where>
             ar.biz_type = 'ARTICLE'
             <if test="request.auditStatus != null">
                 AND ar.audit_status = #{request.auditStatus}
             </if>
             <if test="request.title != null and request.title != ''">
-                AND a.title LIKE CONCAT('%', #{request.title}, '%')
-            </if>
-            <if test="request.authorName != null and request.authorName != ''">
-                AND u.nickname LIKE CONCAT('%', #{request.authorName}, '%')
+                AND (a.title LIKE CONCAT('%', #{request.title}, '%')
+                or u.nickname LIKE CONCAT('%', #{request.title}, '%') )
             </if>
             <if test="request.categoryId != null">
-                AND a.category_id = #{request.categoryId}
+                and a.category_id IN (
+                WITH RECURSIVE category_tree AS (
+                SELECT id FROM category WHERE id = #{request.categoryId}
+                UNION ALL
+                SELECT c.id FROM category c
+                INNER JOIN category_tree ct ON c.parent_id = ct.id
+                )
+                SELECT id FROM category_tree
+                )
             </if>
             <if test="request.auditType != null">
                 AND ar.audit_type = #{request.auditType}
@@ -197,7 +193,7 @@
                 AND ar.updated_at &lt;= #{request.auditEndTime}
             </if>
         </where>
-        GROUP BY ar.id, a.id, u.id, au.id, c.id
+        GROUP BY ar.id, a.id, u.id, au.id, c9.id
         ORDER BY ar.created_at DESC
         LIMIT #{request.pageSize} OFFSET #{offset}
     </select>

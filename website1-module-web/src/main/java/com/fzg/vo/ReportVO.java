@@ -18,6 +18,7 @@ public class ReportVO {
      * 举报人ID
      */
     private Long reporterId;
+    private String avatar;
 
     /**
      * 举报人昵称
@@ -108,4 +109,9 @@ public class ReportVO {
      * 更新时间
      */
     private Date updatedAt;
+
+    /**
+     * 优先级：high-高, medium-中, low-低（根据 reasonType 动态计算）
+     */
+    private String priority;
 }

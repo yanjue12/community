@@ -13,14 +13,15 @@ import com.fzg.vo.AuditQueryRequest;
 import com.fzg.vo.AuditRecordVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @description 针对表【audit_record(审核表)】的数据库操作Service实现
@@ -32,6 +33,9 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
 
     private final AuditRecordMapper auditRecordMapper;
     private final Articlemapper articleMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    private static final String AUDIT_LOCK_PREFIX = "audit:lock:";
 
     @Override
     public Result getPendingAuditList(Byte auditStatus, Integer pageNum, Integer pageSize) {
@@ -85,6 +89,11 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result approveAudit(Long auditId, Long auditorId, String reason) {
+        String lockKey = AUDIT_LOCK_PREFIX + auditId;
+        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, auditorId.toString(), 30, TimeUnit.SECONDS);
+        if (Boolean.FALSE.equals(locked)) {
+            return Result.fail(EnumReturn.valueOf("该审核记录正在处理中，请稍后重试"));
+        }
         try {
             AuditRecord auditRecord = this.getById(auditId);
             if (auditRecord == null) {
@@ -120,17 +129,23 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
         } catch (Exception e) {
             log.error("审核通过失败: {}", e.getMessage(), e);
             return Result.fail(EnumReturn.valueOf("审核通过失败"));
+        } finally {
+            redisTemplate.delete(lockKey);
         }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result rejectAudit(Long auditId, Long auditorId, String reason) {
+        if (!StringUtils.hasText(reason)) {
+            return Result.fail(EnumReturn.valueOf("拒绝原因不能为空"));
+        }
+        String lockKey = AUDIT_LOCK_PREFIX + auditId;
+        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, auditorId.toString(), 30, TimeUnit.SECONDS);
+        if (Boolean.FALSE.equals(locked)) {
+            return Result.fail(EnumReturn.valueOf("该审核记录正在处理中，请稍后重试"));
+        }
         try {
-            if (!StringUtils.hasText(reason)) {
-                return Result.fail(EnumReturn.valueOf("拒绝原因不能为空"));
-            }
-
             AuditRecord auditRecord = this.getById(auditId);
             if (auditRecord == null) {
                 return Result.fail(EnumReturn.valueOf("审核记录不存在"));
@@ -164,6 +179,8 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
         } catch (Exception e) {
             log.error("审核拒绝失败: {}", e.getMessage(), e);
             return Result.fail(EnumReturn.valueOf("审核拒绝失败"));
+        } finally {
+            redisTemplate.delete(lockKey);
         }
     }
 
@@ -238,8 +255,8 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
             auditRecord.setArticleId(articleId);
             auditRecord.setAuditStatus((byte) 0); // 0-待审核
             auditRecord.setAuditType((byte) 2);
-            auditRecord.setCreatedAt(new Date());
-            auditRecord.setUpdatedAt(new Date());
+            auditRecord.setCreatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
+            auditRecord.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
 
             this.save(auditRecord);
             return auditRecord;
@@ -335,11 +352,11 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
      * 获取今日开始时间
      */
     private Date getTodayStart() {
-        java.util.Calendar calendar = java.util.Calendar.getInstance();
-        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0);
-        calendar.set(java.util.Calendar.MINUTE, 0);
-        calendar.set(java.util.Calendar.SECOND, 0);
-        calendar.set(java.util.Calendar.MILLISECOND, 0);
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
         return calendar.getTime();
     }
 

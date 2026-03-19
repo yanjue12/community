@@ -9,13 +9,22 @@ import com.fzg.mapper.Rolemapper;
 import com.fzg.mapper.UserMapper;
 import com.fzg.mapper.UserRolemapper;
 import com.fzg.model.*;
+import com.fzg.vo.UserAdminVO;
+import com.fzg.vo.UserEditRequest;
+import com.fzg.vo.UserQueryRequest;
+import com.fzg.vo.UserStatsVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -24,6 +33,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/admin/user")
 @SaCheckLogin
+@Slf4j
+@Tag(name = "管理端用户管理", description = "用户管理相关接口")
 public class AdminUserController {
 
     @Autowired
@@ -38,19 +49,87 @@ public class AdminUserController {
     private RolePermissionMapper rolePermissionMapper;
 
     // ==================== 用户管理 ====================
-    
-    /**
-     * 分页查询用户列表（支持多维度搜索）
-     */
-    @GetMapping("/list")
-    public Result listUsers(@RequestParam(defaultValue = "1") Integer pageNum,
-                           @RequestParam(defaultValue = "10") Integer pageSize,
-                           @RequestParam(required = false) String keyword,
-                           @RequestParam(required = false) String status,
-                           @RequestParam(required = false) Long roleId) {
 
-        
+    /**
+     * 用户管理卡片统计（总数、正常、封禁、管理员）
+     */
+    @GetMapping("/statistics")
+    @Operation(summary = "用户卡片统计")
+    public Result getUserStats() {
+        try {
+            UserStatsVO stats = userMapper.queryUserStats();
+            return Result.success(stats);
+        } catch (Exception e) {
+            log.error("查询用户统计失败: {}", e.getMessage(), e);
+            return Result.fail(500, "查询失败");
+        }
+    }
+
+    /**
+     * 用户列表（用户名/角色/状态多条件分页查询）
+     */
+    @PostMapping("/list")
+    @Operation(summary = "用户列表查询")
+    public Result listUsers(@RequestBody(required = false) UserQueryRequest req) {
+        try {
+            if (req == null) req = new UserQueryRequest();
+            int pageNum  = req.getPageNum()  == null ? 1  : req.getPageNum();
+            int pageSize = req.getPageSize() == null ? 10 : req.getPageSize();
+            req.setPageNum(pageNum);
+            req.setPageSize(pageSize);
+            int offset = (pageNum - 1) * pageSize;
+
+            List<UserAdminVO> list = userMapper.queryAdminUserList(req, offset);
+            Long total = userMapper.countAdminUserList(req);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("list", list);
+            data.put("total", total);
+            return Result.success(data);
+        } catch (Exception e) {
+            log.error("查询用户列表失败: {}", e.getMessage(), e);
+            return Result.fail(500, "查询失败");
+        }
+    }
+
+    /**
+     * 编辑用户（状态 + 角色）
+     */
+    @PutMapping("/edit/{id}")
+    @Transactional(rollbackFor = Exception.class)
+    @Operation(summary = "编辑用户状态和角色")
+    public Result editUser(@PathVariable Long id, @RequestBody UserEditRequest req) {
+        User user = userMapper.selectById(id);
+        if (user == null) {
+            return Result.fail(404, "用户不存在");
+        }
+        // 更新状态
+        if (req.getStatus() != null) {
+            user.setStatus(req.getStatus());
+            user.setUpdatedAt(new Date());
+            userMapper.updateById(user);
+        }
+        // 更新角色
+        if (req.getRoleId() != null) {
+            userRoleMapper.delete(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, id));
+            UserRole userRole = new UserRole();
+            userRole.setUserId(id);
+            userRole.setRoleId(req.getRoleId());
+            userRole.setCreatedAt(new Date());
+            userRoleMapper.insert(userRole);
+        }
         return Result.success(true);
+    }
+
+    /**
+     * 查询所有角色（页面初始化下拉用）
+     */
+    @GetMapping("/roles")
+    @Operation(summary = "获取所有角色列表")
+    public Result getAllRolesForSelect() {
+        return Result.success(roleMapper.selectList(
+            new LambdaQueryWrapper<Role>().eq(Role::getStatus, "1").orderByAsc(Role::getSort)
+        ));
     }
 
     /**
@@ -69,7 +148,7 @@ public class AdminUserController {
         );
         List<Long> roleIds = userRoles.stream().map(UserRole::getRoleId).collect(Collectors.toList());
         
-        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         result.put("user", user);
         result.put("roleIds", roleIds);
         
