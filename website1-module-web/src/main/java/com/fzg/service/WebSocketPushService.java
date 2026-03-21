@@ -141,6 +141,49 @@ public class WebSocketPushService {
     }
 
     /**
+     * 推送私信消息给接收方（如果在线）
+     *
+     * @param message 私信消息对象
+     * @param senderNickname 发送者昵称
+     * @param senderAvatar   发送者头像
+     */
+    public boolean pushPrivateMessage(com.fzg.model.PrivateMessage message,
+                                      String senderNickname, String senderAvatar) {
+        try {
+            if (!WebSocketManager.isUserOnline(message.getReceiverId())) {
+                log.debug("用户{}不在线，私信不推送WebSocket", message.getReceiverId());
+                return false;
+            }
+
+            Map<String, Object> sender = new HashMap<>();
+            sender.put("id", message.getSenderId());
+            sender.put("nickname", senderNickname);
+            sender.put("avatar", senderAvatar);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("messageId", message.getId());
+            data.put("conversationId", message.getConversationId());
+            data.put("content", message.getContent());
+            data.put("contentType", message.getContentType());
+            data.put("createdAt", message.getCreatedAt());
+            data.put("sender", sender);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", "private_message");
+            payload.put("data", data);
+            payload.put("timestamp", System.currentTimeMillis());
+
+            String json = com.alibaba.fastjson.JSON.toJSONString(payload);
+            boolean success = WebSocketManager.sendMessageToUser(message.getReceiverId(), json);
+            log.info("私信WebSocket推送 -> 用户{} {}", message.getReceiverId(), success ? "成功" : "失败");
+            return success;
+        } catch (Exception e) {
+            log.error("推送私信失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
      * 广播消息给所有在线用户
      */
     public void broadcastMessage(String title, String content) {

@@ -11,5 +11,5 @@ import java.util.List;
 @Mapper
 public interface RolePermissionMapper extends BaseMapper<RolePermission> {
 
-    List<RolePermission> selectList(@Param("id") Long id);
+
 }

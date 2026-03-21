@@ -50,7 +50,8 @@ public class NotificationService extends ServiceImpl<Notificationmapper,Notifica
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Notification::getUserId, userId)
                 .eq(Notification::getIsRead, "0")
-                .eq(Notification::getIsDeleted, "0");
+                .eq(Notification::getIsDeleted, "0")
+                .notIn(Notification::getActionType, "user_login", "user_register");
         Long count = notificationMapper.selectCount(wrapper);
 
         redisTemplate.opsForValue().set(cacheKey,String.valueOf(count), CACHE_EXPIRE_TIME, TimeUnit.MINUTES);
@@ -76,7 +77,8 @@ public class NotificationService extends ServiceImpl<Notificationmapper,Notifica
             wrapper.eq(Notification::getUserId, userId)
                     .eq(Notification::getType, type)
                     .eq(Notification::getIsRead, "0")
-                    .eq(Notification::getIsDeleted, "0");
+                    .eq(Notification::getIsDeleted, "0")
+                    .notIn(Notification::getActionType, "user_login", "user_register");
             Long count = notificationMapper.selectCount(wrapper);
             result.put(type, count);
         }
@@ -94,6 +96,34 @@ public class NotificationService extends ServiceImpl<Notificationmapper,Notifica
     private void invalidateCache(Long userId) {
         redisTemplate.delete(UNREAD_COUNT_KEY + userId);
         redisTemplate.delete(UNREAD_TYPE_KEY + userId);
+    }
+
+    /**
+     * 按 category 应用查询条件
+     * like=点赞, comment=评论, follow=关注, system=系统通知, null/空=全部
+     */
+    private void applyCategoryFilter(LambdaQueryWrapper<Notification> wrapper, String category) {
+        if (category == null || category.isEmpty()) {
+            wrapper.notIn(Notification::getActionType, "user_login", "user_register");
+            return;
+        }
+        switch (category) {
+            case "like":
+                wrapper.in(Notification::getActionType, "like_article", "like_comment");
+                break;
+            case "comment":
+                wrapper.in(Notification::getActionType, "comment_article", "reply_comment", "mention");
+                break;
+            case "follow":
+                wrapper.in(Notification::getActionType, "follow", "new_article");
+                break;
+            case "system":
+                wrapper.eq(Notification::getType, "system")
+                       .notIn(Notification::getActionType, "user_login", "user_register");
+                break;
+            default:
+                wrapper.notIn(Notification::getActionType, "user_login", "user_register");
+        }
     }
 
     // ==================== 通知创建方法 ====================
@@ -426,6 +456,30 @@ public class NotificationService extends ServiceImpl<Notificationmapper,Notifica
     }
 
     /**
+     * 按分类全部标记为已读
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int markAllAsReadByCategory(Long userId, String category) {
+        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Notification::getUserId, userId)
+               .eq(Notification::getIsRead, "0")
+               .eq(Notification::getIsDeleted, "0");
+
+        applyCategoryFilter(wrapper, category);
+
+        Notification update = new Notification();
+        update.setIsRead("1");
+        update.setReadAt(new Date());
+
+        int result = notificationMapper.update(update, wrapper);
+        if (result > 0) {
+            invalidateCache(userId);
+        }
+        return result;
+    }
+
+    /**
      * 删除单个通知（逻辑删除）
      */
     @Override
@@ -524,11 +578,40 @@ public class NotificationService extends ServiceImpl<Notificationmapper,Notifica
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Notification::getUserId, userId)
                .eq(Notification::getIsDeleted, "0")
+               // 排除管理端监控用的登录/注册通知，这类通知不应展示给普通用户
+               .notIn(Notification::getActionType, "user_login", "user_register")
                .orderByDesc(Notification::getCreatedAt);
 
         if (type != null && !type.isEmpty()) {
             wrapper.eq(Notification::getType, type);
         }
+        if (isRead != null && !isRead.isEmpty()) {
+            wrapper.eq(Notification::getIsRead, isRead);
+        }
+
+        return notificationMapper.selectPage(page, wrapper);
+    }
+
+    /**
+     * 按分类获取通知列表（分页）
+     * category: like=点赞(like_article/like_comment)
+     *           comment=评论(comment_article/reply_comment/mention)
+     *           follow=关注(follow/new_article)
+     *           system=系统通知(type=system，排除user_login/user_register)
+     */
+    @Override
+    public Page<Notification> getNotificationListByCategory(Long userId, Integer pageNum, Integer pageSize, String category, String isRead) {
+        pageNum = pageNum == null || pageNum < 1 ? 1 : pageNum;
+        pageSize = pageSize == null || pageSize < 1 ? 10 : Math.min(pageSize, 100);
+
+        Page<Notification> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Notification::getUserId, userId)
+               .eq(Notification::getIsDeleted, "0")
+               .orderByDesc(Notification::getCreatedAt);
+
+        applyCategoryFilter(wrapper, category);
+
         if (isRead != null && !isRead.isEmpty()) {
             wrapper.eq(Notification::getIsRead, isRead);
         }

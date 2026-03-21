@@ -1,6 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="mapper.PrivateMessageMapper">
+<mapper namespace="com.fzg.mapper.PrivateMessageMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into private_message (
+            conversation_id,
+            sender_id,
+            receiver_id,
+            content,
+            content_type
+        ) values (
+                     #{conversationId},
+                     #{senderId},
+                     #{receiverId},
+                     #{content},
+                     #{contentType}
+                 )
+    </insert>
 
+    <select id="selectByConversation" resultType="com.fzg.model.PrivateMessage">
+        select *
+        from private_message
+        where conversation_id = #{conversationId}
+          and is_deleted = 0
+        order by id desc
+            limit #{offset}, #{limit}
+    </select>
+
+    <select id="countByConversation" resultType="int">
+        select count(*)
+        from private_message
+        where conversation_id = #{conversationId}
+          and is_deleted = 0
+    </select>
+
+    <update id="markRead">
+        update private_message
+        set is_read = 1
+        where conversation_id = #{conversationId}
+          and receiver_id = #{userId}
+          and is_read = 0
+    </update>
+
+    <select id="countUnread" resultType="int">
+        select count(*)
+        from private_message
+        where receiver_id = #{userId}
+          and is_read = 0
+          and is_deleted = 0
+    </select>
 
 </mapper>

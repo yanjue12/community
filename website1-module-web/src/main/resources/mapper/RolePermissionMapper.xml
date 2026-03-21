@@ -3,9 +3,4 @@
 <mapper namespace="com.fzg.mapper.RolePermissionMapper">
 
 
-    <select id="selectList" resultType="com.fzg.model.RolePermission">
-        select  * from role_permission
-        where role_id = #{id}
-        order by desc created_at;
-    </select>
 </mapper>

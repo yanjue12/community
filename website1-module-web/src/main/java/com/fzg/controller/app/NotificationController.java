@@ -19,7 +19,7 @@ import java.util.Map;
  * 通知相关接口
  */
 @RestController
-@RequestMapping("/api/notification")
+@RequestMapping("/notification")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "通知管理", description = "通知相关接口")
@@ -50,6 +50,27 @@ public class NotificationController {
     }
 
     /**
+     * 按分类获取通知列表
+     * category: like=点赞, comment=评论, follow=关注, system=系统通知, 不传=全部
+     */
+    @GetMapping("/list/category")
+    @Operation(summary = "按分类获取通知列表")
+    public Result<Page<Notification>> getNotificationListByCategory(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String isRead) {
+        try {
+            Page<Notification> notifications = notificationService.getNotificationListByCategory(userId, pageNum, pageSize, category, isRead);
+            return Result.success(notifications);
+        } catch (Exception e) {
+            log.error("按分类获取用户{}通知列表失败: {}", userId, e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("获取通知列表失败"));
+        }
+    }
+
+    /**
      * 获取用户未读通知数量
      */
     @GetMapping("/unread-count")
@@ -64,24 +85,7 @@ public class NotificationController {
         }
     }
 
-    /**
-     * 标记通知为已读
-     */
-    @PostMapping("/mark-read/{notificationId}")
-    @Operation(summary = "标记通知为已读")
-    public Result<String> markNotificationAsRead(@PathVariable Long notificationId, @RequestParam Long userId) {
-        try {
-            boolean success = notificationService.markAsRead(userId, notificationId);
-            if (success) {
-                return Result.success("标记成功");
-            } else {
-                return Result.fail(EnumReturn.valueOf("标记失败"));
-            }
-        } catch (Exception e) {
-            log.error("标记通知{}为已读失败: {}", notificationId, e.getMessage(), e);
-            return Result.fail(EnumReturn.valueOf("标记失败"));
-        }
-    }
+
 
     /**
      * 批量标记通知为已读
@@ -94,6 +98,22 @@ public class NotificationController {
             return Result.success("成功标记" + count + "条通知为已读");
         } catch (Exception e) {
             log.error("批量标记用户{}通知为已读失败: {}", userId, e.getMessage(), e);
+            return Result.fail(EnumReturn.valueOf("批量标记失败"));
+        }
+    }
+
+    /**
+     * 按分类全部标记为已读
+     * category: like / comment / follow / system / 不传=全部
+     */
+    @PostMapping("/mark-read-category")
+    @Operation(summary = "按分类全部标记为已读")
+    public Result<String> markAllAsReadByCategory(@RequestParam Long userId, @RequestParam(required = false) String category) {
+        try {
+            int count = notificationService.markAllAsReadByCategory(userId, category);
+            return Result.success("成功标记" + count + "条通知为已读");
+        } catch (Exception e) {
+            log.error("按分类批量标记用户{}通知为已读失败: {}", userId, e.getMessage(), e);
             return Result.fail(EnumReturn.valueOf("批量标记失败"));
         }
     }

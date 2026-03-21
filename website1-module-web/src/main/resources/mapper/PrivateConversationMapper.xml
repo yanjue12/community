@@ -1,5 +1,72 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="mapper.PrivateConversationMapper">
+<mapper namespace="com.fzg.mapper.PrivateConversationMapper">
 
+    <select id="selectByUsers" resultType="com.fzg.model.PrivateConversation">
+        select *
+        from private_conversation
+        where user_min = #{min}
+          and user_max = #{max}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into private_conversation(user_min, user_max)
+        values (#{userMin}, #{userMax})
+    </insert>
+
+    <update id="updateLastMessage">
+        update private_conversation
+        set last_message_id = #{msgId},
+            last_message_time = now()
+        where id = #{id}
+    </update>
+
+    <select id="selectByUser" resultType="com.fzg.model.PrivateConversation">
+        select *
+        from private_conversation
+        where user_min = #{userId}
+           or user_max = #{userId}
+        order by last_message_time desc
+            limit #{offset}, #{limit}
+    </select>
+    <select id="selectConversationList" resultType="com.fzg.vo.ConversationVO">
+        select
+            c.id as conversationId,
+
+            case
+                when c.user_min = #{userId} then c.user_max
+                else c.user_min
+                end as targetUserId,
+
+            u.nickname,
+            u.avatar,
+
+            m.content as lastMessage,
+            c.last_message_time as lastMessageTime,
+
+            (
+                select count(*)
+                from private_message pm
+                where pm.conversation_id = c.id
+                  and pm.receiver_id = #{userId}
+                  and pm.is_read = 0
+            ) as unreadCount
+
+        from private_conversation c
+                 join user u
+                      on u.id = (
+                          case
+                              when c.user_min = #{userId} then c.user_max
+                              else c.user_min
+                              end
+                          )
+
+                 left join private_message m
+                           on m.id = c.last_message_id
+
+        where c.user_min = #{userId}
+           or c.user_max = #{userId}
+
+        order by c.last_message_time desc
+    </select>
 </mapper>

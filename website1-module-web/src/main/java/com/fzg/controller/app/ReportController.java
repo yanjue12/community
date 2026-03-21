@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
  * 用户端举报控制器
  */
 @RestController
-@RequestMapping("/api/report")
+@RequestMapping("/report")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "用户端举报管理", description = "用户举报相关接口")
@@ -46,16 +46,7 @@ public class ReportController {
         }
     }
 
-    /**
-     * 获取举报原因列表
-     */
-    @GetMapping("/reasons")
-    @Operation(summary = "获取举报原因", description = "根据目标类型获取可用的举报原因")
-    public Result getReportReasons(
-            @Parameter(description = "目标类型：article-文章, comment-评论, user-用户", example = "article")
-            @RequestParam String targetType) {
-        return reportReasonService.getReasonsByTargetType(targetType);
-    }
+
 
     /**
      * 获取所有举报原因

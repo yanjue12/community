@@ -95,4 +95,23 @@
       created_at = #{created_at,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=BIGINT}
   </update>
+
+  <!-- 查询所有角色，附带用户数量 -->
+  <select id="selectAllRolesWithUserCount" resultType="com.fzg.vo.RoleVO">
+    SELECT
+      r.id,
+      r.role_name   AS roleName,
+      r.role_code   AS roleCode,
+      r.description,
+      r.sort,
+      r.status,
+      r.created_at  AS createdAt,
+      r.updated_at  AS updatedAt,
+      COUNT(ur.user_id) AS userCount
+    FROM role r
+    LEFT JOIN user_role ur ON r.id = ur.role_id
+    GROUP BY r.id
+    ORDER BY r.sort ASC
+  </select>
+
 </mapper>

@@ -40,6 +40,12 @@ public interface INotificationService extends IService<Notification> {
     int markAllAsRead(Long userId, String type);
 
     /**
+     * 按分类全部标记为已读
+     * category: like / comment / follow / system / null(全部)
+     */
+    int markAllAsReadByCategory(Long userId, String category);
+
+    /**
      * 删除单个通知（逻辑删除）
      */
     boolean deleteNotification(Long userId, Long notificationId);
@@ -63,6 +69,12 @@ public interface INotificationService extends IService<Notification> {
      * 获取通知列表（分页）
      */
     Page<Notification> getNotificationList(Long userId, Integer pageNum, Integer pageSize, String type, String isRead);
+
+    /**
+     * 按分类获取通知列表（分页）
+     * category: like=点赞, comment=评论, follow=关注, system=系统通知
+     */
+    Page<Notification> getNotificationListByCategory(Long userId, Integer pageNum, Integer pageSize, String category, String isRead);
 
     /**
      * 获取通知详情（自动标记为已读）

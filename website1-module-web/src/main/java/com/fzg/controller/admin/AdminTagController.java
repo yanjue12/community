@@ -9,6 +9,8 @@ import com.fzg.model.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
+
 /**
  * 管理员-标签管理
  */
@@ -19,6 +21,14 @@ public class AdminTagController {
 
     @Autowired
     private ArticleTagMapper tagMapper;
+
+    /**
+     * 标签统计（总标签数、总使用次数、平均使用次数、最热标签）
+     */
+    @GetMapping("/statistics")
+    public Result getTagStatistics() {
+        return Result.success(tagMapper.queryTagStats());
+    }
 
     /**
      * 分页查询标签列表
@@ -32,17 +42,10 @@ public class AdminTagController {
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like(ArticleTag::getName, keyword);
         }
-        wrapper.orderByDesc(ArticleTag::getCreatedAt);
+        wrapper.orderByDesc(ArticleTag::getArticleCount);
         return Result.success(tagMapper.selectPage(page, wrapper));
     }
 
-    /**
-     * 获取所有标签（不分页）
-     */
-    @GetMapping("/all")
-    public Result getAllTags() {
-        return Result.success(tagMapper.selectList(null));
-    }
 
     /**
      * 获取标签详情
@@ -56,9 +59,9 @@ public class AdminTagController {
     /**
      * 创建标签
      */
-    @PostMapping
+    @PostMapping("/create")
     public Result createTag(@RequestBody ArticleTag tag) {
-        tag.setCreatedAt(new java.util.Date());
+        tag.setCreatedAt(new Date());
         int result = tagMapper.insert(tag);
         return Result.handle(result > 0);
     }

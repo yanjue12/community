@@ -33,6 +33,12 @@ sa-token:
   is-log: true
 #  token-type: redis
 
+oauth:
+  github:
+    client-id: Ov23liUmWRPzSNKOkjnh
+    client-secret: fbdb4b9ad9e2ced34343c3a5c441bb2f099f7ddb
+    redirect-uri: http://localhost:8080/oauth/github/callback
+
 
 management:
   endpoints:

@@ -5,6 +5,16 @@
     <select id="queryHotTags" resultType="com.fzg.model.ArticleTag">
         SELECT * FROM article_tag ORDER BY article_count DESC LIMIT 10
     </select>
+    <select id="queryTagStats" resultType="map">
+        SELECT
+            COUNT(*) AS totalCount,
+            COALESCE(SUM(article_count), 0) AS totalUsage,
+            COALESCE(ROUND(AVG(article_count)), 0) AS avgUsage,
+            (SELECT name FROM article_tag ORDER BY article_count DESC LIMIT 1) AS hotTagName,
+            (SELECT article_count FROM article_tag ORDER BY article_count DESC LIMIT 1) AS hotTagCount
+        FROM article_tag
+    </select>
+
     <select id="listTagNamesByArticleId" resultType="java.lang.String">
         select att.name from article_tag att
         join article_tag_relation atr on att.id = atr.tag_id

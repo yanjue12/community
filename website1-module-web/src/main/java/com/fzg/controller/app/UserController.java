@@ -158,6 +158,7 @@ public class UserController {
 
     @PostMapping("/queryUserInfo")
     public Result queryUserInfo(@RequestBody UserVO userVO) {
+        log.info("userId:{}",userVO.getUserId());
         User user = userService.getById(Long.valueOf(userVO.getUserId()));
         userVO.setNickname(user.getNickname());
         userVO.setAvatar(user.getAvatar());

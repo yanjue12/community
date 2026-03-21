@@ -9,10 +9,13 @@ import com.fzg.mapper.Rolemapper;
 import com.fzg.mapper.UserMapper;
 import com.fzg.mapper.UserRolemapper;
 import com.fzg.model.*;
+import com.fzg.util.UserUtil;
 import com.fzg.vo.UserAdminVO;
 import com.fzg.vo.UserEditRequest;
 import com.fzg.vo.UserQueryRequest;
 import com.fzg.vo.UserStatsVO;
+import com.fzg.vo.RoleVO;
+import io.netty.util.internal.ThreadLocalRandom;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -122,15 +127,18 @@ public class AdminUserController {
     }
 
     /**
-     * 查询所有角色（页面初始化下拉用）
+     * 检查邮箱是否已存在
      */
-    @GetMapping("/roles")
-    @Operation(summary = "获取所有角色列表")
-    public Result getAllRolesForSelect() {
-        return Result.success(roleMapper.selectList(
-            new LambdaQueryWrapper<Role>().eq(Role::getStatus, "1").orderByAsc(Role::getSort)
-        ));
+    @GetMapping("/check-email")
+    @Operation(summary = "检查邮箱是否已存在")
+    public Result checkEmail(@RequestParam String email) {
+        Long count = userMapper.selectCount(
+            new LambdaQueryWrapper<User>().eq(User::getEmail, email)
+        );
+        return Result.success(count > 0);
     }
+
+
 
     /**
      * 获取用户详情（包含角色信息）
@@ -158,18 +166,19 @@ public class AdminUserController {
     /**
      * 创建用户（可同时分配角色）
      */
-    @PostMapping
+    @PostMapping("/create")
     @Transactional(rollbackFor = Exception.class)
-    public Result createUser(@RequestBody java.util.Map<String, Object> params) {
+    public Result createUser(@RequestBody Map<String, Object> params) {
         User user = new User();
         user.setUsername((String) params.get("username"));
-        user.setPassword((String) params.get("password")); // 实际应该加密
-        user.setNickname((String) params.get("nickname"));
+        String encryptPwd = UserUtil.getUserEncryptPassword((String) params.get("email"), (String) params.get("password"));
+        user.setPassword(encryptPwd);
+        user.setNickname((String) params.getOrDefault("nickname",generateRandomChineseNickname(9)));
         user.setEmail((String) params.get("email"));
         user.setPhone((String) params.get("phone"));
-        user.setAvatar((String) params.get("avatar"));
+        user.setAvatar((String) params.getOrDefault("avatar","http://127.0.0.1:9000/website/908470.jpg"));
         user.setStatus((String) params.getOrDefault("status", "1"));
-        user.setCreatedAt(new Date());
+        user.setCreatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
         
         int result = userMapper.insert(user);
         if (result > 0) {
@@ -186,6 +195,30 @@ public class AdminUserController {
             }
         }
         return Result.handle(result > 0);
+    }
+
+
+    // 可自行扩展字符池：常用汉字、成语字、姓氏表等
+    private static final String[] HANZI_POOL = (
+            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ雨晨风雅星辰海棠松柏梅兰竹菊清欢陌上归舟烟波渔歌寒山流云暖阳晓月乐声逸客晴川秋水落霞孤鹜春光夏息秋实冬藏诗意浅忆墨染倾城素年"
+    ).split("");
+
+    /**
+     * 生成指定长度的随机汉字昵称（允许字符重复）
+     * @param length 昵称长度，建议 9
+     * @return 随机汉字昵称
+     */
+    public static String generateRandomChineseNickname(int length) {
+        if (length <= 0) {
+            throw new IllegalArgumentException("length must > 0");
+        }
+        StringBuilder sb = new StringBuilder(length);
+        ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        for (int i = 0; i < length; i++) {
+            int idx = rnd.nextInt(HANZI_POOL.length);
+            sb.append(HANZI_POOL[idx]);
+        }
+        return sb.toString();
     }
 
     /**
@@ -230,94 +263,70 @@ public class AdminUserController {
         return Result.handle(result > 0);
     }
 
-    /**
-     * 删除用户
-     */
-    @DeleteMapping("/{id}")
-    @Transactional(rollbackFor = Exception.class)
-    public Result deleteUser(@PathVariable Long id) {
-        // 删除用户角色关联
-        userRoleMapper.delete(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, id));
-        // 删除用户
-        int result = userMapper.deleteById(id);
-        return Result.handle(result > 0);
-    }
 
-    /**
-     * 批量删除用户
-     */
-    @DeleteMapping("/batch")
-    @Transactional(rollbackFor = Exception.class)
-    public Result batchDelete(@RequestBody List<Long> ids) {
-        // 删除用户角色关联
-        userRoleMapper.delete(new LambdaQueryWrapper<UserRole>().in(UserRole::getUserId, ids));
-        // 删除用户
-        int result = userMapper.deleteBatchIds(ids);
-        return Result.handle(result > 0);
-    }
-
-    /**
-     * 重置用户密码
-     */
-    @PutMapping("/{id}/reset-password")
-    public Result resetPassword(@PathVariable Long id, @RequestParam String newPassword) {
-        User user = new User();
-        user.setId(id);
-        user.setPassword(newPassword); // 实际应该加密
-        user.setUpdatedAt(new Date());
-        int result = userMapper.updateById(user);
-        return Result.handle(result > 0);
-    }
 
     // ==================== 角色管理 ====================
-    
-    /**
-     * 查询角色列表（支持分页）
-     */
-    @GetMapping("/role/list")
-    public Result listRoles(@RequestParam(defaultValue = "1") Integer pageNum,
-                           @RequestParam(defaultValue = "10") Integer pageSize,
-                           @RequestParam(required = false) String keyword) {
-        Page<Role> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            wrapper.like(Role::getRoleName, keyword)
-                   .or().like(Role::getRoleCode, keyword);
-        }
-        wrapper.orderByDesc(Role::getCreatedAt);
-        return Result.success(roleMapper.selectPage(page, wrapper));
-    }
+
+
 
     /**
-     * 获取所有角色（不分页）
+     * 查询所有角色（用户管理页面初始化下拉用）
      */
-    @GetMapping("/role/all")
-    public Result getAllRoles() {
+    @GetMapping("/roles")
+    @Operation(summary = "获取所有角色列表")
+    public Result getAllRolesForSelect() {
         return Result.success(roleMapper.selectList(
-            new LambdaQueryWrapper<Role>().orderByAsc(Role::getCreatedAt)
+                new LambdaQueryWrapper<Role>().eq(Role::getStatus, "1").orderByAsc(Role::getSort)
         ));
     }
 
+
     /**
-     * 获取角色详情（包含权限）
+     * 查询所有角色（角色管理界面含权限列表和用户数量）
      */
-    @GetMapping("/role/{id}")
-    public Result getRole(@PathVariable Long id) {
-        Role role = roleMapper.selectById(id);
-        if (role == null) {
-            return Result.fail(404, "角色不存在");
+    @GetMapping("/role/list")
+    @Operation(summary = "查询所有角色", description = "返回所有角色及其权限列表、用户数量")
+    public Result getAllRoles() {
+        try {
+            // 1. 查所有角色 + 用户数量（一条 SQL）
+            List<RoleVO> roles = roleMapper.selectAllRolesWithUserCount();
+            log.info("获取角色和用户数量");
+            // 2. 批量查所有角色的权限（避免 N+1）
+            if (!roles.isEmpty()) {
+                // 查出全部 role_permission 关联
+                log.info("开始查角色权限中间表");
+                List<RolePermission> allRolePerms = rolePermissionMapper.selectList(
+                        new LambdaQueryWrapper<RolePermission>()
+                );
+                log.info("allRolePerms.size:{}",allRolePerms.size());
+                // 查出全部权限
+                List<Permission> allPerms = permissionMapper.selectList(new LambdaQueryWrapper<Permission>());
+                log.info("permissionList.size:{}",allPerms.size());
+                Map<Long, Permission> permMap = allPerms.stream()
+                        .collect(Collectors.toMap(Permission::getId, p -> p));
+
+                // 按 roleId 分组，组装到每个 RoleVO
+                Map<Long, List<Long>> rolePermIds = allRolePerms.stream()
+                        .collect(Collectors.groupingBy(
+                                RolePermission::getRoleId,
+                                Collectors.mapping(RolePermission::getPermissionId, Collectors.toList())
+                        ));
+
+                roles.forEach(role -> {
+                    List<Long> permIds = rolePermIds.getOrDefault(role.getId(), java.util.Collections.emptyList());
+                    List<Permission> perms = permIds.stream()
+                            .map(permMap::get)
+                            .filter(p -> p != null)
+                            .collect(Collectors.toList());
+                    role.setPermissions(perms);
+                });
+            }
+
+            return Result.success(roles);
+        } catch (Exception e) {
+            log.error("查询角色列表失败: {}", e.getMessage(), e);
+            return Result.fail(500, "查询角色列表失败");
         }
-        
-        // 查询角色的权限列表
-        List<RolePermission> rolePermissions = rolePermissionMapper.selectList(id);
-        List<Long> permissionIds = rolePermissions.stream()
-            .map(RolePermission::getPermissionId).collect(Collectors.toList());
-        
-        java.util.Map<String, Object> result = new java.util.HashMap<>();
-        result.put("role", role);
-        result.put("permissionIds", permissionIds);
-        
-        return Result.success(result);
     }
 
     /**
@@ -325,7 +334,7 @@ public class AdminUserController {
      */
     @PostMapping("/role")
     @Transactional(rollbackFor = Exception.class)
-    public Result createRole(@RequestBody java.util.Map<String, Object> params) {
+    public Result createRole(@RequestBody Map<String, Object> params) {
         Role role = new Role();
         role.setRoleName((String) params.get("roleName"));
         role.setRoleCode((String) params.get("roleCode"));
@@ -417,23 +426,7 @@ public class AdminUserController {
     }
 
     // ==================== 权限管理 ====================
-    
-    /**
-     * 查询权限列表（支持分页）
-     */
-    @GetMapping("/permission/list")
-    public Result listPermissions(@RequestParam(defaultValue = "1") Integer pageNum,
-                                 @RequestParam(defaultValue = "10") Integer pageSize,
-                                 @RequestParam(required = false) String keyword) {
-        Page<Permission> page = new Page<>(pageNum, pageSize);
-        LambdaQueryWrapper<Permission> wrapper = new LambdaQueryWrapper<>();
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            wrapper.like(Permission::getName, keyword)
-                   .or().like(Permission::getPermissionCode, keyword);
-        }
-        wrapper.orderByAsc(Permission::getSort).orderByDesc(Permission::getCreatedAt);
-        return Result.success(permissionMapper.selectPage(page, wrapper));
-    }
+
 
     /**
      * 获取所有权限（树形结构）
