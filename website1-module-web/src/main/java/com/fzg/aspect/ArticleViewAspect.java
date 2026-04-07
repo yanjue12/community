@@ -1,8 +1,10 @@
 package com.fzg.aspect;
 
+import com.fzg.enums.BehaviorTypeEnum;
 import com.fzg.mapper.ArticleViewHistoryMapper;
 import com.fzg.model.ArticleViewHistory;
 import com.fzg.service.ArticleStatService;
+import com.fzg.service.UserBehaviorService;
 import com.fzg.vo.ArticleDetailVO;
 import com.fzg.vo.ArticleRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,9 @@ public class ArticleViewAspect {
     @Autowired
     private ArticleViewHistoryMapper articleViewHistoryMapper;
 
+    @Autowired
+    private UserBehaviorService userBehaviorService;
+
     @Autowired(required = false)
     private HttpServletRequest httpServletRequest;
 
@@ -46,6 +51,12 @@ public class ArticleViewAspect {
                         req.getUserId(),
                         req.getIp(),
                         article.getAuthorId()
+                );
+
+                userBehaviorService.recordBehavior(
+                        req.getUserId(),
+                        req.getArticleId(),
+                        BehaviorTypeEnum.VIEW
                 );
             }
         }

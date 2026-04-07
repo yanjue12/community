@@ -9,6 +9,9 @@ import java.time.temporal.ChronoUnit;
 public class BehaviorDecayUtil {
 
     public static double decay(LocalDateTime time) {
+        if (time == null) {
+            return 0.0;
+        }
         long days = ChronoUnit.DAYS.between(time, LocalDateTime.now());
 
         if (days <= 7) return 1.0;

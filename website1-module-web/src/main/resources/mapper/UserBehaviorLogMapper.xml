@@ -13,14 +13,23 @@
             tag_id as tagId,
             category_id as categoryId,
             author_id as authorId,
-            create_time as createTime
+            create_at as createAt
         from user_behavior_log
         where user_id = #{userId}
-          and create_time >= date_sub(now(), interval #{days} day)
+          and create_at >= date_sub(now(), interval #{days} day)
     </select>
 
     <select id="selectRecentBehavior" resultType="com.fzg.model.UserBehaviorLog">
-        select *
+        select 
+            id,
+            user_id as userId,
+            article_id as articleId,
+            behavior_type as behaviorType,
+            behavior_weight as behaviorWeight,
+            tag_id as tagId,
+            category_id as categoryId,
+            author_id as authorId,
+            create_at as createAt
         from user_behavior_log
         where user_id = #{userId}
           and create_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)

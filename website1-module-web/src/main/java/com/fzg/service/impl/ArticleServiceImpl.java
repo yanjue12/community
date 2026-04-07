@@ -11,6 +11,7 @@ import com.fzg.job.ArticleQueryExecutor;
 import com.fzg.mapper.*;
 import com.fzg.model.*;
 import com.fzg.service.ArticleService;
+import com.fzg.service.UserProfileCalculateService;
 import com.fzg.service.UserPrivacyService;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +64,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private UserPrivacyService userPrivacyService;
     @Autowired
     private UserProfileMapper userProfileMapper;
+    @Autowired
+    private UserProfileCalculateService userProfileCalculateService;
     @Autowired
     private SearchHistoryMapper searchHistoryMapper;
 
@@ -312,6 +315,15 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         UserProfile profile = userProfileMapper.selectByUserId(userId);
 
         if (profile == null || profile.getProfileLevel() < 1) {
+            try {
+                userProfileCalculateService.calculateByUserId(userId);
+                profile = userProfileMapper.selectByUserId(userId);
+            } catch (Exception e) {
+                log.warn("实时重算用户画像失败, userId={}, err={}", userId, e.getMessage());
+            }
+        }
+
+        if (profile == null || profile.getProfileLevel() < 1) {
             return baseMapper.queryHotIdsLimit(100);
         }
 
@@ -333,7 +345,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         Set<Long> excludeIds = new HashSet<>();
 
         List<Long> coldIds =
-                    baseMapper.queryPersonalizedList(
+                baseMapper.queryPersonalizedList(
                         topTagWeights,
                         excludeIds,
                         "cold",
@@ -351,6 +363,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 );
 
         excludeIds.addAll(hotIds);
+        Set<Long> exposedIds = getExposedArticleIds(userId);
+        excludeIds.addAll(exposedIds);
 
         List<Long> exploreIds =
                 baseMapper.queryExploreList(
@@ -362,6 +376,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         List<Long> finalIds = new ArrayList<>();
         finalIds.addAll(coldIds);
         finalIds.addAll(hotIds);
+        Collections.shuffle(finalIds);
 
         return mixIdList(finalIds, exploreIds);
     }
@@ -466,6 +481,9 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             Map<Long, Double> tagProfile,
             int limit) {
 
+        if (tagProfile == null || tagProfile.isEmpty()) {
+            return Collections.emptyList();
+        }
         return tagProfile.entrySet().stream()
                 .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                 .limit(limit)

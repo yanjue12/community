@@ -33,6 +33,8 @@ public class UserProfile {
     private Integer profileLevel;
 
     private LocalDateTime lastCalculatedAt;
+    @TableField("create_at")
     private LocalDateTime createTime;
+    @TableField("update_at")
     private LocalDateTime updateTime;
 }

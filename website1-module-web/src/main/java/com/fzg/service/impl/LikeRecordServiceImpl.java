@@ -3,6 +3,7 @@ package com.fzg.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.constant.RedisArticleKey;
+import com.fzg.enums.BehaviorTypeEnum;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.LikeRecordMapper;
@@ -14,6 +15,7 @@ import com.fzg.model.User;
 import com.fzg.ratelimit.LikeRateLimit;
 import com.fzg.service.LikeRecordService;
 import com.fzg.service.NotificationPublisher;
+import com.fzg.service.UserBehaviorService;
 import com.fzg.vo.LikeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
     private final UserMapper userMapper;
     private final LikeRateLimit likeRateLimit;
     private final NotificationPublisher notificationPublisher;
+    private final UserBehaviorService userBehaviorService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -102,6 +105,12 @@ public class LikeRecordServiceImpl extends ServiceImpl<LikeRecordMapper, LikeRec
                                 article.getUserId(), userId, articleId, article.getTitle(), likerName
                         );
                     }
+
+                    userBehaviorService.recordBehavior(
+                            userId,
+                            articleId,
+                            BehaviorTypeEnum.LIKE
+                    );
                 }
             }
             // 关键：更新 Redis 缓存点赞状态

@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -60,6 +61,7 @@ public class UserBehaviorServiceImpl implements UserBehaviorService {
         log.setTagId(dim.getTagId());
         log.setCategoryId(dim.getCategoryId());
         log.setAuthorId(dim.getAuthorId());
+        log.setCreateAt(LocalDateTime.now());
 
         behaviorLogMapper.insert(log);
 

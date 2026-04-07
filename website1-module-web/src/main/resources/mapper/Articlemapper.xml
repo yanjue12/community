@@ -593,6 +593,11 @@
             resultType="java.lang.Long">
 
         select a.id
+--         (a.view_count * 1
+--         + a.like_count * 10
+--         + a.comment_count * 6
+--         + a.collect_count * 8
+--         + a.share_count * 4) AS finalScore
 
         from article a
 
@@ -631,7 +636,7 @@
 
         group by a.id
 
-        order by finalScore desc,
+        order by
         a.published_at desc
 
         limit #{pageSize}

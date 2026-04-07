@@ -17,13 +17,13 @@
         )
         values
             (
-                #{userId},
-                #{tagProfile},
-                #{categoryProfile},
-                #{authorProfile},
-                #{behaviorCount},
-                #{profileLevel},
-                #{lastCalculatedAt},
+                #{profile.userId},
+                #{profile.tagProfile},
+                #{profile.categoryProfile},
+                #{profile.authorProfile},
+                #{profile.behaviorCount},
+                #{profile.profileLevel},
+                #{profile.lastCalculatedAt},
                 now(),
                 now()
             )
@@ -36,7 +36,20 @@
                                  last_calculated_at = values(last_calculated_at),
                                  update_at = now()
     </insert>
-    <select id="selectByUserId" resultType="com.fzg.model.UserProfile">
+    <resultMap id="UserProfileMap" type="com.fzg.model.UserProfile">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="tag_profile" property="tagProfile" typeHandler="com.fzg.handler.JsonMapTypeHandler"/>
+        <result column="category_profile" property="categoryProfile" typeHandler="com.fzg.handler.JsonMapTypeHandler"/>
+        <result column="author_profile" property="authorProfile" typeHandler="com.fzg.handler.JsonMapTypeHandler"/>
+        <result column="behavior_count" property="behaviorCount"/>
+        <result column="profile_level" property="profileLevel"/>
+        <result column="last_calculated_at" property="lastCalculatedAt"/>
+        <result column="create_at" property="createTime"/>
+        <result column="update_at" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectByUserId" resultMap="UserProfileMap">
         select * from user_profile
         where user_id = #{userId}
     </select>
