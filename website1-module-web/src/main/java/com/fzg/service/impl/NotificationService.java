@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fzg.mapper.Notificationmapper;
+import com.fzg.mapper.UserMapper;
 import com.fzg.model.Notification;
+import com.fzg.model.User;
 import com.fzg.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,7 @@ public class NotificationService extends ServiceImpl<Notificationmapper,Notifica
 
     private final Notificationmapper notificationMapper;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final UserMapper userMapper;
 
     private static final String UNREAD_COUNT_KEY = "notification:unread:";
     private static final String UNREAD_TYPE_KEY = "notification:unread:type:";
@@ -123,6 +126,32 @@ public class NotificationService extends ServiceImpl<Notificationmapper,Notifica
                 break;
             default:
                 wrapper.notIn(Notification::getActionType, "user_login", "user_register");
+        }
+    }
+
+    /**
+     * 批量填充发送人头像
+     */
+    private void fillFromUserAvatar(List<Notification> list) {
+        if (list == null || list.isEmpty()) return;
+        // 收集所有非空的 fromUserId
+        Set<Long> fromUserIds = new java.util.HashSet<>();
+        for (Notification n : list) {
+            if (n.getFromUserId() != null) {
+                fromUserIds.add(n.getFromUserId());
+            }
+        }
+        if (fromUserIds.isEmpty()) return;
+        // 批量查头像
+        LambdaQueryWrapper<User> q = new LambdaQueryWrapper<>();
+        q.in(User::getId, fromUserIds).select(User::getId, User::getAvatar);
+        Map<Long, String> avatarMap = new java.util.HashMap<>();
+        userMapper.selectList(q).forEach(u -> avatarMap.put(u.getId(), u.getAvatar()));
+        // 回填
+        for (Notification n : list) {
+            if (n.getFromUserId() != null) {
+                n.setFromUserAvatar(avatarMap.get(n.getFromUserId()));
+            }
         }
     }
 
@@ -589,7 +618,9 @@ public class NotificationService extends ServiceImpl<Notificationmapper,Notifica
             wrapper.eq(Notification::getIsRead, isRead);
         }
 
-        return notificationMapper.selectPage(page, wrapper);
+        Page<Notification> result = notificationMapper.selectPage(page, wrapper);
+        fillFromUserAvatar(result.getRecords());
+        return result;
     }
 
     /**
@@ -616,7 +647,9 @@ public class NotificationService extends ServiceImpl<Notificationmapper,Notifica
             wrapper.eq(Notification::getIsRead, isRead);
         }
 
-        return notificationMapper.selectPage(page, wrapper);
+        Page<Notification> result = notificationMapper.selectPage(page, wrapper);
+        fillFromUserAvatar(result.getRecords());
+        return result;
     }
 
     /**

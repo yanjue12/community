@@ -2,6 +2,7 @@ package com.fzg.controller.app;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.enums.ArticleListType;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
@@ -67,6 +68,7 @@ public class ArticleController {
 
 
     @PostMapping("/detail")
+    @ArticleViewTrack
     public Result details(@RequestBody ArticleRequest articleRequest){
         if(null == articleRequest || StringUtils.isEmpty(articleRequest.getIp())
         || null == articleRequest.getArticleId()){

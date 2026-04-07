@@ -6,8 +6,10 @@ import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.AuditRecordMapper;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.model.Article;
+import com.fzg.model.AuditLog;
 import com.fzg.model.AuditRecord;
 import com.fzg.model.Result;
+import com.fzg.service.AuditLogService;
 import com.fzg.service.AuditRecordService;
 import com.fzg.vo.AuditQueryRequest;
 import com.fzg.vo.AuditRecordVO;
@@ -34,6 +36,7 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
     private final AuditRecordMapper auditRecordMapper;
     private final Articlemapper articleMapper;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final AuditLogService auditLogService;
 
     private static final String AUDIT_LOCK_PREFIX = "audit:lock:";
 
@@ -124,6 +127,9 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
                 articleMapper.updateById(article);
             }
 
+            // 写入审核操作日志
+            auditLogService.save(new AuditLog(auditId, AuditLog.ActionType.MANUAL_PASS, auditorId, reason));
+
             log.info("审核通过成功: auditId={}, auditorId={}", auditId, auditorId);
             return Result.success("审核通过成功");
         } catch (Exception e) {
@@ -173,6 +179,9 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
                 article.setUpdatedAt(new Date());
                 articleMapper.updateById(article);
             }
+
+            // 写入审核操作日志
+            auditLogService.save(new AuditLog(auditId, AuditLog.ActionType.MANUAL_REJECT, auditorId, reason));
 
             log.info("审核拒绝成功: auditId={}, auditorId={}, reason={}", auditId, auditorId, reason);
             return Result.success("审核拒绝成功");

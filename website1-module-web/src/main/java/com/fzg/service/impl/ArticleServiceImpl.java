@@ -63,6 +63,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private UserPrivacyService userPrivacyService;
     @Autowired
     private UserProfileMapper userProfileMapper;
+    @Autowired
+    private SearchHistoryMapper searchHistoryMapper;
 
 
 
@@ -129,7 +131,6 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
 
     @Override
-    @ArticleViewTrack
     public ArticleDetailVO queryArticleDetails(ArticleRequest articleRequest) {
 
         Long articleId = articleRequest.getArticleId();
@@ -550,6 +551,11 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         Integer pageSize = searchRequset.getPageSize() == null ? 10 : searchRequset.getPageSize();
         Long userId = searchRequset.getUserId();
 
+        // 登录用户保存搜索历史
+        if (userId != null && keyword != null && !keyword.trim().isEmpty()) {
+            saveSearchHistory(userId, keyword.trim());
+        }
+
         ResultSearchVO result = new ResultSearchVO();
         int offset = (pageNum - 1) * pageSize;
 
@@ -827,6 +833,27 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private boolean isMutualFollow(Long userId, Long authorId) {
         return isFollower(userId, authorId)
                 && isFollower(authorId, userId);
+    }
+
+    /**
+     * 保存搜索历史：已存在则更新时间，不存在则新增
+     */
+    private void saveSearchHistory(Long userId, String searchTerm) {
+        try {
+            SearchHistory existing = searchHistoryMapper.selectByUserAndTerm(userId, searchTerm);
+            if (existing != null) {
+                searchHistoryMapper.updateLastSearchedAt(userId, searchTerm);
+            } else {
+                SearchHistory history = new SearchHistory();
+                history.setUserId(userId);
+                history.setSearchTerm(searchTerm);
+                history.setSearchedAt(new Date());
+                history.setLastSearchedAt(new Date());
+                searchHistoryMapper.insert(history);
+            }
+        } catch (Exception e) {
+            log.warn("保存搜索历史失败: userId={}, term={}, err={}", userId, searchTerm, e.getMessage());
+        }
     }
 
 

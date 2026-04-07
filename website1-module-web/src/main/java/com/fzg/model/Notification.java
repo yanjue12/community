@@ -128,5 +128,11 @@ public class Notification implements Serializable {
     @TableField("notify_level")
     private String notifyLevel;
 
+    /**
+     * 发送消息人头像（非数据库字段，查询时填充）
+     */
+    @TableField(exist = false)
+    private String fromUserAvatar;
+
     private static final long serialVersionUID = 1L;
 }
