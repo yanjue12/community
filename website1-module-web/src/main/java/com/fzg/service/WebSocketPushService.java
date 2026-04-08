@@ -51,9 +51,9 @@ public class WebSocketPushService {
             boolean success = WebSocketManager.sendMessageToUser(userId, messageJson);
 
             if (success) {
-                log.info("✅ 向用户{}推送通知成功 [{}]: {}", userId, eventId, title);
+                log.info("向用户{}推送通知成功 [{}]: {}", userId, eventId, title);
             } else {
-                log.warn("❌ 向用户{}推送通知失败 [{}]: {}", userId, eventId, title);
+                log.warn("向用户{}推送通知失败 [{}]: {}", userId, eventId, title);
             }
 
             return success;

@@ -1,6 +1,10 @@
 package com.fzg.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+
 import com.fzg.dto.analytics.ChartDataDTO;
 import com.fzg.dto.analytics.DashboardDTO;
 import com.fzg.dto.analytics.RealtimeActivityDTO;
@@ -32,6 +36,8 @@ import java.util.Map;
 @RequestMapping("/admin/analytics")
 @RequiredArgsConstructor
 @Slf4j
+@SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 @Tag(name = "管理端数据分析", description = "数据统计、图表分析相关接口")
 public class AdminAnalyticsController {
 

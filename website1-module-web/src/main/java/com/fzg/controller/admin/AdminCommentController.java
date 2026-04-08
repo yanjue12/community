@@ -1,6 +1,8 @@
 package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.mapper.Commentmapper;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/admin/comment")
 @SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 public class AdminCommentController {
 
     @Autowired
@@ -57,6 +60,7 @@ public class AdminCommentController {
      * 删除评论
      */
     @DeleteMapping("/{id}")
+    @SaCheckRole("admin")
     public Result deleteComment(@PathVariable Long id) {
         int result = commentMapper.deleteById(id);
         return Result.handle(result > 0);
@@ -66,6 +70,7 @@ public class AdminCommentController {
      * 批量删除评论
      */
     @DeleteMapping("/batch")
+    @SaCheckRole("admin")
     public Result batchDelete(@RequestBody java.util.List<Long> ids) {
         int result = commentMapper.deleteBatchIds(ids);
         return Result.handle(result > 0);
@@ -76,6 +81,7 @@ public class AdminCommentController {
      * 置顶评论
      */
     @PutMapping("/{id}/top")
+    @SaCheckRole("admin")
     public Result topComment(@PathVariable Long id, @RequestParam String isTop) {
         Comment comment = new Comment();
         comment.setId(id);

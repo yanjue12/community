@@ -1,6 +1,8 @@
 package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import cn.dev33.satoken.stp.StpUtil;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
@@ -23,6 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 @Tag(name = "管理端举报管理")
 public class AdminReportController {
 
@@ -33,6 +36,7 @@ public class AdminReportController {
      * action: delete_content-删除内容, warn_user-警告用户, ban_user-封禁用户, reject-驳回举报
      */
     @PostMapping("/{reportId}/action")
+    @SaCheckRole(value = {"admin", "reportAdmin"}, mode = SaMode.OR)
     @Operation(summary = "处理举报", description = "delete_content/warn_user/ban_user/reject")
     public Result processAction(
             @Parameter(description = "举报ID", required = true)
@@ -99,6 +103,7 @@ public class AdminReportController {
      * status: resolved-通过, rejected-驳回
      */
     @PostMapping("/batch-process")
+    @SaCheckRole(value = {"admin", "reportAdmin"}, mode = SaMode.OR)
     @Operation(summary = "批量处理举报（通过/驳回）")
     public Result batchProcess(
             @Parameter(description = "举报ID列表", required = true)

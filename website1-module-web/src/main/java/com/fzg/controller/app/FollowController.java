@@ -35,7 +35,7 @@ public class FollowController {
      * 关注
      * @return
      */
-    @PostMapping("add")
+    @PostMapping("/add")
     public Result addFollow(@RequestBody FollowVO follow){
         if(null == follow || follow.getFollowerId() == null || follow.getFollowingId() == null){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);

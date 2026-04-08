@@ -11,6 +11,7 @@ import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.Rolemapper;
 import com.fzg.mapper.UserRolemapper;
 import com.fzg.model.Article;
+import com.fzg.model.Follow;
 import com.fzg.model.Result;
 import com.fzg.model.Role;
 import com.fzg.model.User;
@@ -18,6 +19,7 @@ import com.fzg.model.UserPrivacy;
 import com.fzg.model.UserRole;
 import com.fzg.service.UserPrivacyService;
 import com.fzg.service.UserService;
+import com.fzg.service.FollowService;
 import com.fzg.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -52,6 +54,7 @@ public class UserController {
     private final Articlemapper articlemapper;
     private final UserRolemapper userRolemapper;
     private final Rolemapper rolemapper;
+    private final FollowService followService;
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -158,8 +161,14 @@ public class UserController {
 
     @PostMapping("/queryUserInfo")
     public Result queryUserInfo(@RequestBody UserVO userVO) {
+        if (userVO == null || userVO.getUserId() == null) {
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
         log.info("userId:{}",userVO.getUserId());
         User user = userService.getById(Long.valueOf(userVO.getUserId()));
+        if (user == null) {
+            return Result.fail(EnumReturn.valueOf("用户不存在"));
+        }
         userVO.setNickname(user.getNickname());
         userVO.setAvatar(user.getAvatar());
         userVO.setSignature(user.getSignature());
@@ -170,10 +179,26 @@ public class UserController {
         userVO.setFollowingCount(user.getFollowingCount());
         userVO.setCollectionCount(user.getCollectionCount());
         userVO.setCoverImages(user.getCoverImages());
-        Boolean b = redisTemplate.opsForSet().isMember(
-                RedisFollowKey.followingSet(userVO.getCurUserId()),
-                String.valueOf(userVO.getUserId()));
-        userVO.setFollowStatus(b);
+
+        boolean isFollow = false;
+        Long curUserId = userVO.getCurUserId();
+        Long targetUserId = Long.valueOf(userVO.getUserId());
+        if (curUserId != null) {
+            long followCount = followService.count(
+                    new LambdaQueryWrapper<Follow>()
+                            .eq(Follow::getFollowerId, curUserId)
+                            .eq(Follow::getFollowingId, targetUserId)
+            );
+            isFollow = followCount > 0;
+
+            String followingKey = RedisFollowKey.followingSet(curUserId);
+            if (isFollow) {
+                redisTemplate.opsForSet().add(followingKey, String.valueOf(targetUserId));
+            } else {
+                redisTemplate.opsForSet().remove(followingKey, String.valueOf(targetUserId));
+            }
+        }
+        userVO.setFollowStatus(isFollow);
         return Result.success(userVO);
     }
 

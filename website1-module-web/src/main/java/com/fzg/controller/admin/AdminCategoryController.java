@@ -1,6 +1,8 @@
 package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
@@ -28,6 +30,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/category")
 @SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 @Slf4j
 @Tag(name = "管理端分类管理", description = "分类管理相关接口")
 public class AdminCategoryController {
@@ -169,6 +172,7 @@ public class AdminCategoryController {
      * 创建分类
      */
     @PostMapping("/create")
+    @SaCheckRole("admin")
     public Result createCategory(@RequestBody Category category) {
         category.setCreatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
         int result = categoryMapper.insert(category);
@@ -180,6 +184,7 @@ public class AdminCategoryController {
      * 删除分类
      */
     @DeleteMapping("/{id}")
+    @SaCheckRole("admin")
     public Result deleteCategory(@PathVariable Long id) {
         // 检查是否有子分类
         LambdaQueryWrapper<Category> wrapper = new LambdaQueryWrapper<>();
@@ -196,6 +201,7 @@ public class AdminCategoryController {
      * 批量删除分类
      */
     @DeleteMapping("/batch")
+    @SaCheckRole("admin")
     public Result batchDelete(@RequestBody java.util.List<Long> ids) {
         int result = categoryMapper.deleteBatchIds(ids);
         return Result.handle(result > 0);
@@ -207,6 +213,7 @@ public class AdminCategoryController {
      * 启用/禁用分类
      */
     @PutMapping("/{id}/status")
+    @SaCheckRole("admin")
     public Result updateStatus(@PathVariable Long id, @RequestParam String status) {
         Category category = new Category();
         category.setId(id);

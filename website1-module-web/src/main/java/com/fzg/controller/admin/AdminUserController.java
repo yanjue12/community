@@ -1,6 +1,8 @@
 package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.mapper.PermissionMapper;
@@ -38,6 +40,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/admin/user")
 @SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 @Slf4j
 @Tag(name = "管理端用户管理", description = "用户管理相关接口")
 public class AdminUserController {
@@ -101,6 +104,7 @@ public class AdminUserController {
      * 编辑用户（状态 + 角色）
      */
     @PutMapping("/edit/{id}")
+    @SaCheckRole("admin")
     @Transactional(rollbackFor = Exception.class)
     @Operation(summary = "编辑用户状态和角色")
     public Result editUser(@PathVariable Long id, @RequestBody UserEditRequest req) {
@@ -167,6 +171,7 @@ public class AdminUserController {
      * 创建用户（可同时分配角色）
      */
     @PostMapping("/create")
+    @SaCheckRole("admin")
     @Transactional(rollbackFor = Exception.class)
     public Result createUser(@RequestBody Map<String, Object> params) {
         User user = new User();
@@ -225,6 +230,7 @@ public class AdminUserController {
      * 更新用户信息（包含角色授权）
      */
     @PutMapping("/{id}")
+    @SaCheckRole("admin")
     @Transactional(rollbackFor = Exception.class)
     public Result updateUser(@PathVariable Long id, @RequestBody java.util.Map<String, Object> params) {
         User user = userMapper.selectById(id);
@@ -333,6 +339,7 @@ public class AdminUserController {
      * 创建角色（可同时分配权限）
      */
     @PostMapping("/role")
+    @SaCheckRole("admin")
     @Transactional(rollbackFor = Exception.class)
     public Result createRole(@RequestBody Map<String, Object> params) {
         Role role = new Role();
@@ -363,6 +370,7 @@ public class AdminUserController {
      * 更新角色（包含权限分配）
      */
     @PutMapping("/role/{id}")
+    @SaCheckRole("admin")
     @Transactional(rollbackFor = Exception.class)
     public Result updateRole(@PathVariable Long id, @RequestBody java.util.Map<String, Object> params) {
         Role role = roleMapper.selectById(id);
@@ -406,6 +414,7 @@ public class AdminUserController {
      * 删除角色
      */
     @DeleteMapping("/role/{id}")
+    @SaCheckRole("admin")
     @Transactional(rollbackFor = Exception.class)
     public Result deleteRole(@PathVariable Long id) {
         // 检查是否有用户使用该角色
@@ -452,6 +461,7 @@ public class AdminUserController {
      * 创建权限
      */
     @PostMapping("/permission")
+    @SaCheckRole("admin")
     public Result createPermission(@RequestBody Permission permission) {
         permission.setCreatedAt(new Date());
         int result = permissionMapper.insert(permission);
@@ -462,6 +472,7 @@ public class AdminUserController {
      * 更新权限
      */
     @PutMapping("/permission/{id}")
+    @SaCheckRole("admin")
     public Result updatePermission(@PathVariable Long id, @RequestBody Permission permission) {
         permission.setId(id);
         permission.setUpdatedAt(new Date());
@@ -473,6 +484,7 @@ public class AdminUserController {
      * 删除权限
      */
     @DeleteMapping("/permission/{id}")
+    @SaCheckRole("admin")
     @Transactional(rollbackFor = Exception.class)
     public Result deletePermission(@PathVariable Long id) {
         // 检查是否有角色使用该权限

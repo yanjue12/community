@@ -1,6 +1,8 @@
 package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.AuditRecordMapper;
@@ -8,6 +10,7 @@ import com.fzg.mapper.Categorymapper;
 import com.fzg.model.Article;
 import com.fzg.model.AuditRecord;
 import com.fzg.model.Result;
+import com.fzg.service.ArticleExportService;
 import com.fzg.vo.ArticleRequest;
 import com.fzg.vo.ArticleStatsVO;
 import com.fzg.vo.ArticleVO;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -26,6 +30,7 @@ import java.util.List;
 @RequestMapping("/admin/article")
 @RestController
 @SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 public class AdminArticleController {
 
     @Autowired
@@ -34,6 +39,8 @@ public class AdminArticleController {
     private AuditRecordMapper auditRecordMapper;
     @Autowired
     private Categorymapper categorymapper;
+    @Autowired
+    private ArticleExportService articleExportService;
 
 
 
@@ -59,6 +66,7 @@ public class AdminArticleController {
      * 删除文章
      */
     @DeleteMapping("delete/{id}")
+    @SaCheckRole("admin")
     public Result deleteArticle(@PathVariable Long id) {
         Article article = articleMapper.selectById(id);
         if(null == article){
@@ -73,6 +81,7 @@ public class AdminArticleController {
      * 批量删除文章
      */
     @DeleteMapping("/batch")
+    @SaCheckRole("admin")
     public Result batchDelete(@RequestBody List<Long> ids) {
         List<Article> articles = articleMapper.selectBatchIds(ids);
         if(CollectionUtils.isEmpty(articles)){
@@ -89,6 +98,7 @@ public class AdminArticleController {
      * 更新文章状态
      */
     @PutMapping("/update/status/{id}")
+    @SaCheckRole("admin")
     public Result updateStatus(@PathVariable Long id, @RequestParam String status) {
         Article article = articleMapper.selectById(id);
         if(null == article){
@@ -103,6 +113,7 @@ public class AdminArticleController {
      * 置顶文章
      */
     @PutMapping("/{id}/top")
+    @SaCheckRole("admin")
     public Result topArticle(@PathVariable Long id, @RequestParam String isTop) {
         Article article = new Article();
         article.setId(id);
@@ -115,6 +126,7 @@ public class AdminArticleController {
      * 推荐文章
      */
     @PutMapping("/{id}/recommend")
+    @SaCheckRole("admin")
     public Result recommendArticle(@PathVariable Long id, @RequestParam String isRecommend) {
         Article article = new Article();
         article.setId(id);
@@ -124,52 +136,23 @@ public class AdminArticleController {
     }
 
     /**
-     * 手动审核通过
+     * 导出文章统计与明细
+     * @param start 开始日期(yyyy-MM-dd)，默认本周一
+     * @param end   结束日期(yyyy-MM-dd)，默认今天
+     * @param format 导出格式 excel/pdf
      */
-    @PostMapping("/audit/manual/pass")
-    @Transactional(rollbackFor = Exception.class)
-    public Result manualPass(@RequestParam Long articleId, @RequestParam Long adminId) {
-        Article article = new Article();
-        article.setId(articleId);
-        article.setStatus("1"); // 1-已发布
-        int result = articleMapper.updateById(article);
-        
-        if (result > 0) {
-            // 记录审核记录
-            AuditRecord record = new AuditRecord();
-            record.setArticleId(articleId);
-            record.setAuditType((byte) 2);
-            record.setAuditorId(adminId);
-            record.setAuditStatus((byte) 1);
-            record.setUpdatedAt(new java.util.Date());
-            auditRecordMapper.insert(record);
+    @GetMapping("/export")
+    public void exportArticles(@RequestParam(required = false) String start,
+                               @RequestParam(required = false) String end,
+                               @RequestParam(defaultValue = "excel") String format,
+                               javax.servlet.http.HttpServletResponse response) {
+        LocalDate s = start == null || start.isBlank() ? null : LocalDate.parse(start);
+        LocalDate e = end == null || end.isBlank() ? null : LocalDate.parse(end);
+        if ("pdf".equalsIgnoreCase(format)) {
+            articleExportService.exportPdf(s, e, response);
+        } else {
+            articleExportService.exportExcel(s, e, response);
         }
-        return Result.handle(result > 0);
-    }
-
-    /**
-     * 手动审核拒绝
-     */
-    @PostMapping("/audit/manual/reject")
-    @Transactional(rollbackFor = Exception.class)
-    public Result manualReject(@RequestParam Long articleId, 
-                               @RequestParam Long adminId,
-                               @RequestParam String reason) {
-        Article article = new Article();
-        article.setId(articleId);
-        article.setStatus("2"); // 2-审核拒绝
-        int result = articleMapper.updateById(article);
-        
-        if (result > 0) {
-            AuditRecord record = new AuditRecord();
-            record.setArticleId(articleId);
-            record.setAuditorId(adminId);
-            record.setAuditStatus((byte) 2);
-            record.setReason(reason);
-            record.setUpdatedAt(new Date());
-            auditRecordMapper.insert(record);
-        }
-        return Result.handle(result > 0);
     }
 
     /**

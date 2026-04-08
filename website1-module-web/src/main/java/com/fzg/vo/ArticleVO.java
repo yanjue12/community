@@ -24,6 +24,11 @@ public class ArticleVO {
     private String avatar;//用户头像
     private String nickName;
 
+    private String username;
+    private String email;
+    private String location;
+    private String userStatus;
+
     private Integer viewCount;
     private Integer likeCount;
     private Integer commentCount;

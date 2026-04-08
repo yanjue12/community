@@ -467,7 +467,6 @@
         a.type,a.published_at as updatedTime,a.view_count as viewCount,
         a.like_count as likeCount,a.comment_count as commentCount,
         a.share_count as shareCount,a.collect_count as collectCount,
-        a.share_count as shareCount,
         a.is_recommend as isRecommend,
         a.is_top as isTop,
         u.id as userId, u.nickname as nickName,
@@ -493,7 +492,7 @@
         where a.visibility = 0 -- 0:公开
         and a.status = 1 -- 1:已发布
         and a.published_at is not null -- 已发布的文章
-        and a.created_at >= DATE_SUB(NOW(), INTERVAL 10 DAY)
+--        and a.created_at >= DATE_SUB(NOW(), INTERVAL 10 DAY)
         <!-- 关注：只显示关注的人的文章 -->
         and f.id is not null
         order by a.published_at desc
@@ -793,10 +792,29 @@
 
     </select>
     <select id="queryArticleByCondition" resultType="com.fzg.vo.ArticleVO">
-        select a.id,a.user_id as userId,a.title,a.summary,a.status,a.view_count as viewCount,
+        select a.id,
+               a.user_id              as userId,
+               a.title,
+               a.summary,
+               a.status,
+               a.comment_count        as commentCount,
+               a.like_count           as likeCount,
+               a.collect_count        as collectCount,
+               a.share_count          as shareCount,
+               a.view_count           as viewCount,
                a.like_count as likeCount,a.comment_count as commentCount,a.share_count as shareCount,
-        a.published_at as publishedAt ,a.cover_image as coverImage,a.is_top as isTop,
-        a.is_recommend as isRecommend,u.nickname,u.avatar, c9.name as categoryName
+        a.published_at         as publishedAt,
+               a.cover_image          as coverImage,
+               a.is_top              as isTop,
+        a.is_recommend         as isRecommend,
+               u.nickname            as nickName,
+               u.username            as username,
+               u.email               as email,
+               u.location            as location,
+               u.status              as userStatus,
+               u.avatar              as avatar,
+               c9.name               as categoryName,
+               group_concat(t.name)  as tagName
         from article a
         left join category c9 on a.category_id = c9.id
         left join user u on u.id = a.user_id
@@ -838,6 +856,7 @@
                 and a.published_at &lt; #{request.endTime}
             </if>
         </where>
+        group by a.id
         order by  a.published_at desc
         limit #{request.pageSize} offset #{offset}
     </select>

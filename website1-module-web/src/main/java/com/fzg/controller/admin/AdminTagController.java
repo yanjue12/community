@@ -1,6 +1,8 @@
 package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.mapper.ArticleTagMapper;
@@ -17,6 +19,7 @@ import java.util.Date;
 @RestController
 @RequestMapping("/admin/tag")
 @SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 public class AdminTagController {
 
     @Autowired
@@ -60,6 +63,7 @@ public class AdminTagController {
      * 创建标签
      */
     @PostMapping("/create")
+    @SaCheckRole("admin")
     public Result createTag(@RequestBody ArticleTag tag) {
         tag.setCreatedAt(new Date());
         int result = tagMapper.insert(tag);
@@ -70,6 +74,7 @@ public class AdminTagController {
      * 更新标签
      */
     @PutMapping("/{id}")
+    @SaCheckRole("admin")
     public Result updateTag(@PathVariable Long id, @RequestBody ArticleTag tag) {
         tag.setId(id);
         tag.setCreatedAt(new java.util.Date());
@@ -81,6 +86,7 @@ public class AdminTagController {
      * 删除标签
      */
     @DeleteMapping("/{id}")
+    @SaCheckRole("admin")
     public Result deleteTag(@PathVariable Long id) {
         int result = tagMapper.deleteById(id);
         return Result.handle(result > 0);
@@ -90,6 +96,7 @@ public class AdminTagController {
      * 批量删除标签
      */
     @DeleteMapping("/batch")
+    @SaCheckRole("admin")
     public Result batchDelete(@RequestBody java.util.List<Long> ids) {
         int result = tagMapper.deleteBatchIds(ids);
         return Result.handle(result > 0);

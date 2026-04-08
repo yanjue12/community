@@ -1,7 +1,10 @@
 package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import cn.dev33.satoken.stp.StpUtil;
+
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.AuditRecord;
 import com.fzg.model.Result;
@@ -24,6 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 @Tag(name = "管理端审核管理", description = "管理员审核相关接口")
 public class AdminAuditController {
 
@@ -51,6 +55,7 @@ public class AdminAuditController {
      * 审核通过
      */
     @PostMapping("/{auditId}/approve")
+    @SaCheckRole(value = {"admin", "auditAdmin"}, mode = SaMode.OR)
     @Operation(summary = "审核通过", description = "管理员审核通过文章")
     public Result approveAudit(
             @Parameter(description = "审核记录ID", example = "1")
@@ -72,6 +77,7 @@ public class AdminAuditController {
      * 审核拒绝
      */
     @PostMapping("/{auditId}/reject")
+    @SaCheckRole(value = {"admin", "auditAdmin"}, mode = SaMode.OR)
     @Operation(summary = "审核拒绝", description = "管理员审核拒绝文章")
     public Result rejectAudit(
             @Parameter(description = "审核记录ID", example = "1")
@@ -93,6 +99,7 @@ public class AdminAuditController {
      * 批量审核
      */
     @PostMapping("/batch")
+    @SaCheckRole(value = {"admin", "auditAdmin"}, mode = SaMode.OR)
     @Operation(summary = "批量审核", description = "批量审核多个文章")
     public Result batchAudit(
             @Parameter(description = "审核记录ID列表", required = true)

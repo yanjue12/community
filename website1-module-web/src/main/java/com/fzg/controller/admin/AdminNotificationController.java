@@ -1,8 +1,12 @@
 package com.fzg.controller.admin;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.fzg.enums.EnumReturn;
 import com.fzg.model.Result;
 import com.fzg.task.NotificationPartitionTask;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +24,8 @@ import java.util.Map;
 @RequestMapping("/api/admin/notification")
 @RequiredArgsConstructor
 @Slf4j
+@SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 @Tag(name = "管理员通知管理", description = "通知分区管理等管理员功能")
 public class AdminNotificationController {
 
@@ -29,6 +35,7 @@ public class AdminNotificationController {
      * 手动创建指定月份的分区
      */
     @PostMapping("/partition/create")
+    @SaCheckRole("admin")
     @Operation(summary = "创建指定月份分区")
     public Result<String> createPartition(@RequestParam int year, @RequestParam int month) {
         try {
@@ -51,6 +58,7 @@ public class AdminNotificationController {
      * 手动删除指定分区
      */
     @DeleteMapping("/partition/{partitionName}")
+    @SaCheckRole("admin")
     @Operation(summary = "删除指定分区")
     public Result<String> dropPartition(@PathVariable String partitionName) {
         try {
@@ -71,6 +79,7 @@ public class AdminNotificationController {
      * 手动执行下个月分区创建
      */
     @PostMapping("/partition/create-next-month")
+    @SaCheckRole("admin")
     @Operation(summary = "创建下个月分区")
     public Result<String> createNextMonthPartition() {
         try {
@@ -86,6 +95,7 @@ public class AdminNotificationController {
      * 手动执行历史分区删除
      */
     @PostMapping("/partition/drop-old")
+    @SaCheckRole("admin")
     @Operation(summary = "删除历史分区")
     public Result<String> dropOldPartitions() {
         try {

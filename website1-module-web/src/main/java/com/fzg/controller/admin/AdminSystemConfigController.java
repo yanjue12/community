@@ -1,6 +1,8 @@
 package com.fzg.controller.admin;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fzg.model.Result;
 import com.fzg.model.SystemConfig;
@@ -18,6 +20,7 @@ import java.util.Date;
 @RestController
 @RequestMapping("/admin/system/config")
 @SaCheckLogin
+@SaCheckRole(value = {"admin", "auditAdmin", "reportAdmin"}, mode = SaMode.OR)
 public class AdminSystemConfigController {
 
     @Autowired
@@ -52,6 +55,7 @@ public class AdminSystemConfigController {
      * 新增配置
      */
     @PostMapping
+    @SaCheckRole("admin")
     public Result create(@RequestBody SystemConfig config) {
         // 检查 configKey 唯一性
         Long count = systemConfigService.count(
@@ -69,6 +73,7 @@ public class AdminSystemConfigController {
      * 修改配置
      */
     @PutMapping("/{id}")
+    @SaCheckRole("admin")
     public Result update(@PathVariable Long id, @RequestBody SystemConfig config) {
         config.setId(id);
         config.setUpdatedAt(new Date());
@@ -79,6 +84,7 @@ public class AdminSystemConfigController {
      * 删除配置
      */
     @DeleteMapping("/{id}")
+    @SaCheckRole("admin")
     public Result delete(@PathVariable Long id) {
         return Result.handle(systemConfigService.removeById(id));
     }
@@ -99,6 +105,7 @@ public class AdminSystemConfigController {
      * 新增分组
      */
     @PostMapping("/group")
+    @SaCheckRole("admin")
     public Result createGroup(@RequestBody SystemConfigGroup group) {
         Long count = systemConfigGroupService.count(
                 new LambdaQueryWrapper<SystemConfigGroup>().eq(SystemConfigGroup::getGroupName, group.getGroupName())
@@ -113,6 +120,7 @@ public class AdminSystemConfigController {
      * 修改分组
      */
     @PutMapping("/group/{id}")
+    @SaCheckRole("admin")
     public Result updateGroup(@PathVariable Long id, @RequestBody SystemConfigGroup group) {
         group.setId(id);
         return Result.handle(systemConfigGroupService.updateById(group));
@@ -122,6 +130,7 @@ public class AdminSystemConfigController {
      * 删除分组
      */
     @DeleteMapping("/group/{id}")
+    @SaCheckRole("admin")
     public Result deleteGroup(@PathVariable Long id) {
         // 检查分组下是否有配置
         SystemConfigGroup g = systemConfigGroupService.getById(id);
