@@ -154,6 +154,10 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         LambdaQueryWrapper<UserPrivacy> l = new LambdaQueryWrapper<>();
         l.eq(UserPrivacy::getUserId,article.getAuthorId());
         UserPrivacy userPrivacy = userPrivacyMapper.selectOne(l);
+        if (userPrivacy == null) {
+            article.setCanComment("Public");
+            return article;
+        }
         String canComment = userPrivacy.getCanComment();
         if("0".equals(canComment)){
             article.setCanComment("Public");
@@ -220,25 +224,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         int pageSize = request.getPageSize() == null ? 10 : request.getPageSize();
         int offset = (pageNum - 1) * pageSize;
 
-        List<ArticleVO> list;
-
-        switch (request.getType()) {
-            case "0": // 热榜
-                list = baseMapper.queryHotList(request, pageSize, offset);
-                break;
-
-            case "1": // 推荐
-                list = queryRecommendList(request, pageSize, offset,pageNum);
-                break;
-
-            case "2": // 关注
-                list = baseMapper.queryFollowList(request, pageSize, offset);
-                break;
-
-            case "3": // 最新
-            default:
-                list = baseMapper.queryLatestList(request, pageSize, offset);
-        }
+        List<ArticleVO> list = queryHomeListByType(request, pageSize, offset, pageNum);
 
         if (CollectionUtils.isEmpty(list)) {
             return new ArticlePageVO();
@@ -254,6 +240,26 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             recordExpose(userId, list);
         }
         return vo;
+    }
+
+    // 首页四个tab统一分发：热榜/推荐/关注/最新
+    private List<ArticleVO> queryHomeListByType(
+            ArticleRequest request,
+            int pageSize,
+            int offset,
+            int pageNum) {
+
+        switch (request.getType()) {
+            case "0":
+                return baseMapper.queryHotList(request, pageSize, offset);
+            case "1":
+                return queryRecommendList(request, pageSize, offset, pageNum);
+            case "2":
+                return baseMapper.queryFollowList(request, pageSize, offset);
+            case "3":
+            default:
+                return baseMapper.queryLatestList(request, pageSize, offset);
+        }
     }
 
 
@@ -311,6 +317,11 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
     //构建完整推荐池
     private List<Long> buildFullRecommendPool(Long userId) {
+
+        List<Long> cfIds = buildCollaborativeFilteringRecommendPool(userId, 100);
+        if (!CollectionUtils.isEmpty(cfIds)) {
+            return cfIds;
+        }
 
         UserProfile profile = userProfileMapper.selectByUserId(userId);
 
@@ -379,6 +390,196 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         Collections.shuffle(finalIds);
 
         return mixIdList(finalIds, exploreIds);
+    }
+
+    /**
+     * User-CF（基于用户协同过滤）
+     * 1) 用“点赞+收藏”构建用户交互集合
+     * 2) 计算用户相似度：sim(u,v)=|Iu∩Iv|/sqrt(|Iu|*|Iv|)
+     * 3) 候选文章得分：score(u,i)=Σ sim(u,v)
+     * 4) 排除本人已交互和已曝光，按分数降序返回
+     */
+    private List<Long> buildCollaborativeFilteringRecommendPool(Long userId, int totalSize) {
+        // 目标用户的隐式反馈（点赞+收藏）
+        Set<Long> targetArticleIds = loadUserInteractionArticleIds(userId);
+        if (CollectionUtils.isEmpty(targetArticleIds)) {
+            return Collections.emptyList();
+        }
+
+        List<LikeRecord> sameArticleLikes = likeRecordMapper.selectList(
+                new LambdaQueryWrapper<LikeRecord>()
+                        .eq(LikeRecord::getStatus, "1")
+                        .in(LikeRecord::getArticleId, targetArticleIds)
+        );
+
+        List<Favorite> sameArticleFavorites = favoritemapper.selectList(
+                new LambdaQueryWrapper<Favorite>()
+                        .eq(Favorite::getStatus, "1")
+                        .eq(Favorite::getTargetType, "1")
+                        .in(Favorite::getTargetId, targetArticleIds)
+        );
+
+        // 候选邻居用户：与目标用户在文章上有交集的用户
+        Set<Long> neighborUserIds = new HashSet<>();
+        for (LikeRecord record : sameArticleLikes) {
+            if (record.getUserId() != null && !Objects.equals(record.getUserId(), userId)) {
+                neighborUserIds.add(record.getUserId());
+            }
+        }
+        for (Favorite favorite : sameArticleFavorites) {
+            if (favorite.getUserId() != null && !Objects.equals(favorite.getUserId(), userId)) {
+                neighborUserIds.add(favorite.getUserId());
+            }
+        }
+
+        if (CollectionUtils.isEmpty(neighborUserIds)) {
+            return Collections.emptyList();
+        }
+
+        List<LikeRecord> neighborLikes = likeRecordMapper.selectList(
+                new LambdaQueryWrapper<LikeRecord>()
+                        .eq(LikeRecord::getStatus, "1")
+                        .in(LikeRecord::getUserId, neighborUserIds)
+        );
+
+        List<Favorite> neighborFavorites = favoritemapper.selectList(
+                new LambdaQueryWrapper<Favorite>()
+                        .eq(Favorite::getStatus, "1")
+                        .eq(Favorite::getTargetType, "1")
+                        .in(Favorite::getUserId, neighborUserIds)
+        );
+
+        // 邻居用户 -> 交互文章集合
+        Map<Long, Set<Long>> neighborInteractionMap = new HashMap<>();
+
+        for (LikeRecord record : neighborLikes) {
+            if (record.getUserId() == null || record.getArticleId() == null) {
+                continue;
+            }
+            neighborInteractionMap
+                    .computeIfAbsent(record.getUserId(), k -> new HashSet<>())
+                    .add(record.getArticleId());
+        }
+
+        for (Favorite favorite : neighborFavorites) {
+            if (favorite.getUserId() == null || favorite.getTargetId() == null) {
+                continue;
+            }
+            neighborInteractionMap
+                    .computeIfAbsent(favorite.getUserId(), k -> new HashSet<>())
+                    .add(favorite.getTargetId());
+        }
+
+        // 计算目标用户与邻居用户的余弦相似度
+        Map<Long, Double> similarityMap = new HashMap<>();
+        for (Map.Entry<Long, Set<Long>> entry : neighborInteractionMap.entrySet()) {
+            Set<Long> neighborArticles = entry.getValue();
+            if (CollectionUtils.isEmpty(neighborArticles)) {
+                continue;
+            }
+
+            long overlap = neighborArticles.stream().filter(targetArticleIds::contains).count();
+            if (overlap == 0) {
+                continue;
+            }
+
+            double similarity = overlap /
+                    Math.sqrt((double) targetArticleIds.size() * (double) neighborArticles.size());
+
+            if (similarity > 0) {
+                similarityMap.put(entry.getKey(), similarity);
+            }
+        }
+
+        if (similarityMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 仅取Top-N近邻，避免长尾噪声
+        List<Map.Entry<Long, Double>> topNeighbors = similarityMap.entrySet().stream()
+                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                .limit(30)
+                .collect(Collectors.toList());
+
+        Set<Long> exposedIds = getExposedArticleIds(userId);
+        // 候选文章打分：累加近邻相似度
+        Map<Long, Double> candidateScoreMap = new HashMap<>();
+
+        for (Map.Entry<Long, Double> neighbor : topNeighbors) {
+            Set<Long> neighborArticles = neighborInteractionMap.get(neighbor.getKey());
+            if (CollectionUtils.isEmpty(neighborArticles)) {
+                continue;
+            }
+
+            double similarity = neighbor.getValue();
+            for (Long articleId : neighborArticles) {
+                if (articleId == null || targetArticleIds.contains(articleId) || exposedIds.contains(articleId)) {
+                    continue;
+                }
+                candidateScoreMap.merge(articleId, similarity, Double::sum);
+            }
+        }
+
+        List<Long> result = candidateScoreMap.entrySet().stream()
+                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                .limit(totalSize)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        // 协同过滤数量不足时，使用热榜补齐
+        if (result.size() < totalSize) {
+            Set<Long> excludeIds = new HashSet<>(targetArticleIds);
+            excludeIds.addAll(exposedIds);
+            excludeIds.addAll(result);
+
+            List<Long> hotFill = baseMapper.queryHotIdsLimit(totalSize * 2);
+            for (Long id : hotFill) {
+                if (!excludeIds.contains(id)) {
+                    result.add(id);
+                    if (result.size() >= totalSize) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // 加载用户历史交互文章（点赞+收藏）作为隐式反馈集合
+    private Set<Long> loadUserInteractionArticleIds(Long userId) {
+        if (userId == null) {
+            return Collections.emptySet();
+        }
+
+        Set<Long> ids = new HashSet<>();
+
+        List<LikeRecord> likeRecords = likeRecordMapper.selectList(
+                new LambdaQueryWrapper<LikeRecord>()
+                        .eq(LikeRecord::getUserId, userId)
+                        .eq(LikeRecord::getStatus, "1")
+        );
+
+        for (LikeRecord likeRecord : likeRecords) {
+            if (likeRecord.getArticleId() != null) {
+                ids.add(likeRecord.getArticleId());
+            }
+        }
+
+        List<Favorite> favorites = favoritemapper.selectList(
+                new LambdaQueryWrapper<Favorite>()
+                        .eq(Favorite::getUserId, userId)
+                        .eq(Favorite::getStatus, "1")
+                        .eq(Favorite::getTargetType, "1")
+        );
+
+        for (Favorite favorite : favorites) {
+            if (favorite.getTargetId() != null) {
+                ids.add(favorite.getTargetId());
+            }
+        }
+
+        return ids;
     }
 
     private List<Long> getCachedRecommendIds(String key) {
@@ -792,7 +993,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         );
 
         if (privacy == null) {
-            return false;
+            return true;
         }
 
         switch (privacy.getArticleVisibility()) {

@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fzg.mapper.PermissionMapper;
 import com.fzg.mapper.RolePermissionMapper;
 import com.fzg.mapper.Rolemapper;
+import com.fzg.mapper.UserPrivacyMapper;
 import com.fzg.mapper.UserMapper;
 import com.fzg.mapper.UserRolemapper;
 import com.fzg.model.*;
@@ -55,6 +56,8 @@ public class AdminUserController {
     private UserRolemapper userRoleMapper;
     @Autowired
     private RolePermissionMapper rolePermissionMapper;
+    @Autowired
+    private UserPrivacyMapper userPrivacyMapper;
 
     // ==================== 用户管理 ====================
 
@@ -187,6 +190,8 @@ public class AdminUserController {
         
         int result = userMapper.insert(user);
         if (result > 0) {
+            initUserPrivacyIfAbsent(user.getId());
+
             // 分配角色
             List<Integer> roleIds = (List<Integer>) params.get("roleIds");
             if (!CollectionUtils.isEmpty(roleIds)) {
@@ -200,6 +205,25 @@ public class AdminUserController {
             }
         }
         return Result.handle(result > 0);
+    }
+
+    private void initUserPrivacyIfAbsent(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        Long count = userPrivacyMapper.selectCount(
+                new LambdaQueryWrapper<UserPrivacy>().eq(UserPrivacy::getUserId, userId)
+        );
+        if (count != null && count > 0) {
+            return;
+        }
+
+        Date now = new Date();
+        UserPrivacy userPrivacy = new UserPrivacy();
+        userPrivacy.setUserId(userId);
+        userPrivacy.setCreatedAt(now);
+        userPrivacy.setUpdatedAt(now);
+        userPrivacyMapper.insert(userPrivacy);
     }
 
 

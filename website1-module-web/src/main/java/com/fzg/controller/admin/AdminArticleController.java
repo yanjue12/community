@@ -36,10 +36,6 @@ public class AdminArticleController {
     @Autowired
     private Articlemapper articleMapper;
     @Autowired
-    private AuditRecordMapper auditRecordMapper;
-    @Autowired
-    private Categorymapper categorymapper;
-    @Autowired
     private ArticleExportService articleExportService;
 
 

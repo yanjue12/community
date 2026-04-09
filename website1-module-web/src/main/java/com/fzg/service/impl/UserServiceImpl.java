@@ -206,6 +206,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setAvatar("http://127.0.0.1:9000/website/908470.jpg");
 
         if(this.save(user)){
+            initUserPrivacyIfAbsent(user.getId());
+
             // 创建注册通知
             try {
                 Notification notification = new Notification();
@@ -542,6 +544,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 .append("</body>")
                 .append("</html>");
         return content.toString();
+    }
+
+    private void initUserPrivacyIfAbsent(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        LambdaQueryWrapper<UserPrivacy> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserPrivacy::getUserId, userId);
+        if (userPrivacyService.count(wrapper) > 0) {
+            return;
+        }
+
+        Date now = new Date();
+        UserPrivacy userPrivacy = new UserPrivacy();
+        userPrivacy.setUserId(userId);
+        userPrivacy.setCreatedAt(now);
+        userPrivacy.setUpdatedAt(now);
+        userPrivacyService.save(userPrivacy);
     }
 
 }

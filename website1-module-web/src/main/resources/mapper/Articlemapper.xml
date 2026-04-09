@@ -818,6 +818,8 @@
         from article a
         left join category c9 on a.category_id = c9.id
         left join user u on u.id = a.user_id
+        left join article_tag_relation atr on atr.article_id = a.id
+        left join article_tag t on t.id = atr.tag_id
         <where>
             1=1
             <if test="request.status != null and request.status != ''">

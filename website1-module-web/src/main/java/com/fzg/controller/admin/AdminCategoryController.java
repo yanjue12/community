@@ -22,6 +22,7 @@ import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -174,9 +175,38 @@ public class AdminCategoryController {
     @PostMapping("/create")
     @SaCheckRole("admin")
     public Result createCategory(@RequestBody Category category) {
+        if (category == null || category.getName() == null || category.getName().trim().isEmpty()) {
+            return Result.fail(400, "分类名称不能为空");
+        }
+        if (category.getSlug() == null || category.getSlug().trim().isEmpty()) {
+            category.setSlug(buildSlug(category.getName()));
+        }
         category.setCreatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
         int result = categoryMapper.insert(category);
         return Result.handle(result > 0);
+    }
+
+    private String buildSlug(String sourceName) {
+        String base = sourceName == null ? "" : sourceName.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        if (base.isEmpty()) {
+            base = "cat";
+        }
+
+        String candidate = base;
+        int suffix = 1;
+        while (existsSlug(candidate)) {
+            candidate = base + "-" + suffix;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private boolean existsSlug(String slug) {
+        LambdaQueryWrapper<Category> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Category::getSlug, slug);
+        return categoryMapper.selectCount(wrapper) > 0;
     }
 
 
