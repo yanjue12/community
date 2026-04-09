@@ -588,55 +588,6 @@
     </select>
 
 
-    <select id="queryPersonalizedList"
-            resultType="java.lang.Long">
-
-        select a.id
-
-
-        from article a
-
-        left join article_tag_relation atr
-        on a.id = atr.article_id
-
-        left join user u on a.user_id = u.id
-        left join category c on a.category_id = c.id
-
-        where a.visibility = 0
-        and a.status = 1
-        and a.published_at is not null
-        and a.created_at >= DATE_SUB(NOW(), INTERVAL 15 DAY)
-
-        <!-- 排除已曝光 -->
-        <if test="excludeIds != null and excludeIds.size() > 0">
-            and a.id not in
-            <foreach collection="excludeIds"
-                     item="id"
-                     open="("
-                     separator=","
-                     close=")">
-                #{id}
-            </foreach>
-        </if>
-
-        <!-- 冷热拆池 -->
-        <if test="flag != null">
-            <if test="flag == 'cold'">
-                and a.view_count &lt; 1000
-            </if>
-            <if test="flag == 'hot'">
-                and a.view_count &gt;= 1000
-            </if>
-        </if>
-
-        group by a.id
-
-        order by
-        a.published_at desc
-
-        limit #{pageSize}
-
-    </select>
 
 
 
@@ -727,7 +678,6 @@
         a.type,a.published_at as updatedTime,a.view_count as viewCount,
         a.like_count as likeCount,a.comment_count as commentCount,
         a.share_count as shareCount,a.collect_count as collectCount,
-        a.share_count as shareCount,
         a.is_recommend as isRecommend,
         a.is_top as isTop,
         u.id as userId, u.nickname as nickName,
@@ -952,6 +902,28 @@
         order by score desc
         limit #{pageSize}
 
+    </select>
+
+    <select id="queryRandomIdsLimit" resultType="java.lang.Long">
+        select id from article
+        where visibility = 0
+          and status = 1
+          and published_at is not null
+        order by rand()
+        limit #{limit}
+    </select>
+
+    <select id="queryRandomArticles" resultType="com.fzg.vo.ArticleVO">
+        select a.id,a.title,a.summary,a.cover_image as coverImage,
+               a.type,a.published_at as updatedTime,a.view_count as viewCount,
+               a.like_count as likeCount,a.comment_count as commentCount,
+               a.share_count as shareCount,a.collect_count as collectCount,
+               u.id as userId,u.nickname as nickName,u.avatar as avatar
+        from article a
+        join user u on a.user_id = u.id
+        where a.visibility = 0 and a.status = 1 and a.published_at is not null
+        order by rand()
+        limit #{pageSize} offset #{offset}
     </select>
 
 </mapper>

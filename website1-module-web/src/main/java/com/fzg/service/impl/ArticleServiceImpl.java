@@ -3,11 +3,9 @@ package com.fzg.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fzg.annotation.ArticleViewTrack;
 import com.fzg.constant.RedisArticleKey;
 import com.fzg.constant.RedisRecommendKey;
 import com.fzg.enums.ArticleListType;
-import com.fzg.job.ArticleQueryExecutor;
 import com.fzg.mapper.*;
 import com.fzg.model.*;
 import com.fzg.service.ArticleService;
@@ -15,6 +13,7 @@ import com.fzg.service.UserProfileCalculateService;
 import com.fzg.service.UserPrivacyService;
 import com.fzg.vo.*;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.parsson.JsonUtil;
 import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MultiMatchQueryBuilder;
@@ -285,18 +284,19 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             int pageNum) {
 
         Long userId = request.getUserId();
-
-        if (userId == null) {
-            return baseMapper.queryHotList(request, pageSize, offset);
+        log.info("查询推荐内容开始");
+        if (userId == null || userId == 0) {
+            log.info("游客，随机文章");
+            return baseMapper.queryRandomArticles(pageSize, offset);
         }
-
+        log.info("推荐。没有走热榜");
         String cacheKey = RedisRecommendKey.userRecommendList(userId);
 
         // ==============================
         // 1.先查缓存
         // ==============================
         List<Long> cachedIds = getCachedRecommendIds(cacheKey);
-
+        log.info("查询出缓存值为：{}", JSON.toJSONString(cachedIds));
         if (CollectionUtils.isEmpty(cachedIds)) {
 
             // 2.没缓存 → 生成完整推荐池
@@ -307,7 +307,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                         .map(String::valueOf)
                         .collect(Collectors.toList());
                 redisTemplate.opsForList().rightPushAll(cacheKey, stringIds);
-                redisTemplate.expire(cacheKey, 30, TimeUnit.MINUTES);
+                redisTemplate.expire(cacheKey, 5, TimeUnit.SECONDS);
             }
         }
 
@@ -330,29 +330,32 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
     //构建完整推荐池
     private List<Long> buildFullRecommendPool(Long userId) {
-
+        log.info("开始构建推荐池");
         Map<String, List<Long>> recallMap = buildMultiRecallPool(userId, RECOMMEND_POOL_SIZE);
         List<Long> hybridIds = rankByWeightedFusion(userId, recallMap, RECOMMEND_POOL_SIZE);
         if (!CollectionUtils.isEmpty(hybridIds)) {
             return hybridIds;
         }
 
-        return baseMapper.queryHotIdsLimit(RECOMMEND_POOL_SIZE);
+        log.info("构建个性化的空，直接热榜数据");
+        return baseMapper.queryRandomIdsLimit(RECOMMEND_POOL_SIZE);
     }
 
     // 多路召回：CF + 内容兴趣 + 热榜
     private Map<String, List<Long>> buildMultiRecallPool(Long userId, int totalSize) {
         Map<String, List<Long>> recallMap = new LinkedHashMap<>();
-
+        log.info("开始多路召回");
         List<Long> cfRecall = buildCollaborativeFilteringRecommendPool(userId, totalSize);
         List<Long> contentRecall = buildContentBasedRecommendPool(userId, totalSize);
         List<Long> hotRecall = baseMapper.queryHotIdsLimit(totalSize);
-
+        log.info("cfRecall={} contentRecall={} hotRecall={}",
+                cfRecall.size(), contentRecall.size(), hotRecall.size());
         recallMap.put("cf", cfRecall);
         recallMap.put("content", contentRecall);
         recallMap.put("hot", hotRecall);
 
         recordRecallEval(userId, recallMap);
+        log.info("多路召回结束");
         return recallMap;
     }
 
@@ -361,7 +364,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             Long userId,
             Map<String, List<Long>> recallMap,
             int totalSize) {
-
+        log.info("排序融合开始");
         if (recallMap == null || recallMap.isEmpty()) {
             return Collections.emptyList();
         }
@@ -417,13 +420,16 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             }
         }
 
+        // 打乱顺序提升曝光多样性
+        Collections.shuffle(result);
         recordFusionEval(userId, fusionScoreMap);
+        log.info("排序融合结束");
         return result;
     }
 
     // 内容召回：复用原有画像加权逻辑，保持“冷热+探索”混排
     private List<Long> buildContentBasedRecommendPool(Long userId, int totalSize) {
-
+        log.info("内容召回");
         UserProfile profile = userProfileMapper.selectByUserId(userId);
 
         if (profile == null || profile.getProfileLevel() < 1) {
@@ -439,7 +445,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             return baseMapper.queryHotIdsLimit(totalSize);
         }
 
-        int exploreSize = (int) Math.ceil(totalSize * 0.2);
+        int exploreSize = (int) Math.ceil(totalSize * 0.5);
         int remainSize = totalSize - exploreSize;
 
         int coldSize = remainSize / 2;
@@ -532,7 +538,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         try {
             String day = LocalDate.now().toString();
             String key = "rec:eval:recall:" + day;
-
+            log.info("评估闭环-召回层");
             for (Map.Entry<String, List<Long>> entry : recallMap.entrySet()) {
                 String channel = entry.getKey();
                 int size = CollectionUtils.isEmpty(entry.getValue()) ? 0 : entry.getValue().size();
@@ -574,6 +580,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
      * 4) 排除本人已交互和已曝光，按分数降序返回
      */
     private List<Long> buildCollaborativeFilteringRecommendPool(Long userId, int totalSize) {
+        log.info("buildCollaborativeFilteringRecommendPool开始");
         Map<Long, Double> targetWeightMap = loadUserInteractionWeightMap(userId);
         if (targetWeightMap.isEmpty()) {
             return Collections.emptyList();
@@ -947,8 +954,13 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             return Collections.emptyList();
         }
 
+        if (tagLastTimeMap == null) {
+            tagLastTimeMap = Collections.emptyMap();
+        }
+
         long now = System.currentTimeMillis();
 
+        Map<Long, Long> finalTagLastTimeMap = tagLastTimeMap;
         return tagProfile.entrySet().stream()
                 .map(entry -> {
 
@@ -956,7 +968,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                     Double weight = entry.getValue();
 
 
-                    Long lastTime = tagLastTimeMap.getOrDefault(tagId, now);
+                    Long lastTime = finalTagLastTimeMap.getOrDefault(tagId, now);
                     if (lastTime == null || lastTime <= 0) {
                         lastTime = now;
                     }
@@ -998,8 +1010,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             log.warn("记录曝光评估指标失败, userId={}, err={}", userId, e.getMessage());
         }
 
-        // 保留 7 天
-        redisTemplate.expire(key, 7, TimeUnit.DAYS);
+        // 保留 1 天，避免过大影响召回
+        redisTemplate.expire(key, 1, TimeUnit.DAYS);
     }
 
     //获取曝光集合
@@ -1011,6 +1023,10 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         String key = RedisRecommendKey.userExposeSet(userId);
         Set<String> set = redisTemplate.opsForSet().members(key);
+        // 限制曝光集合大小，最多保留最近 30 条
+        if (set != null && set.size() > 30) {
+            set = set.stream().limit(30).collect(Collectors.toSet());
+        }
 
         if (CollectionUtils.isEmpty(set)) {
             return Collections.emptySet();

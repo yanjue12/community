@@ -3,7 +3,6 @@ package com.fzg.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fzg.model.Article;
 import com.fzg.model.ArticleDimension;
-import com.fzg.model.TagWeightDTO;
 import com.fzg.vo.*;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
@@ -65,12 +64,7 @@ public interface Articlemapper extends BaseMapper<Article> {
 
     ArticleDimension selectArticleDimension(@Param("articleId") Long articleId);
 
-    List<Long> queryPersonalizedList(
-            @Param("tagWeights") List<TagWeightDTO> tagWeights,
-            @Param("excludeIds") Set<Long> excludeIds,
-            @Param("flag") String flag,
-            @Param("pageSize") int pageSize
-    );
+
 
 
     List<Long> queryExploreList(
@@ -84,6 +78,13 @@ public interface Articlemapper extends BaseMapper<Article> {
 
     List<Long> queryHotIdsLimit(@Param("limit") int limit);
 
+    // 随机文章 ID 列表，用于游客或推荐池为空的回退
+    List<Long> queryRandomIdsLimit(@Param("limit") int limit);
+
+    // 随机文章列表（分页）
+    List<ArticleVO> queryRandomArticles(@Param("pageSize") int pageSize, @Param("offset") int offset);
+
+    List<Long> queryPersonalizedListV2(@Param("tagWeightMap") Map<Long, Double> tagWeightMap, @Param("excludeIds") Set<Long> excludeIds, @Param("flag") String flag, @Param("pageSize") int coldSize);
 
 
 
@@ -96,5 +97,4 @@ public interface Articlemapper extends BaseMapper<Article> {
 
     ArticleStatsVO queryArticleStats();
 
-    List<Long> queryPersonalizedListV2(@Param("tagWeightMap") Map<Long, Double> tagWeightMap, @Param("excludeIds") Set<Long> excludeIds, @Param("cold") String cold, @Param("coldSize") int coldSize);
 }
