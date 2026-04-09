@@ -23,6 +23,9 @@ public class UserProfile {
     private Map<Long, Double> tagProfile;
 
     @TableField(typeHandler = JsonMapTypeHandler.class)
+    private Map<Long, Long> tagLastTimeMap;
+
+    @TableField(typeHandler = JsonMapTypeHandler.class)
     private Map<Long, Double> categoryProfile;
 
     @TableField(typeHandler = JsonMapTypeHandler.class)

@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -42,8 +43,18 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> implements ArticleService {
 
+    private static final int RECOMMEND_POOL_SIZE = 100;
+    private static final double CF_RECALL_WEIGHT = 0.50;
+    private static final double CONTENT_RECALL_WEIGHT = 0.35;
+    private static final double HOT_RECALL_WEIGHT = 0.15;
+    private static final int MAX_FUSION_EVAL_SIZE = 200;
+    // 行为权重（用于构建隐式反馈向量）
+    private static final double VIEW_BEHAVIOR_WEIGHT = 1.0;
+    private static final double LIKE_BEHAVIOR_WEIGHT = 3.0;
+    private static final double FAVORITE_BEHAVIOR_WEIGHT = 4.0;
+
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private LikeRecordMapper likeRecordMapper;
     @Autowired
@@ -68,6 +79,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     private UserProfileCalculateService userProfileCalculateService;
     @Autowired
     private SearchHistoryMapper searchHistoryMapper;
+    @Autowired
+    private ArticleViewHistoryMapper articleViewHistoryMapper;
 
 
 
@@ -318,10 +331,98 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
     //构建完整推荐池
     private List<Long> buildFullRecommendPool(Long userId) {
 
-        List<Long> cfIds = buildCollaborativeFilteringRecommendPool(userId, 100);
-        if (!CollectionUtils.isEmpty(cfIds)) {
-            return cfIds;
+        Map<String, List<Long>> recallMap = buildMultiRecallPool(userId, RECOMMEND_POOL_SIZE);
+        List<Long> hybridIds = rankByWeightedFusion(userId, recallMap, RECOMMEND_POOL_SIZE);
+        if (!CollectionUtils.isEmpty(hybridIds)) {
+            return hybridIds;
         }
+
+        return baseMapper.queryHotIdsLimit(RECOMMEND_POOL_SIZE);
+    }
+
+    // 多路召回：CF + 内容兴趣 + 热榜
+    private Map<String, List<Long>> buildMultiRecallPool(Long userId, int totalSize) {
+        Map<String, List<Long>> recallMap = new LinkedHashMap<>();
+
+        List<Long> cfRecall = buildCollaborativeFilteringRecommendPool(userId, totalSize);
+        List<Long> contentRecall = buildContentBasedRecommendPool(userId, totalSize);
+        List<Long> hotRecall = baseMapper.queryHotIdsLimit(totalSize);
+
+        recallMap.put("cf", cfRecall);
+        recallMap.put("content", contentRecall);
+        recallMap.put("hot", hotRecall);
+
+        recordRecallEval(userId, recallMap);
+        return recallMap;
+    }
+
+    // 排序融合：Weighted RRF
+    private List<Long> rankByWeightedFusion(
+            Long userId,
+            Map<String, List<Long>> recallMap,
+            int totalSize) {
+
+        if (recallMap == null || recallMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<String, Double> weightMap = new HashMap<>();
+        weightMap.put("cf", CF_RECALL_WEIGHT);
+        weightMap.put("content", CONTENT_RECALL_WEIGHT);
+        weightMap.put("hot", HOT_RECALL_WEIGHT);
+
+        Set<Long> interactedIds = loadUserInteractionArticleIds(userId);
+        Set<Long> exposedIds = getExposedArticleIds(userId);
+        Set<Long> excludeIds = new HashSet<>();
+        excludeIds.addAll(interactedIds);
+        excludeIds.addAll(exposedIds);
+
+        Map<Long, Double> fusionScoreMap = new HashMap<>();
+
+        for (Map.Entry<String, List<Long>> entry : recallMap.entrySet()) {
+            String channel = entry.getKey();
+            List<Long> ids = entry.getValue();
+            if (CollectionUtils.isEmpty(ids)) {
+                continue;
+            }
+
+            double weight = weightMap.getOrDefault(channel, 0.1);
+            for (int i = 0; i < ids.size(); i++) {
+                Long articleId = ids.get(i);
+                if (articleId == null || excludeIds.contains(articleId)) {
+                    continue;
+                }
+                double rankScore = weight / (i + 1.0);
+                fusionScoreMap.merge(articleId, rankScore, Double::sum);
+            }
+        }
+
+        List<Long> result = fusionScoreMap.entrySet().stream()
+                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                .limit(totalSize)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        if (result.size() < totalSize) {
+            Set<Long> fillExcludeIds = new HashSet<>(excludeIds);
+            fillExcludeIds.addAll(result);
+            List<Long> hotFill = baseMapper.queryHotIdsLimit(totalSize * 2);
+            for (Long id : hotFill) {
+                if (!fillExcludeIds.contains(id)) {
+                    result.add(id);
+                    if (result.size() >= totalSize) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        recordFusionEval(userId, fusionScoreMap);
+        return result;
+    }
+
+    // 内容召回：复用原有画像加权逻辑，保持“冷热+探索”混排
+    private List<Long> buildContentBasedRecommendPool(Long userId, int totalSize) {
 
         UserProfile profile = userProfileMapper.selectByUserId(userId);
 
@@ -335,10 +436,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         }
 
         if (profile == null || profile.getProfileLevel() < 1) {
-            return baseMapper.queryHotIdsLimit(100);
+            return baseMapper.queryHotIdsLimit(totalSize);
         }
-
-        int totalSize = 100;
 
         int exploreSize = (int) Math.ceil(totalSize * 0.2);
         int remainSize = totalSize - exploreSize;
@@ -347,7 +446,15 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         int hotSize = remainSize - coldSize;
 
         List<TagWeightDTO> topTagWeights =
-                getTopTagWeights(profile.getTagProfile(), 5);
+                getTopTagWeightsWithDecay(
+                        profile.getTagProfile(),
+                        profile.getTagLastTimeMap(),
+                        10
+                );
+
+        Map<Long, Double> tagWeightMap =
+                buildTagWeightMap(topTagWeights);
+
 
         List<Long> topTagIds = topTagWeights.stream()
                 .map(TagWeightDTO::getTagId)
@@ -356,8 +463,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         Set<Long> excludeIds = new HashSet<>();
 
         List<Long> coldIds =
-                baseMapper.queryPersonalizedList(
-                        topTagWeights,
+                baseMapper.queryPersonalizedListV2(
+                        tagWeightMap,
                         excludeIds,
                         "cold",
                         coldSize
@@ -366,8 +473,8 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         excludeIds.addAll(coldIds);
 
         List<Long> hotIds =
-                baseMapper.queryPersonalizedList(
-                        topTagWeights,
+                baseMapper.queryPersonalizedListV2(
+                        tagWeightMap,
                         excludeIds,
                         "hot",
                         hotSize
@@ -392,19 +499,86 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         return mixIdList(finalIds, exploreIds);
     }
 
+    private Map<Long, Double> normalize(Map<Long, Double> map) {
+
+        double sum = map.values().stream().mapToDouble(Double::doubleValue).sum();
+
+        if (sum == 0) return map;
+
+        Map<Long, Double> result = new HashMap<>();
+
+        for (Map.Entry<Long, Double> e : map.entrySet()) {
+            result.put(e.getKey(), e.getValue() / sum);
+        }
+
+        return result;
+    }
+
+
+    private Map<Long, Double> buildTagWeightMap(List<TagWeightDTO> list) {
+
+        Map<Long, Double> map = new HashMap<>();
+
+        for (TagWeightDTO dto : list) {
+            map.put(dto.getTagId(), dto.getWeight());
+        }
+
+        return map;
+    }
+
+
+    // 评估闭环-召回层：记录各路召回规模，便于离线分析召回贡献
+    private void recordRecallEval(Long userId, Map<String, List<Long>> recallMap) {
+        try {
+            String day = LocalDate.now().toString();
+            String key = "rec:eval:recall:" + day;
+
+            for (Map.Entry<String, List<Long>> entry : recallMap.entrySet()) {
+                String channel = entry.getKey();
+                int size = CollectionUtils.isEmpty(entry.getValue()) ? 0 : entry.getValue().size();
+                redisTemplate.opsForHash().increment(key, channel + ":users", 1);
+                redisTemplate.opsForHash().increment(key, channel + ":items", size);
+            }
+
+            redisTemplate.expire(key, 7, TimeUnit.DAYS);
+        } catch (Exception e) {
+            log.warn("记录召回评估指标失败, userId={}, err={}", userId, e.getMessage());
+        }
+    }
+
+    // 评估闭环-融合层：记录用户级融合分数，后续可和点击/点赞做归因评估
+    private void recordFusionEval(Long userId, Map<Long, Double> fusionScoreMap) {
+        if (userId == null || fusionScoreMap == null || fusionScoreMap.isEmpty()) {
+            return;
+        }
+        try {
+            String zsetKey = "rec:eval:fusion:user:" + userId;
+            redisTemplate.delete(zsetKey);
+
+            fusionScoreMap.entrySet().stream()
+                    .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                    .limit(MAX_FUSION_EVAL_SIZE)
+                    .forEach(e -> redisTemplate.opsForZSet().add(zsetKey, e.getKey().toString(), e.getValue()));
+
+            redisTemplate.expire(zsetKey, 3, TimeUnit.DAYS);
+        } catch (Exception e) {
+            log.warn("记录融合评估指标失败, userId={}, err={}", userId, e.getMessage());
+        }
+    }
+
     /**
      * User-CF（基于用户协同过滤）
-     * 1) 用“点赞+收藏”构建用户交互集合
-     * 2) 计算用户相似度：sim(u,v)=|Iu∩Iv|/sqrt(|Iu|*|Iv|)
-     * 3) 候选文章得分：score(u,i)=Σ sim(u,v)
+     * 1) 用“浏览+点赞+收藏”构建加权交互向量
+     * 2) 计算加权余弦相似度：sim(u,v)=Σ(wu,i*wv,i)/(|wu|*|wv|)
+     * 3) 候选文章得分：score(u,i)=Σ(sim(u,v)*wv,i)
      * 4) 排除本人已交互和已曝光，按分数降序返回
      */
     private List<Long> buildCollaborativeFilteringRecommendPool(Long userId, int totalSize) {
-        // 目标用户的隐式反馈（点赞+收藏）
-        Set<Long> targetArticleIds = loadUserInteractionArticleIds(userId);
-        if (CollectionUtils.isEmpty(targetArticleIds)) {
+        Map<Long, Double> targetWeightMap = loadUserInteractionWeightMap(userId);
+        if (targetWeightMap.isEmpty()) {
             return Collections.emptyList();
         }
+        Set<Long> targetArticleIds = targetWeightMap.keySet();
 
         List<LikeRecord> sameArticleLikes = likeRecordMapper.selectList(
                 new LambdaQueryWrapper<LikeRecord>()
@@ -419,6 +593,11 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                         .in(Favorite::getTargetId, targetArticleIds)
         );
 
+        List<ArticleViewHistory> sameArticleViews = articleViewHistoryMapper.selectList(
+                new LambdaQueryWrapper<ArticleViewHistory>()
+                        .in(ArticleViewHistory::getArticleId, targetArticleIds)
+        );
+
         // 候选邻居用户：与目标用户在文章上有交集的用户
         Set<Long> neighborUserIds = new HashSet<>();
         for (LikeRecord record : sameArticleLikes) {
@@ -429,6 +608,11 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         for (Favorite favorite : sameArticleFavorites) {
             if (favorite.getUserId() != null && !Objects.equals(favorite.getUserId(), userId)) {
                 neighborUserIds.add(favorite.getUserId());
+            }
+        }
+        for (ArticleViewHistory view : sameArticleViews) {
+            if (view.getUserId() != null && !Objects.equals(view.getUserId(), userId)) {
+                neighborUserIds.add(view.getUserId());
             }
         }
 
@@ -449,16 +633,23 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                         .in(Favorite::getUserId, neighborUserIds)
         );
 
-        // 邻居用户 -> 交互文章集合
-        Map<Long, Set<Long>> neighborInteractionMap = new HashMap<>();
+        List<ArticleViewHistory> neighborViews = articleViewHistoryMapper.selectList(
+                new LambdaQueryWrapper<ArticleViewHistory>()
+                        .in(ArticleViewHistory::getUserId, neighborUserIds)
+                        .orderByDesc(ArticleViewHistory::getCreatedAt)
+                        .last("limit 5000")
+        );
+
+        // 邻居用户 -> 加权交互向量
+        Map<Long, Map<Long, Double>> neighborInteractionMap = new HashMap<>();
 
         for (LikeRecord record : neighborLikes) {
             if (record.getUserId() == null || record.getArticleId() == null) {
                 continue;
             }
             neighborInteractionMap
-                    .computeIfAbsent(record.getUserId(), k -> new HashSet<>())
-                    .add(record.getArticleId());
+                    .computeIfAbsent(record.getUserId(), k -> new HashMap<>())
+                    .merge(record.getArticleId(), LIKE_BEHAVIOR_WEIGHT, Double::sum);
         }
 
         for (Favorite favorite : neighborFavorites) {
@@ -466,25 +657,43 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 continue;
             }
             neighborInteractionMap
-                    .computeIfAbsent(favorite.getUserId(), k -> new HashSet<>())
-                    .add(favorite.getTargetId());
+                    .computeIfAbsent(favorite.getUserId(), k -> new HashMap<>())
+                    .merge(favorite.getTargetId(), FAVORITE_BEHAVIOR_WEIGHT, Double::sum);
+        }
+
+        for (ArticleViewHistory view : neighborViews) {
+            if (view.getUserId() == null || view.getArticleId() == null) {
+                continue;
+            }
+            neighborInteractionMap
+                    .computeIfAbsent(view.getUserId(), k -> new HashMap<>())
+                    .merge(view.getArticleId(), VIEW_BEHAVIOR_WEIGHT, Double::sum);
         }
 
         // 计算目标用户与邻居用户的余弦相似度
         Map<Long, Double> similarityMap = new HashMap<>();
-        for (Map.Entry<Long, Set<Long>> entry : neighborInteractionMap.entrySet()) {
-            Set<Long> neighborArticles = entry.getValue();
-            if (CollectionUtils.isEmpty(neighborArticles)) {
+        double targetNorm = vectorNorm(targetWeightMap);
+        if (targetNorm <= 0) {
+            return Collections.emptyList();
+        }
+
+        for (Map.Entry<Long, Map<Long, Double>> entry : neighborInteractionMap.entrySet()) {
+            Map<Long, Double> neighborVector = entry.getValue();
+            if (neighborVector == null || neighborVector.isEmpty()) {
                 continue;
             }
 
-            long overlap = neighborArticles.stream().filter(targetArticleIds::contains).count();
-            if (overlap == 0) {
+            double dot = dotProduct(targetWeightMap, neighborVector);
+            if (dot <= 0) {
                 continue;
             }
 
-            double similarity = overlap /
-                    Math.sqrt((double) targetArticleIds.size() * (double) neighborArticles.size());
+            double neighborNorm = vectorNorm(neighborVector);
+            if (neighborNorm <= 0) {
+                continue;
+            }
+
+            double similarity = dot / (targetNorm * neighborNorm);
 
             if (similarity > 0) {
                 similarityMap.put(entry.getKey(), similarity);
@@ -506,17 +715,20 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         Map<Long, Double> candidateScoreMap = new HashMap<>();
 
         for (Map.Entry<Long, Double> neighbor : topNeighbors) {
-            Set<Long> neighborArticles = neighborInteractionMap.get(neighbor.getKey());
-            if (CollectionUtils.isEmpty(neighborArticles)) {
+            Map<Long, Double> neighborVector = neighborInteractionMap.get(neighbor.getKey());
+            if (neighborVector == null || neighborVector.isEmpty()) {
                 continue;
             }
 
             double similarity = neighbor.getValue();
-            for (Long articleId : neighborArticles) {
+            for (Map.Entry<Long, Double> neighborBehavior : neighborVector.entrySet()) {
+                Long articleId = neighborBehavior.getKey();
+                Double behaviorWeight = neighborBehavior.getValue();
                 if (articleId == null || targetArticleIds.contains(articleId) || exposedIds.contains(articleId)) {
                     continue;
                 }
-                candidateScoreMap.merge(articleId, similarity, Double::sum);
+                double delta = similarity * (behaviorWeight == null ? VIEW_BEHAVIOR_WEIGHT : behaviorWeight);
+                candidateScoreMap.merge(articleId, delta, Double::sum);
             }
         }
 
@@ -546,13 +758,32 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         return result;
     }
 
-    // 加载用户历史交互文章（点赞+收藏）作为隐式反馈集合
+    // 加载用户历史交互文章（浏览+点赞+收藏）作为隐式反馈集合
     private Set<Long> loadUserInteractionArticleIds(Long userId) {
+        Map<Long, Double> weightMap = loadUserInteractionWeightMap(userId);
+        return weightMap.keySet();
+    }
+
+    // 加载用户行为加权向量：浏览=1, 点赞=3, 收藏=4
+    // 向量形式：articleId -> weight
+    private Map<Long, Double> loadUserInteractionWeightMap(Long userId) {
         if (userId == null) {
-            return Collections.emptySet();
+            return Collections.emptyMap();
         }
 
-        Set<Long> ids = new HashSet<>();
+        Map<Long, Double> weightMap = new HashMap<>();
+
+        List<ArticleViewHistory> viewHistories = articleViewHistoryMapper.selectList(
+                new LambdaQueryWrapper<ArticleViewHistory>()
+                        .eq(ArticleViewHistory::getUserId, userId)
+                        .orderByDesc(ArticleViewHistory::getCreatedAt)
+                        .last("limit 200")
+        );
+        for (ArticleViewHistory history : viewHistories) {
+            if (history.getArticleId() != null) {
+                weightMap.merge(history.getArticleId(), VIEW_BEHAVIOR_WEIGHT, Double::sum);
+            }
+        }
 
         List<LikeRecord> likeRecords = likeRecordMapper.selectList(
                 new LambdaQueryWrapper<LikeRecord>()
@@ -562,7 +793,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         for (LikeRecord likeRecord : likeRecords) {
             if (likeRecord.getArticleId() != null) {
-                ids.add(likeRecord.getArticleId());
+                weightMap.merge(likeRecord.getArticleId(), LIKE_BEHAVIOR_WEIGHT, Double::sum);
             }
         }
 
@@ -575,11 +806,40 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
         for (Favorite favorite : favorites) {
             if (favorite.getTargetId() != null) {
-                ids.add(favorite.getTargetId());
+                weightMap.merge(favorite.getTargetId(), FAVORITE_BEHAVIOR_WEIGHT, Double::sum);
             }
         }
 
-        return ids;
+        return weightMap;
+    }
+
+    // 向量点积：Σ(wu,i * wv,i)，仅在交集维度累加
+    private double dotProduct(Map<Long, Double> left, Map<Long, Double> right) {
+        if (left == null || right == null || left.isEmpty() || right.isEmpty()) {
+            return 0D;
+        }
+        double result = 0D;
+        for (Map.Entry<Long, Double> entry : left.entrySet()) {
+            Double rightValue = right.get(entry.getKey());
+            if (rightValue != null) {
+                result += entry.getValue() * rightValue;
+            }
+        }
+        return result;
+    }
+
+    // 向量范数：sqrt(Σ(w^2))，用于余弦相似度归一化
+    private double vectorNorm(Map<Long, Double> vector) {
+        if (vector == null || vector.isEmpty()) {
+            return 0D;
+        }
+        double sum = 0D;
+        for (Double value : vector.values()) {
+            if (value != null && value > 0) {
+                sum += value * value;
+            }
+        }
+        return Math.sqrt(sum);
     }
 
     private List<Long> getCachedRecommendIds(String key) {
@@ -587,7 +847,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         if (size == null || size == 0) {
             return Collections.emptyList();
         }
-        List<Object> objects =
+        List<String> objects =
                 redisTemplate.opsForList().range(key, 0, -1);
         if (CollectionUtils.isEmpty(objects)) {
             return Collections.emptyList();
@@ -678,17 +938,39 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
 
 
     //获取标签权重
-    private List<TagWeightDTO> getTopTagWeights(
+    private List<TagWeightDTO> getTopTagWeightsWithDecay(
             Map<Long, Double> tagProfile,
+            Map<Long, Long> tagLastTimeMap, // 新增
             int limit) {
 
         if (tagProfile == null || tagProfile.isEmpty()) {
             return Collections.emptyList();
         }
+
+        long now = System.currentTimeMillis();
+
         return tagProfile.entrySet().stream()
-                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                .map(entry -> {
+
+                    Long tagId = entry.getKey();
+                    Double weight = entry.getValue();
+
+
+                    Long lastTime = tagLastTimeMap.getOrDefault(tagId, now);
+                    if (lastTime == null || lastTime <= 0) {
+                        lastTime = now;
+                    }
+                    double days = (now - lastTime) / (1000.0 * 3600 * 24);
+
+                    // 时间衰减 λ = 0.08
+                    double decay = Math.exp(-0.08 * days);
+
+                    double finalWeight = weight * decay;
+
+                    return new TagWeightDTO(tagId, finalWeight, lastTime);
+                })
+                .sorted((a, b) -> Double.compare(b.getWeight(), a.getWeight()))
                 .limit(limit)
-                .map(e -> new TagWeightDTO(e.getKey(), e.getValue()))
                 .collect(Collectors.toList());
     }
 
@@ -705,6 +987,17 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
             redisTemplate.opsForSet().add(key, vo.getId().toString());
         }
 
+        try {
+            String day = LocalDate.now().toString();
+            String evalExposeKey = "rec:eval:expose:" + day;
+            for (ArticleVO vo : list) {
+                redisTemplate.opsForHash().increment(evalExposeKey, vo.getId().toString(), 1);
+            }
+            redisTemplate.expire(evalExposeKey, 7, TimeUnit.DAYS);
+        } catch (Exception e) {
+            log.warn("记录曝光评估指标失败, userId={}, err={}", userId, e.getMessage());
+        }
+
         // 保留 7 天
         redisTemplate.expire(key, 7, TimeUnit.DAYS);
     }
@@ -717,7 +1010,7 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
         }
 
         String key = RedisRecommendKey.userExposeSet(userId);
-        Set<Object> set = redisTemplate.opsForSet().members(key);
+        Set<String> set = redisTemplate.opsForSet().members(key);
 
         if (CollectionUtils.isEmpty(set)) {
             return Collections.emptySet();

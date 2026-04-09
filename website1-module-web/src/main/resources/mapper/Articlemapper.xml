@@ -592,11 +592,7 @@
             resultType="java.lang.Long">
 
         select a.id
---         (a.view_count * 1
---         + a.like_count * 10
---         + a.comment_count * 6
---         + a.collect_count * 8
---         + a.share_count * 4) AS finalScore
+
 
         from article a
 
@@ -781,10 +777,10 @@
 
         order by
             (
-                a.view_count
-                    + a.like_count * 10
-                    + a.comment_count * 5
-                    + a.collect_count * 3
+                a.view_count * 0.1
+                    + a.like_count * 0.5
+                    + a.comment_count * 0.1
+                    + a.collect_count * 0.5
                 ) desc,
             a.published_at desc
 
@@ -916,6 +912,46 @@
             sum(created_at >= date_sub(curdate(), interval weekday(curdate()) day)) as weeklyNew
         from article
         where status != '4';
+    </select>
+    <select id="queryPersonalizedListV2" resultType="java.lang.Long">
+
+        select a.id,
+        (
+        sum(
+        case atr.tag_id
+        <foreach collection="tagWeightMap" index="tagId" item="weight">
+            when #{tagId} then #{weight}
+        </foreach>
+        else 0 end
+        )
+        + 0.3 * log(1 + a.view_count + 2*a.like_count + 3*a.collect_count)
+        + 0.2 * exp(-0.08 * timestampdiff(hour, a.published_at, now()))
+        ) as score
+
+        from article a
+        left join article_tag_relation atr on a.id = atr.article_id
+        where a.visibility = 0
+        and a.status = 1
+        and a.published_at is not null
+        <if test="excludeIds != null and excludeIds.size() > 0">
+            and a.id not in
+            <foreach collection="excludeIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        </if>
+
+        <if test="flag == 'cold'">
+            and a.view_count &lt; 1000
+        </if>
+
+        <if test="flag == 'hot'">
+            and a.view_count &gt;= 1000
+        </if>
+
+        group by a.id
+        order by score desc
+        limit #{pageSize}
+
     </select>
 
 </mapper>

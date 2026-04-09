@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Repository
@@ -94,4 +95,6 @@ public interface Articlemapper extends BaseMapper<Article> {
     Long countArticleByCondition(@Param("request") ArticleRequest request);
 
     ArticleStatsVO queryArticleStats();
+
+    List<Long> queryPersonalizedListV2(@Param("tagWeightMap") Map<Long, Double> tagWeightMap, @Param("excludeIds") Set<Long> excludeIds, @Param("cold") String cold, @Param("coldSize") int coldSize);
 }
