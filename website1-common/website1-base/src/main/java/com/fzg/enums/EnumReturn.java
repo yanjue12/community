@@ -46,12 +46,14 @@ public enum EnumReturn {
         UN_LOGIN_OR_TOKEN_INVAID(2000, "未登录或token失效"),
 
         CONTENT_NOT_EXISTS(2000, "内容不能为空"),
+        ARTICLE_NOT_EXISTS(2000, "文章不存在"),
         NAME_NOT_EXISTS(2000, "姓名不能为空"),
         REQUSET_IS_EMPTY(2000, "请求参数不能为空"),
         EMAIL_IS_EMPTY(2000, "邮箱不能为空"),
         EMAIL_SEND_FAIL(2000, "邮箱发送失败"),
         MENU_TYPE_IS_EMPTY(2000, "菜单类型不能为空"),
         QUERY_PARAM_EMPTY(2000, "查询条件不能为空"),
+        FLAG_PARAM_ERROR(2000, "入参flag传递错误"),
 
         OPERATION_SUCCESS(2000,"操作成功"),
 

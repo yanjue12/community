@@ -1,10 +1,13 @@
 package com.fzg.controller.app;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fzg.mapper.PaperMapper;
+import com.fzg.mapper.QuestionMapper;
 import com.fzg.model.*;
 import com.fzg.service.*;
 import com.fzg.vo.AnswerDTO;
+import com.fzg.vo.PaperQueryRequest;
+import com.fzg.vo.QuestionQueryRequest;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +26,11 @@ public class ExamController {
     @Autowired
     private QuestionService questionService;
     @Autowired
+    private QuestionMapper questionMapper;
+    @Autowired
     private PaperService paperService;
+    @Autowired
+    private PaperMapper paperMapper;
     @Autowired
     private PaperQuestionService paperQuestionService;
     @Autowired
@@ -38,42 +45,61 @@ public class ExamController {
                                 @RequestParam(required = false) String keyword,
                                 @RequestParam(required = false) String tag,
                                 @RequestParam(required = false) Integer difficulty) {
+        int safePageNum = pageNum == null || pageNum < 1 ? 1 : pageNum;
+        int safePageSize = pageSize == null || pageSize < 1 ? 10 : pageSize;
+        int offset = (safePageNum - 1) * safePageSize;
 
-        LambdaQueryWrapper<Question> wrapper = new LambdaQueryWrapper<>();
-        if (keyword != null && !keyword.isEmpty()) {
-            wrapper.like(Question::getContent, keyword);
-        }
-        if (tag != null && !tag.isEmpty()) {
-            wrapper.like(Question::getTags, tag);
-        }
-        if (difficulty != null) {
-            wrapper.eq(Question::getDifficulty, difficulty);
-        }
-        Page<Question> page = questionService.page(new Page<>(pageNum, pageSize), wrapper);
-        return Result.success(page);
+        QuestionQueryRequest request = new QuestionQueryRequest();
+        request.setPageNum(safePageNum);
+        request.setPageSize(safePageSize);
+        request.setKeyword(keyword);
+        request.setTag(tag);
+        request.setDifficulty(difficulty);
+
+        List<Question> list = questionMapper.queryQuestionList(request, offset);
+        Long total = questionMapper.countQuestionList(request);
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("list", list);
+        resp.put("total", total);
+        resp.put("pageNum", safePageNum);
+        resp.put("pageSize", safePageSize);
+        return Result.success(resp);
     }
 
     /* ------------------- 试卷列表 ------------------- */
     @GetMapping("/paper/list")
     public Result listPapers(@RequestParam(defaultValue = "1") Integer pageNum,
                              @RequestParam(defaultValue = "10") Integer pageSize) {
-        Page<Paper> page = paperService.page(new Page<>(pageNum, pageSize),
-                new LambdaQueryWrapper<Paper>().eq(Paper::getStatus, 1));
+        int safePageNum = pageNum == null || pageNum < 1 ? 1 : pageNum;
+        int safePageSize = pageSize == null || pageSize < 1 ? 10 : pageSize;
+        int offset = (safePageNum - 1) * safePageSize;
+
+        PaperQueryRequest request = new PaperQueryRequest();
+        request.setPageNum(safePageNum);
+        request.setPageSize(safePageSize);
+        request.setStatus(1);
+
+        List<Paper> papers = paperMapper.selectPaperList(request, offset);
+        int total = paperMapper.selectPaperCount(request);
 
         // 补充题目数量
-        List<Map<String, Object>> data = page.getRecords().stream().map(p -> {
+        List<Map<String, Object>> data = papers.stream().map(p -> {
             long count = paperQuestionService.count(new LambdaQueryWrapper<PaperQuestion>().eq(PaperQuestion::getPaperId, p.getId()));
             Map<String, Object> m = new HashMap<>();
             m.put("id", p.getId());
             m.put("title", p.getTitle());
             m.put("totalScore", p.getTotalScore());
+            m.put("timeLimit", p.getTimeLimit());
             m.put("questionCount", count);
             return m;
         }).collect(Collectors.toList());
 
         Map<String, Object> resp = new HashMap<>();
-        resp.put("total", page.getTotal());
+        resp.put("total", total);
         resp.put("list", data);
+        resp.put("pageNum", safePageNum);
+        resp.put("pageSize", safePageSize);
         return Result.success(resp);
     }
 

@@ -90,11 +90,11 @@ public class UserController {
         }else if("MONOMER".equals(upSetVO.getFlag())){
             article = articlemapper.selectById(upSetVO.getArticleId());
             if(null == article){
-                return Result.fail(EnumReturn.valueOf("文章不存在"));
+                return Result.fail(EnumReturn.ARTICLE_NOT_EXISTS);
             }
             return Result.success(article);
         }
-        return Result.fail(EnumReturn.valueOf("入参flag传递错误"));
+        return Result.fail(EnumReturn.FLAG_PARAM_ERROR);
     }
 
 

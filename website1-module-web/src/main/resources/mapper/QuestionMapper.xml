@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.QuestionMapper">
+
+    <!-- 题目分页查询 -->
+    <select id="queryQuestionList" resultType="com.fzg.model.Question">
+        SELECT *
+        FROM question
+        <where>
+            1 = 1
+            <if test="request.keyword != null and request.keyword != ''">
+                AND content LIKE CONCAT('%', #{request.keyword}, '%')
+            </if>
+            <if test="request.type != null">
+                AND type = #{request.type}
+            </if>
+            <if test="request.difficulty != null">
+                AND difficulty = #{request.difficulty}
+            </if>
+            <if test="request.tag != null and request.tag != ''">
+                AND tags LIKE CONCAT('%', #{request.tag}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+        limit #{request.pageSize} offset #{offset}
+    </select>
+
+    <!-- 题目总数统计 -->
+    <select id="countQuestionList" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM question
+        <where>
+            1 = 1
+            <if test="request.keyword != null and request.keyword != ''">
+                AND content LIKE CONCAT('%', #{request.keyword}, '%')
+            </if>
+            <if test="request.type != null">
+                AND type = #{request.type}
+            </if>
+            <if test="request.difficulty != null">
+                AND difficulty = #{request.difficulty}
+            </if>
+            <if test="request.tag != null and request.tag != ''">
+                AND tags LIKE CONCAT('%', #{request.tag}, '%')
+            </if>
+        </where>
+    </select>
+
+</mapper>
