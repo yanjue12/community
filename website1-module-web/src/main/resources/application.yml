@@ -1,3 +1,23 @@
 spring:
   profiles:
     active: dev
+
+ark:
+  ai:
+    enabled: true
+    api-key: ${ARK_API_KEY:}
+    base-url: https://ark.cn-beijing.volces.com/api/v3
+    model: doubao-seed-2-0-pro-260215
+    embedding-model: doubao-embedding-vision-251215
+    allowed-models:
+      - doubao-seed-2-0-pro-260215
+      - doubao-1-5-pro-256k-250115
+      - doubao-embedding-vision-251215
+    allowed-chat-models:
+      - doubao-seed-2-0-pro-260215
+      - doubao-1-5-pro-256k-250115
+    allowed-embedding-models:
+      - doubao-embedding-vision-251215
+    timeout-seconds: 90
+    max-history-messages: 10
+    context-ttl-minutes: 120

@@ -926,4 +926,14 @@
         limit #{pageSize} offset #{offset}
     </select>
 
+    <select id="queryUserProfileStats" resultType="java.util.Map">
+        select
+            count(1) as topicCount,
+            ifnull(sum(ifnull(a.like_count, 0)), 0) as praiseCount
+        from article a
+        where a.user_id = #{userId}
+          and a.status = '1'
+          and a.visibility = '0'
+    </select>
+
 </mapper>

@@ -173,8 +173,11 @@ public class UserController {
         userVO.setAvatar(user.getAvatar());
         userVO.setSignature(user.getSignature());
         userVO.setLocation(user.getLocation());
-        userVO.setTopicCount(user.getTopicCount());
-        userVO.setCommentCount(user.getCommentCount());
+        Map<String, Object> profileStats = articlemapper.queryUserProfileStats(Long.valueOf(userVO.getUserId()));
+        userVO.setTopicCount(safeInt(profileStats.get("topicCount")));
+        Integer praiseCount = safeInt(profileStats.get("praiseCount"));
+        userVO.setCommentCount(praiseCount);
+        userVO.setPraiseCount(praiseCount);
         userVO.setFollowCount(user.getFollowerCount());
         userVO.setFollowingCount(user.getFollowingCount());
         userVO.setCollectionCount(user.getCollectionCount());
@@ -346,7 +349,28 @@ public class UserController {
     public Result queryUserInfo() {
         String loginId = (String) StpUtil.getLoginId();
         User user = userService.getById(Long.valueOf(loginId));
+        if (user != null) {
+            Map<String, Object> profileStats = articlemapper.queryUserProfileStats(user.getId());
+            user.setTopicCount(safeInt(profileStats.get("topicCount")));
+            Integer praiseCount = safeInt(profileStats.get("praiseCount"));
+            user.setCommentCount(praiseCount);
+            user.setPraiseCount(praiseCount);
+        }
         return Result.success(user);
+    }
+
+    private Integer safeInt(Object value) {
+        if (value == null) {
+            return 0;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     @Operation(summary = "用户发送验证码接口（非注册）")

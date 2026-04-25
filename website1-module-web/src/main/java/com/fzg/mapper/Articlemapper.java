@@ -86,7 +86,7 @@ public interface Articlemapper extends BaseMapper<Article> {
 
     List<Long> queryPersonalizedListV2(@Param("tagWeightMap") Map<Long, Double> tagWeightMap, @Param("excludeIds") Set<Long> excludeIds, @Param("flag") String flag, @Param("pageSize") int coldSize);
 
-
+    Map<String, Object> queryUserProfileStats(@Param("userId") Long userId);
 
     //************************管理端************************************
 

@@ -16,6 +16,7 @@ public class UserVO {
     private String location;
     private Integer topicCount; //发帖数
     private Integer commentCount;
+    private Integer praiseCount;
     private Integer followCount;
     private Integer followingCount;//关注数
     private Integer collectionCount;

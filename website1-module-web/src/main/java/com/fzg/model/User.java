@@ -1,6 +1,7 @@
 package com.fzg.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,6 +37,8 @@ public class User {
     private Integer gold;           // 银币
     private Integer topicCount;     // 发帖数
     private Integer commentCount;   // 评论数
+    @TableField(exist = false)
+    private Integer praiseCount;    // 获赞数(接口兼容字段)
     private Integer followerCount;  // 粉丝数
     private Integer followingCount; // 关注数
     private Integer collectionCount; // 收藏数

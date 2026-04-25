@@ -168,8 +168,7 @@ public class ExamController {
             if (existing == null) {
                 paperAnswerService.save(pa);
             } else {
-                pa.setId(existing.getId());
-                paperAnswerService.updateById(pa);
+                paperAnswerService.update(pa, w);
             }
         }
         return Result.success(true);
@@ -198,7 +197,9 @@ public class ExamController {
                 boolean correct = compareAnswer(q, pa.getUserAnswer());
                 if (correct) score = pq.getScore();
                 pa.setScore(score);
-                paperAnswerService.updateById(pa);
+                paperAnswerService.update(pa, new LambdaQueryWrapper<PaperAnswer>()
+                        .eq(PaperAnswer::getAttemptId, attemptId)
+                        .eq(PaperAnswer::getQuestionId, pa.getQuestionId()));
             }
             totalScore += score;
         }
