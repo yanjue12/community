@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface BotAiService {
-    String chat(Long userId, String conversationId, String model, String message);
+    String chat(Long userId, String conversationId, String model, String message, String depth);
 
     void resetConversation(String conversationId);
 

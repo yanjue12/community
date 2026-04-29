@@ -43,6 +43,9 @@ public class BotController {
         String model = request == null || StringUtils.isBlank(request.getModel())
                 ? arkAiProperties.getModel()
                 : request.getModel();
+        String depth = request == null || StringUtils.isBlank(request.getDepth())
+                ? arkAiProperties.getDefaultDepth()
+                : request.getDepth();
         long timestamp = System.currentTimeMillis();
         if (request == null || StringUtils.isBlank(request.getMessage())) {
             BotErrorVO errorVO = new BotErrorVO();
@@ -53,12 +56,13 @@ public class BotController {
             return new Result<>(400, "请求参数错误", errorVO);
         }
         try {
-            String answer = botAiService.chat(request.getUserId(), conversationId, model, request.getMessage());
+            String answer = botAiService.chat(request.getUserId(), conversationId, model, request.getMessage(), depth);
             BotChatResponseVO responseVO = new BotChatResponseVO();
             responseVO.setRequestId(requestId);
             responseVO.setConversationId(conversationId);
             responseVO.setTimestamp(timestamp);
             responseVO.setModel(model);
+            responseVO.setDepth(depth);
             responseVO.setAnswer(answer);
             return Result.success(responseVO);
         } catch (Exception e) {
@@ -262,9 +266,15 @@ public class BotController {
         Map<String, Object> data = new java.util.HashMap<>();
         data.put("defaultModel", arkAiProperties.getModel());
         data.put("defaultEmbeddingModel", arkAiProperties.getEmbeddingModel());
+        data.put("defaultDepth", arkAiProperties.getDefaultDepth());
         data.put("allowedChatModels", arkAiProperties.getAllowedChatModels());
         data.put("allowedEmbeddingModels", arkAiProperties.getAllowedEmbeddingModels());
         data.put("allowedModels", arkAiProperties.getAllowedModels());
+        Map<String, String> depthProfiles = new java.util.HashMap<>();
+        depthProfiles.put("fast", "更快响应，答案更简洁");
+        depthProfiles.put("balanced", "速度与深度平衡");
+        depthProfiles.put("deep", "更完整分析与步骤化输出");
+        data.put("depthProfiles", depthProfiles);
         return Result.success(data);
     }
 }

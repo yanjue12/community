@@ -8,4 +8,5 @@ public class BotChatRequest {
     private String conversationId;
     private String model;
     private String message;
+    private String depth;
 }

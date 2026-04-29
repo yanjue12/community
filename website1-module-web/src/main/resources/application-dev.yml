@@ -349,3 +349,15 @@ third-app:
 #        max-wait: 1ms
 #      shutdown-timeout: 100ms
 
+
+ark:
+  ai:
+    platform-enabled: true
+    platform-base-url: ${AI_PLATFORM_BASE_URL:http://127.0.0.1:8000}
+    platform-api-key: ${AI_PLATFORM_API_KEY:}
+    platform-connect-timeout-seconds: 3
+    platform-read-timeout-seconds: 60
+    platform-retry-count: 1
+    platform-allow-degrade: true
+    default-depth: ${ARK_DEFAULT_DEPTH:balanced}
+

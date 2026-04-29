@@ -8,5 +8,6 @@ public class BotChatResponseVO {
     private String conversationId;
     private Long timestamp;
     private String model;
+    private String depth;
     private String answer;
 }

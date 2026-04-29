@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 public class BotAiServiceImpl implements BotAiService {
 
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    private static final String HEADER_API_KEY = "X-API-Key";
     private static final String CONTEXT_KEY_PREFIX = "bot:context:";
     private static final String SESSION_META_KEY_PREFIX = "bot:session:meta:";
     private static final String USER_SESSIONS_KEY_PREFIX = "bot:user:sessions:";
@@ -46,12 +47,9 @@ public class BotAiServiceImpl implements BotAiService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public String chat(Long userId, String conversationId, String model, String message) {
+    public String chat(Long userId, String conversationId, String model, String message, String depth) {
         if (Boolean.FALSE.equals(arkAiProperties.getEnabled())) {
             throw new IllegalStateException("AI服务未启用");
-        }
-        if (StringUtils.isBlank(arkAiProperties.getApiKey())) {
-            throw new IllegalStateException("ARK_API_KEY 未配置");
         }
         if (StringUtils.isBlank(conversationId)) {
             throw new IllegalArgumentException("conversationId 不能为空");
@@ -61,6 +59,27 @@ public class BotAiServiceImpl implements BotAiService {
         }
         String finalModel = StringUtils.isBlank(model) ? arkAiProperties.getModel() : model;
         validateChatModel(finalModel);
+        String finalDepth = StringUtils.isBlank(depth) ? arkAiProperties.getDefaultDepth() : depth;
+
+        if (Boolean.TRUE.equals(arkAiProperties.getPlatformEnabled())) {
+            try {
+                String answer = callPlatformChat(userId, conversationId, finalModel, message, finalDepth);
+                persistConversation(userId, conversationId, finalModel, message, answer);
+                return answer;
+            } catch (RuntimeException ex) {
+                if (Boolean.TRUE.equals(arkAiProperties.getPlatformAllowDegrade())) {
+                    log.warn("AI平台调用失败，执行降级返回 conversationId={} err={}", conversationId, ex.getMessage());
+                    String degradedAnswer = "AI服务繁忙，已为你降级处理，请稍后再试。";
+                    persistConversation(userId, conversationId, finalModel, message, degradedAnswer);
+                    return degradedAnswer;
+                }
+                throw ex;
+            }
+        }
+
+        if (StringUtils.isBlank(arkAiProperties.getApiKey())) {
+            throw new IllegalStateException("ARK_API_KEY 未配置");
+        }
 
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(arkAiProperties.getTimeoutSeconds(), TimeUnit.SECONDS)
@@ -81,11 +100,86 @@ public class BotAiServiceImpl implements BotAiService {
                 throw ex;
             }
         }
-        appendConversation(conversationId, "user", message);
+        persistConversation(userId, conversationId, finalModel, message, answer);
+        return answer;
+    }
+
+    private void persistConversation(Long userId,
+                                     String conversationId,
+                                     String model,
+                                     String userMessage,
+                                     String answer) {
+        appendConversation(conversationId, "user", userMessage);
         appendConversation(conversationId, "assistant", answer);
         trimHistory(conversationId);
-        upsertConversationSession(userId, conversationId, finalModel, message, answer);
-        return answer;
+        upsertConversationSession(userId, conversationId, model, userMessage, answer);
+    }
+
+    private String callPlatformChat(Long userId,
+                                    String conversationId,
+                                    String model,
+                                    String message,
+                                    String depth) {
+        String url = trimTrailingSlash(arkAiProperties.getPlatformBaseUrl()) + "/bot/chat";
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(arkAiProperties.getPlatformConnectTimeoutSeconds(), TimeUnit.SECONDS)
+                .readTimeout(arkAiProperties.getPlatformReadTimeoutSeconds(), TimeUnit.SECONDS)
+                .writeTimeout(arkAiProperties.getPlatformReadTimeoutSeconds(), TimeUnit.SECONDS)
+                .build();
+        int retryCount = Math.max(0, arkAiProperties.getPlatformRetryCount() == null ? 0 : arkAiProperties.getPlatformRetryCount());
+        RuntimeException lastError = null;
+        for (int attempt = 0; attempt <= retryCount; attempt++) {
+            try {
+                String payload = objectMapper.createObjectNode()
+                        .put("userId", userId == null ? 0L : userId)
+                        .put("conversationId", conversationId)
+                        .put("model", model)
+                        .put("message", message)
+                        .put("depth", depth)
+                        .toString();
+                RequestBody body = RequestBody.create(JSON, payload);
+                Request.Builder requestBuilder = new Request.Builder()
+                        .url(url)
+                        .addHeader("Content-Type", "application/json")
+                        .post(body);
+                if (StringUtils.isNotBlank(arkAiProperties.getPlatformApiKey())) {
+                    requestBuilder.addHeader(HEADER_API_KEY, arkAiProperties.getPlatformApiKey());
+                }
+                try (Response response = client.newCall(requestBuilder.build()).execute()) {
+                    String responseBody = response.body() == null ? "" : response.body().string();
+                    if (!response.isSuccessful()) {
+                        log.warn("AI平台chat调用失败 attempt={} code={} body={}", attempt + 1, response.code(), responseBody);
+                        if (response.code() >= 500 && attempt < retryCount) {
+                            continue;
+                        }
+                        throw new RuntimeException("AI平台调用失败: " + response.code());
+                    }
+                    JsonNode root = objectMapper.readTree(responseBody);
+                    if (root.path("code").asInt(500) != 200) {
+                        String errMsg = root.path("message").asText("AI平台返回失败");
+                        if (attempt < retryCount) {
+                            continue;
+                        }
+                        throw new RuntimeException(errMsg);
+                    }
+                    String answer = root.path("data").path("answer").asText("");
+                    if (StringUtils.isBlank(answer)) {
+                        throw new RuntimeException("AI平台返回内容为空");
+                    }
+                    return answer;
+                }
+            } catch (SocketTimeoutException e) {
+                log.warn("AI平台chat超时 attempt={} err={}", attempt + 1, e.getMessage());
+                lastError = new RuntimeException("AI平台请求超时", e);
+            } catch (IOException e) {
+                log.warn("AI平台chat请求异常 attempt={} err={}", attempt + 1, e.getMessage());
+                lastError = new RuntimeException("AI平台请求异常", e);
+            }
+            if (attempt >= retryCount && lastError != null) {
+                throw lastError;
+            }
+        }
+        throw new RuntimeException("AI平台调用失败");
     }
 
     private String callChatCompletions(OkHttpClient client,
@@ -120,6 +214,70 @@ public class BotAiServiceImpl implements BotAiService {
             log.error("Ark AI请求异常: {}", e.getMessage(), e);
             throw new RuntimeException("AI服务请求异常", e);
         }
+    }
+
+    private Map<String, Object> callPlatformMultimodalEmbedding(Long userId,
+                                                                 String model,
+                                                                 String text,
+                                                                 String imageUrl,
+                                                                 String prompt) {
+        String url = trimTrailingSlash(arkAiProperties.getPlatformBaseUrl()) + "/bot/embedding/multimodal";
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(arkAiProperties.getPlatformConnectTimeoutSeconds(), TimeUnit.SECONDS)
+                .readTimeout(arkAiProperties.getPlatformReadTimeoutSeconds(), TimeUnit.SECONDS)
+                .writeTimeout(arkAiProperties.getPlatformReadTimeoutSeconds(), TimeUnit.SECONDS)
+                .build();
+        int retryCount = Math.max(0, arkAiProperties.getPlatformRetryCount() == null ? 0 : arkAiProperties.getPlatformRetryCount());
+        RuntimeException lastError = null;
+        for (int attempt = 0; attempt <= retryCount; attempt++) {
+            try {
+                String payload = objectMapper.createObjectNode()
+                        .put("userId", userId == null ? 0L : userId)
+                        .put("model", model)
+                        .put("text", StringUtils.defaultString(text))
+                        .put("imageUrl", StringUtils.defaultString(imageUrl))
+                        .put("prompt", StringUtils.defaultString(prompt))
+                        .toString();
+                RequestBody body = RequestBody.create(JSON, payload);
+                Request.Builder requestBuilder = new Request.Builder()
+                        .url(url)
+                        .addHeader("Content-Type", "application/json")
+                        .post(body);
+                if (StringUtils.isNotBlank(arkAiProperties.getPlatformApiKey())) {
+                    requestBuilder.addHeader(HEADER_API_KEY, arkAiProperties.getPlatformApiKey());
+                }
+                try (Response response = client.newCall(requestBuilder.build()).execute()) {
+                    String responseBody = response.body() == null ? "" : response.body().string();
+                    if (!response.isSuccessful()) {
+                        log.warn("AI平台embedding调用失败 attempt={} code={} body={}", attempt + 1, response.code(), responseBody);
+                        if (response.code() >= 500 && attempt < retryCount) {
+                            continue;
+                        }
+                        throw new RuntimeException("Embedding服务调用失败: " + response.code());
+                    }
+                    JsonNode root = objectMapper.readTree(responseBody);
+                    if (root.path("code").asInt(500) != 200) {
+                        String errMsg = root.path("message").asText("Embedding服务调用失败");
+                        if (attempt < retryCount) {
+                            continue;
+                        }
+                        throw new RuntimeException(errMsg);
+                    }
+                    JsonNode dataNode = root.path("data");
+                    return objectMapper.convertValue(dataNode, Map.class);
+                }
+            } catch (SocketTimeoutException e) {
+                log.warn("AI平台embedding超时 attempt={} err={}", attempt + 1, e.getMessage());
+                lastError = new RuntimeException("Embedding服务请求超时", e);
+            } catch (IOException e) {
+                log.warn("AI平台embedding请求异常 attempt={} err={}", attempt + 1, e.getMessage());
+                lastError = new RuntimeException("Embedding服务请求异常", e);
+            }
+            if (attempt >= retryCount && lastError != null) {
+                throw lastError;
+            }
+        }
+        throw new RuntimeException("Embedding服务调用失败");
     }
 
     private boolean isTimeoutException(Throwable throwable) {
@@ -247,14 +405,21 @@ public class BotAiServiceImpl implements BotAiService {
         if (Boolean.FALSE.equals(arkAiProperties.getEnabled())) {
             throw new IllegalStateException("AI服务未启用");
         }
-        if (StringUtils.isBlank(arkAiProperties.getApiKey())) {
-            throw new IllegalStateException("ARK_API_KEY 未配置");
-        }
         if (StringUtils.isBlank(text) && StringUtils.isBlank(imageUrl)) {
             throw new IllegalArgumentException("text 和 imageUrl 不能同时为空");
         }
         String finalModel = StringUtils.isBlank(model) ? arkAiProperties.getEmbeddingModel() : model;
         validateEmbeddingModel(finalModel);
+
+        if (Boolean.TRUE.equals(arkAiProperties.getPlatformEnabled())) {
+            Map<String, Object> parsed = callPlatformMultimodalEmbedding(userId, finalModel, text, imageUrl, prompt);
+            appendDrawingHistory(userId, finalModel, prompt, text, imageUrl);
+            return parsed;
+        }
+
+        if (StringUtils.isBlank(arkAiProperties.getApiKey())) {
+            throw new IllegalStateException("ARK_API_KEY 未配置");
+        }
         String url = arkAiProperties.getBaseUrl() + "/embeddings/multimodal";
 
         OkHttpClient client = new OkHttpClient.Builder()
@@ -590,6 +755,16 @@ public class BotAiServiceImpl implements BotAiService {
             return normalized;
         }
         return normalized.substring(0, maxLength) + "...";
+    }
+
+    private String trimTrailingSlash(String text) {
+        if (StringUtils.isBlank(text)) {
+            return "";
+        }
+        if (text.endsWith("/")) {
+            return text.substring(0, text.length() - 1);
+        }
+        return text;
     }
 
     private void validateChatModel(String model) {
