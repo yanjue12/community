@@ -4,7 +4,6 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.annotation.SaMode;
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fzg.mapper.PaperMapper;
 import com.fzg.mapper.QuestionMapper;
@@ -53,6 +52,9 @@ public class AdminExamController {
         }
         int pageNum = request.getPageNum() == null || request.getPageNum() < 1 ? 1 : request.getPageNum();
         int pageSize = request.getPageSize() == null || request.getPageSize() < 1 ? 10 : request.getPageSize();
+        request.setPageNum(pageNum);
+        request.setPageSize(pageSize);
+        request.setTagList(parseTagsToList(request.getTag()));
 
         int offset = (pageNum - 1) * pageSize;
         List<Question> list = questionMapper.queryQuestionList(request, offset);
@@ -71,6 +73,45 @@ public class AdminExamController {
             return Result.fail(404, "题目不存在");
         }
         return Result.success(question);
+    }
+
+    @GetMapping("/question/tags")
+    @Operation(summary = "题目标签选项", description = "从题库已有题目中提取标签，供前端下拉、多选和自定义标签输入使用")
+    public Result listQuestionTags(@RequestParam(required = false) String keyword,
+                                   @RequestParam(required = false, defaultValue = "50") Integer limit) {
+        int safeLimit = limit == null || limit < 1 ? 50 : Math.min(limit, 200);
+        int fetchLimit = Math.max(safeLimit * 20, 200);
+        String normalizedKeyword = notBlank(keyword) ? keyword.trim().toLowerCase(Locale.ROOT) : null;
+
+        LinkedHashSet<String> tagSet = new LinkedHashSet<>();
+        List<String> payloads = questionMapper.selectTagPayloads(fetchLimit);
+        for (String payload : payloads) {
+            for (String tag : parseTagsToList(payload)) {
+                if (normalizedKeyword != null && !tag.toLowerCase(Locale.ROOT).contains(normalizedKeyword)) {
+                    continue;
+                }
+                tagSet.add(tag);
+                if (tagSet.size() >= safeLimit) {
+                    break;
+                }
+            }
+            if (tagSet.size() >= safeLimit) {
+                break;
+            }
+        }
+
+        List<String> tags = new ArrayList<>(tagSet);
+        List<Map<String, String>> options = tags.stream().map(tag -> {
+            Map<String, String> option = new HashMap<>();
+            option.put("label", tag);
+            option.put("value", tag);
+            return option;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("list", tags);
+        data.put("options", options);
+        return Result.success(data);
     }
 
     @PostMapping("/question/create")
@@ -363,37 +404,39 @@ public class AdminExamController {
         String raw = answer.trim();
 
         if (type == 1) {
-            if (isValidJson(raw)) {
-                Object parsed = JSON.parse(raw);
-                if (parsed instanceof JSONArray) {
-                    return raw;
+            try {
+                Object parsed = parseJsonLenient(raw);
+                if (parsed instanceof Collection) {
+                    return JSON.toJSONString(parsed);
                 }
                 if (parsed instanceof String) {
-                    return JSON.toJSONString(Collections.singletonList(parsed.toString()));
+                    return JSON.toJSONString(Collections.singletonList(cleanTag(parsed.toString())));
                 }
+            } catch (Exception ignored) {
             }
-            return JSON.toJSONString(Collections.singletonList(raw.replace("\"", "")));
+            return JSON.toJSONString(Collections.singletonList(cleanTag(raw)));
         }
 
         if (type == 2) {
-            if (isValidJson(raw)) {
-                Object parsed = JSON.parse(raw);
-                if (parsed instanceof JSONArray) {
-                    return raw;
+            try {
+                Object parsed = parseJsonLenient(raw);
+                if (parsed instanceof Collection) {
+                    return JSON.toJSONString(parsed);
                 }
+            } catch (Exception ignored) {
             }
-            List<String> arr = Arrays.stream(raw.split("[,，]"))
-                    .map(String::trim)
+            List<String> arr = Arrays.stream(raw.split("[,\\uFF0C\\u3001;\\uFF1B\\s]+"))
+                    .map(this::cleanTag)
                     .filter(this::notBlank)
-                    .map(s -> s.replace("\"", ""))
                     .collect(Collectors.toList());
             return arr.isEmpty() ? null : JSON.toJSONString(arr);
         }
 
-        if (isValidJson(raw)) {
-            return raw;
+        try {
+            return JSON.toJSONString(parseJsonLenient(raw));
+        } catch (Exception ignored) {
+            return JSON.toJSONString(raw);
         }
-        return JSON.toJSONString(raw);
     }
 
     private String normalizeOptions(String options, Integer type) {
@@ -403,27 +446,187 @@ public class AdminExamController {
         if (!notBlank(options)) {
             return null;
         }
-        String raw = options.trim();
-        if (!isValidJson(raw)) {
+
+        Object parsed;
+        try {
+            parsed = parseJsonLenient(options.trim());
+        } catch (Exception ignored) {
             return null;
         }
-        Object parsed = JSON.parse(raw);
-        return parsed instanceof JSONArray ? raw : null;
+        if (!(parsed instanceof Collection)) {
+            return null;
+        }
+
+        Collection<?> source = (Collection<?>) parsed;
+        List<Map<String, String>> normalized = new ArrayList<>();
+        int index = 0;
+        for (Object item : source) {
+            String value = null;
+            String label = null;
+
+            if (item instanceof Map) {
+                Map<?, ?> option = (Map<?, ?>) item;
+                value = toText(option.get("value"));
+                label = firstText(option.get("label"), option.get("text"), option.get("content"));
+            } else if (item != null) {
+                String text = item.toString().trim();
+                java.util.regex.Matcher matcher = java.util.regex.Pattern
+                        .compile("^([A-Za-z])[\\.:\\u3001\\s-]+(.+)$")
+                        .matcher(text);
+                if (matcher.matches()) {
+                    value = matcher.group(1);
+                    label = matcher.group(2);
+                } else {
+                    label = text;
+                }
+            }
+
+            if (!notBlank(value)) {
+                value = String.valueOf((char) ('A' + index));
+            }
+            if (!notBlank(label)) {
+                return null;
+            }
+
+            Map<String, String> option = new LinkedHashMap<>();
+            option.put("value", value.trim().toUpperCase(Locale.ROOT));
+            option.put("label", label.trim());
+            normalized.add(option);
+            index++;
+        }
+        return normalized.isEmpty() ? null : JSON.toJSONString(normalized);
     }
 
     private String normalizeTags(String tags) {
+        List<String> arr = parseTagsToList(tags);
+        return arr.isEmpty() ? null : JSON.toJSONString(arr);
+    }
+
+    private List<String> parseTagsToList(String tags) {
         if (!notBlank(tags)) {
+            return Collections.emptyList();
+        }
+
+        List<String> result = new ArrayList<>();
+        collectTags(result, tags);
+        return distinctTags(result);
+    }
+
+    private void collectTags(List<String> result, Object value) {
+        if (value == null) {
+            return;
+        }
+        if (value instanceof Collection) {
+            for (Object item : (Collection<?>) value) {
+                collectTags(result, item);
+            }
+            return;
+        }
+        appendTagText(result, String.valueOf(value));
+    }
+
+    private void appendTagText(List<String> result, String text) {
+        if (!notBlank(text)) {
+            return;
+        }
+        String raw = text.trim().replace("\\\"", "\"");
+        if (looksLikeJson(raw)) {
+            try {
+                Object parsed = parseJsonLenient(raw);
+                if (!(parsed instanceof String && raw.equals(parsed))) {
+                    collectTags(result, parsed);
+                    return;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        String plain = raw;
+        if (plain.startsWith("[") && plain.endsWith("]") && plain.length() > 1) {
+            plain = plain.substring(1, plain.length() - 1);
+        }
+
+        Arrays.stream(plain.split("[,\\uFF0C\\u3001;\\uFF1B\\n\\r]+"))
+                .map(this::cleanTag)
+                .filter(this::notBlank)
+                .forEach(result::add);
+    }
+
+    private String cleanTag(String tag) {
+        if (tag == null) {
             return null;
         }
-        String raw = tags.trim();
-        if (isValidJson(raw)) {
-            return raw;
+        String value = tag.trim().replace("\\\"", "\"");
+        while (value.startsWith("[") && value.length() > 1) {
+            value = value.substring(1).trim();
         }
-        List<String> arr = Arrays.stream(raw.split("[,，]"))
-                .map(String::trim)
-                .filter(this::notBlank)
-                .collect(Collectors.toList());
-        return arr.isEmpty() ? null : JSON.toJSONString(arr);
+        while (value.endsWith("]") && value.length() > 1) {
+            value = value.substring(0, value.length() - 1).trim();
+        }
+        while ((value.startsWith("\"") || value.startsWith("'")) && value.length() > 1) {
+            value = value.substring(1).trim();
+        }
+        while ((value.endsWith("\"") || value.endsWith("'")) && value.length() > 1) {
+            value = value.substring(0, value.length() - 1).trim();
+        }
+        return value;
+    }
+
+    private List<String> distinctTags(List<String> tags) {
+        LinkedHashSet<String> set = new LinkedHashSet<>();
+        for (String tag : tags) {
+            String clean = cleanTag(tag);
+            if (notBlank(clean)) {
+                set.add(clean);
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
+    private Object parseJsonLenient(String raw) {
+        String source = raw == null ? "" : raw.trim();
+        Object parsed;
+        try {
+            parsed = JSON.parse(source);
+        } catch (Exception e) {
+            String unescaped = source.replace("\\\"", "\"");
+            if (unescaped.equals(source)) {
+                throw new IllegalArgumentException(e);
+            }
+            parsed = JSON.parse(unescaped);
+        }
+        if (parsed instanceof String) {
+            String text = ((String) parsed).trim();
+            if (notBlank(text) && looksLikeJson(text)) {
+                try {
+                    return JSON.parse(text);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        return parsed;
+    }
+
+    private boolean looksLikeJson(String raw) {
+        if (!notBlank(raw)) {
+            return false;
+        }
+        String value = raw.trim();
+        return value.startsWith("[") || value.startsWith("{") || value.startsWith("\"");
+    }
+
+    private String toText(Object value) {
+        return value == null ? null : String.valueOf(value).trim();
+    }
+
+    private String firstText(Object... values) {
+        for (Object value : values) {
+            String text = toText(value);
+            if (notBlank(text)) {
+                return text;
+            }
+        }
+        return null;
     }
 
     private boolean isValidJson(String raw) {

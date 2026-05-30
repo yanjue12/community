@@ -18,6 +18,7 @@ import com.fzg.model.User;
 import com.fzg.model.UserPrivacy;
 import com.fzg.model.UserRole;
 import com.fzg.service.UserPrivacyService;
+import com.fzg.service.SensitiveService;
 import com.fzg.service.UserService;
 import com.fzg.service.FollowService;
 import com.fzg.vo.*;
@@ -33,14 +34,23 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.Date;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/auth")
@@ -55,6 +65,7 @@ public class UserController {
     private final UserRolemapper userRolemapper;
     private final Rolemapper rolemapper;
     private final FollowService followService;
+    private final SensitiveService sensitiveService;
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -119,6 +130,11 @@ public class UserController {
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
         }
 
+        String hitWord = sensitiveService.hit(articleVO.getTitle(), articleVO.getSummary(), articleVO.getContent());
+        if (StringUtils.isNotBlank(hitWord)) {
+            return Result.fail(400, "内容包含敏感词，请修改后再提交");
+        }
+
         Boolean b = userService.publishArticle(articleVO);
 
         return b ? Result.success("发布成功") : Result.fail(EnumReturn.valueOf("发布失败"));
@@ -139,6 +155,11 @@ public class UserController {
         }
         if(null == articleVO.getId() || articleVO.getId() <= 0){
             return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+
+        String hitWord = sensitiveService.hit(articleVO.getTitle(), articleVO.getSummary(), articleVO.getContent());
+        if (StringUtils.isNotBlank(hitWord)) {
+            return Result.fail(400, "内容包含敏感词，请修改后再提交");
         }
 
         Boolean b = userService.updateArticle(articleVO);
@@ -215,11 +236,75 @@ public class UserController {
         return userService.register(registerVO);
     }
 
+    /**
+     * 引导式注册：提交初始兴趣标签
+     * 用于解决推荐系统冷启动问题，将用户选中的技术标签写入画像表
+     */
+    @Operation(summary = "引导式注册：初始化兴趣标签")
+    @PostMapping("/initInterestTags")
+    public Result initInterestTags(@RequestBody InitInterestTagsRequest request) {
+        if (request == null || request.getUserId() == null) {
+            return Result.fail(EnumReturn.REQUSET_IS_EMPTY);
+        }
+        return userService.initInterestTags(request);
+    }
+
     @Operation(summary = "用户发送验证码接口（注册）")
     @PostMapping("/send-code")
     public Result sendVerificationCode(@RequestBody RegisterVO registerVO) {
 
         return userService.sendVerificationCode(registerVO);
+    }
+
+    @Operation(summary = "注册图形验证码")
+    @GetMapping("/register-captcha")
+    public Result registerCaptcha() {
+        String captchaId = UUID.randomUUID().toString().replace("-", "");
+        String captchaCode = randomCaptchaCode(4);
+        String captchaKey = RedisVerificationKey.getRegisterCaptchaKey(captchaId);
+        redisTemplate.opsForValue().set(captchaKey, captchaCode, 3, TimeUnit.MINUTES);
+        try {
+            BufferedImage image = new BufferedImage(120, 40, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = image.createGraphics();
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, 120, 40);
+            g.setColor(new Color(220, 220, 220));
+            for (int i = 0; i < 6; i++) {
+                int x1 = (int) (Math.random() * 120);
+                int y1 = (int) (Math.random() * 40);
+                int x2 = (int) (Math.random() * 120);
+                int y2 = (int) (Math.random() * 40);
+                g.drawLine(x1, y1, x2, y2);
+            }
+            g.setFont(new Font("Arial", Font.BOLD, 26));
+            for (int i = 0; i < captchaCode.length(); i++) {
+                g.setColor(new Color(20 + (int) (Math.random() * 120), 20 + (int) (Math.random() * 120), 20 + (int) (Math.random() * 120)));
+                g.drawString(String.valueOf(captchaCode.charAt(i)), 20 + i * 22, 30 + (int) (Math.random() * 4));
+            }
+            g.dispose();
+
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            ImageIO.write(image, "png", os);
+            String base64 = Base64.getEncoder().encodeToString(os.toByteArray());
+            Map<String, Object> data = new HashMap<>();
+            data.put("captchaId", captchaId);
+            data.put("captchaImage", "data:image/png;base64," + base64);
+            data.put("expireSeconds", 180);
+            return Result.success(data);
+        } catch (Exception e) {
+            log.error("生成注册图形验证码失败", e);
+            redisTemplate.delete(captchaKey);
+            return Result.fail(EnumReturn.OPERATION_FAIL);
+        }
+    }
+
+    private String randomCaptchaCode(int length) {
+        String chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt((int) (Math.random() * chars.length())));
+        }
+        return sb.toString();
     }
 
 
@@ -234,6 +319,12 @@ public class UserController {
         //用户名 / 邮箱 密码登录
         return userService.login(userLoginVO);
 
+    }
+
+    @Operation(summary = "手机号验证码登录")
+    @PostMapping("/login-phone-code")
+    public Result loginByPhoneCode(@RequestBody PhoneLoginRequest phoneLoginRequest) {
+        return userService.loginByPhoneCode(phoneLoginRequest);
     }
 
     @PostMapping("/checkUsername")
@@ -380,6 +471,18 @@ public class UserController {
         return userService.sendCode(emailRequest);
     }
 
+    @Operation(summary = "用户发送短信验证码接口")
+    @PostMapping("/send-sms-code")
+    public Result sendSmsCode(@RequestBody SmsCodeSendRequest smsCodeSendRequest) {
+        return userService.sendSmsCode(smsCodeSendRequest);
+    }
+
+    @Operation(summary = "用户校验短信验证码接口")
+    @PostMapping("/verify-sms-code")
+    public Result verifySmsCode(@RequestBody SmsCodeVerifyRequest smsCodeVerifyRequest) {
+        return userService.verifySmsCode(smsCodeVerifyRequest);
+    }
+
     /**
      * 验证验证码接口
      * @param verifyCodeVO
@@ -430,8 +533,9 @@ public class UserController {
             String loginId =(String) StpUtil.getLoginId();
             User user = userService.getById(Long.valueOf(loginId));
             user.setEmail(emailRequest.getEmail());
+            user.setEmailVerified("1");
             user.setUpdatedAt(Date.from(ZonedDateTime.now(ZoneId.systemDefault()).toInstant()));
-            userService.update(user, new QueryWrapper<>());
+            userService.update(user, new QueryWrapper<User>().eq("id", Long.valueOf(loginId)));
         }catch (Exception e){
             log.info("修改邮箱异常:{}",e);
             throw new RuntimeException("修改邮箱异常");

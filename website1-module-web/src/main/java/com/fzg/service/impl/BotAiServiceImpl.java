@@ -19,8 +19,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -28,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 @Service
 @Slf4j
@@ -67,6 +71,19 @@ public class BotAiServiceImpl implements BotAiService {
                 persistConversation(userId, conversationId, finalModel, message, answer);
                 return answer;
             } catch (RuntimeException ex) {
+                log.warn("AI平台调用失败，尝试Ark直连 conversationId={} err={}", conversationId, ex.getMessage());
+                if (StringUtils.isNotBlank(arkAiProperties.getApiKey())) {
+                    try {
+                        String answer = callArkChat(conversationId, finalModel, message);
+                        persistConversation(userId, conversationId, finalModel, message, answer);
+                        return answer;
+                    } catch (RuntimeException directEx) {
+                        log.warn("Ark直连调用失败 conversationId={} err={}", conversationId, directEx.getMessage());
+                        if (!Boolean.TRUE.equals(arkAiProperties.getPlatformAllowDegrade())) {
+                            throw directEx;
+                        }
+                    }
+                }
                 if (Boolean.TRUE.equals(arkAiProperties.getPlatformAllowDegrade())) {
                     log.warn("AI平台调用失败，执行降级返回 conversationId={} err={}", conversationId, ex.getMessage());
                     String degradedAnswer = "AI服务繁忙，已为你降级处理，请稍后再试。";
@@ -77,6 +94,65 @@ public class BotAiServiceImpl implements BotAiService {
             }
         }
 
+        String answer = callArkChat(conversationId, finalModel, message);
+        persistConversation(userId, conversationId, finalModel, message, answer);
+        return answer;
+    }
+
+    @Override
+    public void chatStream(Long userId, String conversationId, String model, String message, String depth,
+                           Consumer<String> chunkConsumer) {
+        if (Boolean.FALSE.equals(arkAiProperties.getEnabled())) {
+            throw new IllegalStateException("AI服务未启用");
+        }
+        if (StringUtils.isBlank(conversationId)) {
+            throw new IllegalArgumentException("conversationId 不能为空");
+        }
+        if (StringUtils.isBlank(message)) {
+            throw new IllegalArgumentException("消息内容不能为空");
+        }
+        String finalModel = StringUtils.isBlank(model) ? arkAiProperties.getModel() : model;
+        validateChatModel(finalModel);
+        String finalDepth = StringUtils.isBlank(depth) ? arkAiProperties.getDefaultDepth() : depth;
+
+        RuntimeException lastError = null;
+        if (StringUtils.isNotBlank(arkAiProperties.getApiKey())) {
+            try {
+                String answer = callArkChatStream(conversationId, finalModel, message, chunkConsumer);
+                persistConversation(userId, conversationId, finalModel, message, answer);
+                return;
+            } catch (RuntimeException ex) {
+                lastError = ex;
+                log.warn("Ark流式调用失败 conversationId={} err={}", conversationId, ex.getMessage());
+            }
+        }
+
+        if (Boolean.TRUE.equals(arkAiProperties.getPlatformEnabled())) {
+            try {
+                String answer = callPlatformChat(userId, conversationId, finalModel, message, finalDepth);
+                chunkConsumer.accept(answer);
+                persistConversation(userId, conversationId, finalModel, message, answer);
+                return;
+            } catch (RuntimeException ex) {
+                lastError = ex;
+                log.warn("AI平台流式降级调用失败 conversationId={} err={}", conversationId, ex.getMessage());
+            }
+        }
+
+        if (Boolean.TRUE.equals(arkAiProperties.getPlatformAllowDegrade())) {
+            String degradedAnswer = "AI服务繁忙，已为你降级处理，请稍后再试。";
+            chunkConsumer.accept(degradedAnswer);
+            persistConversation(userId, conversationId, finalModel, message, degradedAnswer);
+            return;
+        }
+
+        if (lastError != null) {
+            throw lastError;
+        }
+        throw new IllegalStateException("ARK_API_KEY 未配置");
+    }
+
+    private String callArkChat(String conversationId, String model, String message) {
         if (StringUtils.isBlank(arkAiProperties.getApiKey())) {
             throw new IllegalStateException("ARK_API_KEY 未配置");
         }
@@ -87,21 +163,35 @@ public class BotAiServiceImpl implements BotAiService {
                 .writeTimeout(arkAiProperties.getTimeoutSeconds(), TimeUnit.SECONDS)
                 .build();
 
-        String url = arkAiProperties.getBaseUrl() + "/chat/completions";
+        String url = trimTrailingSlash(arkAiProperties.getBaseUrl()) + "/chat/completions";
         List<Map<String, String>> fullHistoryMessages = loadHistoryMessages(conversationId);
-        String answer;
         try {
-            answer = callChatCompletions(client, url, finalModel, fullHistoryMessages, message);
+            return callChatCompletions(client, url, model, fullHistoryMessages, message);
         } catch (RuntimeException ex) {
             if (isTimeoutException(ex)) {
                 log.warn("Ark AI首轮请求超时, 降级重试(仅当前问题), conversationId={}", conversationId);
-                answer = callChatCompletions(client, url, finalModel, new ArrayList<>(), message);
-            } else {
-                throw ex;
+                return callChatCompletions(client, url, model, new ArrayList<>(), message);
             }
+            throw ex;
         }
-        persistConversation(userId, conversationId, finalModel, message, answer);
-        return answer;
+    }
+
+    private String callArkChatStream(String conversationId,
+                                     String model,
+                                     String message,
+                                     Consumer<String> chunkConsumer) {
+        if (StringUtils.isBlank(arkAiProperties.getApiKey())) {
+            throw new IllegalStateException("ARK_API_KEY 未配置");
+        }
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(arkAiProperties.getTimeoutSeconds(), TimeUnit.SECONDS)
+                .readTimeout(arkAiProperties.getTimeoutSeconds(), TimeUnit.SECONDS)
+                .writeTimeout(arkAiProperties.getTimeoutSeconds(), TimeUnit.SECONDS)
+                .build();
+
+        String url = trimTrailingSlash(arkAiProperties.getBaseUrl()) + "/chat/completions";
+        return callChatCompletionsStream(client, url, model, loadHistoryMessages(conversationId), message, chunkConsumer);
     }
 
     private void persistConversation(Long userId,
@@ -156,7 +246,7 @@ public class BotAiServiceImpl implements BotAiService {
                     }
                     JsonNode root = objectMapper.readTree(responseBody);
                     if (root.path("code").asInt(500) != 200) {
-                        String errMsg = root.path("message").asText("AI平台返回失败");
+                        String errMsg = root.path("msg").asText(root.path("message").asText("AI平台返回失败"));
                         if (attempt < retryCount) {
                             continue;
                         }
@@ -212,6 +302,65 @@ public class BotAiServiceImpl implements BotAiService {
             throw new RuntimeException("AI服务请求超时", e);
         } catch (IOException e) {
             log.error("Ark AI请求异常: {}", e.getMessage(), e);
+            throw new RuntimeException("AI服务请求异常", e);
+        }
+    }
+
+    private String callChatCompletionsStream(OkHttpClient client,
+                                             String url,
+                                             String model,
+                                             List<Map<String, String>> historyMessages,
+                                             String message,
+                                             Consumer<String> chunkConsumer) {
+        String payload = buildChatPayload(model, historyMessages, message, true);
+        RequestBody body = RequestBody.create(JSON, payload);
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "text/event-stream")
+                .addHeader("Authorization", "Bearer " + arkAiProperties.getApiKey())
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String responseBody = response.body() == null ? "" : response.body().string();
+                log.error("Ark AI流式调用失败, code={}, body={}", response.code(), responseBody);
+                throw new RuntimeException("AI服务调用失败: " + response.code());
+            }
+            if (response.body() == null) {
+                throw new RuntimeException("AI流式返回内容为空");
+            }
+            StringBuilder answerBuilder = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    response.body().byteStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String data = parseSseDataLine(line);
+                    if (data == null) {
+                        continue;
+                    }
+                    if ("[DONE]".equals(data)) {
+                        break;
+                    }
+                    String delta = parseStreamDelta(data);
+                    if (StringUtils.isEmpty(delta)) {
+                        continue;
+                    }
+                    answerBuilder.append(delta);
+                    chunkConsumer.accept(delta);
+                }
+            }
+            String answer = answerBuilder.toString();
+            if (StringUtils.isBlank(answer)) {
+                throw new RuntimeException("AI流式返回内容为空");
+            }
+            return answer;
+        } catch (SocketTimeoutException e) {
+            log.error("Ark AI流式请求超时: {}", e.getMessage());
+            throw new RuntimeException("AI服务请求超时", e);
+        } catch (IOException e) {
+            log.error("Ark AI流式请求异常: {}", e.getMessage(), e);
             throw new RuntimeException("AI服务请求异常", e);
         }
     }
@@ -526,9 +675,14 @@ public class BotAiServiceImpl implements BotAiService {
     }
 
     private String buildChatPayload(String model, List<Map<String, String>> historyMessages, String message) {
+        return buildChatPayload(model, historyMessages, message, false);
+    }
+
+    private String buildChatPayload(String model, List<Map<String, String>> historyMessages, String message, boolean stream) {
         try {
             JsonNode root = objectMapper.createObjectNode()
-                    .put("model", model);
+                    .put("model", model)
+                    .put("stream", stream);
             com.fasterxml.jackson.databind.node.ArrayNode messages = objectMapper.createArrayNode();
             for (Map<String, String> history : historyMessages) {
                 messages.add(objectMapper.createObjectNode()
@@ -545,25 +699,68 @@ public class BotAiServiceImpl implements BotAiService {
         }
     }
 
+    private String parseSseDataLine(String line) {
+        if (StringUtils.isBlank(line)) {
+            return null;
+        }
+        String trimmed = line.trim();
+        if (trimmed.startsWith(":")) {
+            return null;
+        }
+        if (trimmed.startsWith("data:")) {
+            return trimmed.substring(5).trim();
+        }
+        if (trimmed.startsWith("{")) {
+            return trimmed;
+        }
+        return null;
+    }
+
+    private String parseStreamDelta(String eventData) {
+        try {
+            JsonNode root = objectMapper.readTree(eventData);
+            JsonNode choices = root.path("choices");
+            if (choices.isArray() && choices.size() > 0) {
+                JsonNode first = choices.get(0);
+                String delta = extractContent(first.path("delta").path("content"));
+                if (StringUtils.isNotEmpty(delta)) {
+                    return delta;
+                }
+                return extractContent(first.path("message").path("content"));
+            }
+            return extractContent(root.path("data").path("answer"));
+        } catch (Exception e) {
+            log.warn("Ark AI流式响应解析失败: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    private String extractContent(JsonNode contentNode) {
+        if (contentNode == null || contentNode.isMissingNode() || contentNode.isNull()) {
+            return "";
+        }
+        if (contentNode.isTextual()) {
+            return contentNode.asText();
+        }
+        if (contentNode.isArray()) {
+            StringBuilder builder = new StringBuilder();
+            Iterator<JsonNode> iterator = contentNode.elements();
+            while (iterator.hasNext()) {
+                JsonNode item = iterator.next();
+                if (item.has("text") && item.get("text").isTextual()) {
+                    builder.append(item.get("text").asText());
+                }
+            }
+            return builder.toString();
+        }
+        return "";
+    }
+
     private String parseAssistantContent(String responseBody) {
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             JsonNode contentNode = root.path("choices").path(0).path("message").path("content");
-            if (contentNode.isTextual()) {
-                return contentNode.asText();
-            }
-            if (contentNode.isArray()) {
-                StringBuilder builder = new StringBuilder();
-                Iterator<JsonNode> iterator = contentNode.elements();
-                while (iterator.hasNext()) {
-                    JsonNode item = iterator.next();
-                    if (item.has("text") && item.get("text").isTextual()) {
-                        builder.append(item.get("text").asText());
-                    }
-                }
-                return builder.toString();
-            }
-            return "";
+            return extractContent(contentNode);
         } catch (Exception e) {
             log.error("Ark AI响应解析失败: body={}", responseBody, e);
             throw new RuntimeException("AI响应解析失败");

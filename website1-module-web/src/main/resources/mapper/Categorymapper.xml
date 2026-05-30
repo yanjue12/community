@@ -3,6 +3,35 @@
 <mapper namespace="com.fzg.mapper.Categorymapper">
 
     <select id="queryCategoryList" resultType="com.fzg.vo.CategoryAdminVO">
+        WITH RECURSIVE category_tree AS (
+            SELECT id AS root_id, id AS category_id
+            FROM category
+            UNION ALL
+            SELECT ct.root_id, c.id
+            FROM category_tree ct
+            INNER JOIN category c ON c.parent_id = ct.category_id
+        ),
+        category_article_stats AS (
+            SELECT
+                ct.root_id AS categoryId,
+                COUNT(a.id) AS articleCount,
+                COALESCE(SUM(CASE
+                    WHEN a.status = '1'
+                     AND a.published_at >= CURDATE()
+                     AND a.published_at &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+                    THEN 1 ELSE 0
+                END), 0) AS todayArticleCount,
+                COALESCE(SUM(CASE
+                    WHEN a.status = '1'
+                     AND a.published_at >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                     AND a.published_at &lt; CURDATE()
+                    THEN 1 ELSE 0
+                END), 0) AS yesterdayArticleCount
+            FROM category_tree ct
+            LEFT JOIN article a ON a.category_id = ct.category_id
+                AND a.status != '4'
+            GROUP BY ct.root_id
+        )
         SELECT
             c.id,
             c.name,
@@ -12,7 +41,7 @@
             c.level,
             c.parent_id          AS parentId,
             p.name               AS parentName,
-            c.article_count      AS articleCount,
+            COALESCE(cas.articleCount, 0) AS articleCount,
             c.is_recommend       AS isRecommend,
             c.is_nav             AS isNav,
             c.status,
@@ -24,23 +53,14 @@
             (SELECT COUNT(*) FROM category sub WHERE sub.parent_id = c.id) AS childCount,
 
             /* 今日（0点到当前）该分类下发布的文章数 */
-            (SELECT COUNT(*) FROM article a
-             WHERE a.category_id = c.id
-               AND a.status = '1'
-               AND a.published_at >= CURDATE()
-               AND a.published_at &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)
-            ) AS todayArticleCount,
+            COALESCE(cas.todayArticleCount, 0) AS todayArticleCount,
 
             /* 昨日该分类下发布的文章数 */
-            (SELECT COUNT(*) FROM article a
-             WHERE a.category_id = c.id
-               AND a.status = '1'
-               AND a.published_at >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
-               AND a.published_at &lt; CURDATE()
-            ) AS yesterdayArticleCount
+            COALESCE(cas.yesterdayArticleCount, 0) AS yesterdayArticleCount
 
         FROM category c
         LEFT JOIN category p ON c.parent_id = p.id AND c.parent_id != 0
+        LEFT JOIN category_article_stats cas ON cas.categoryId = c.id
         <where>
             <if test="req.name != null and req.name != ''">
                 AND c.name LIKE CONCAT('%', #{req.name}, '%')

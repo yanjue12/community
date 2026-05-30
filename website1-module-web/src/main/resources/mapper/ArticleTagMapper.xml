@@ -20,4 +20,13 @@
         join article_tag_relation atr on att.id = atr.tag_id
         where atr.article_id = #{id}
     </select>
+
+    <!-- 引导式注册：按热度返回 Top N 候选标签 -->
+    <select id="queryGuideTags" resultType="com.fzg.model.ArticleTag">
+        SELECT id, name, slug, description, color, article_count, category_id
+        FROM article_tag
+        WHERE (status IS NULL OR status = '1')
+        ORDER BY article_count DESC, id ASC
+        LIMIT #{limit}
+    </select>
 </mapper>

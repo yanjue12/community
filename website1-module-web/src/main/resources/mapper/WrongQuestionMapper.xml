@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fzg.mapper.WrongQuestionMapper">
+
+    <!--
+        ============================ DDL ============================
+        CREATE TABLE IF NOT EXISTS wrong_question (
+            id              BIGINT       AUTO_INCREMENT PRIMARY KEY,
+            user_id         BIGINT       NOT NULL                COMMENT '用户ID',
+            question_id     BIGINT       NOT NULL                COMMENT '题目ID',
+            paper_id        BIGINT       DEFAULT NULL            COMMENT '最近一次答错所在试卷ID',
+            attempt_id      BIGINT       DEFAULT NULL            COMMENT '最近一次答错答卷ID',
+            last_user_answer TEXT        DEFAULT NULL            COMMENT '最近一次的用户错误答案',
+            wrong_count     INT          NOT NULL DEFAULT 1      COMMENT '累计错误次数',
+            mastered        TINYINT      NOT NULL DEFAULT 0      COMMENT '是否已掌握 0未 1已',
+            mastered_at     DATETIME     DEFAULT NULL            COMMENT '掌握时间',
+            last_wrong_at   DATETIME     DEFAULT NULL            COMMENT '最近一次错误时间',
+            created_at      DATETIME     DEFAULT NULL,
+            updated_at      DATETIME     DEFAULT NULL,
+            UNIQUE KEY uniq_user_question (user_id, question_id),
+            KEY idx_user_mastered (user_id, mastered)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='错题本';
+        ==============================================================
+    -->
+
+    <sql id="wrongJoin">
+        from wrong_question wq
+        left join question q on q.id = wq.question_id
+        left join paper p    on p.id = wq.paper_id
+    </sql>
+
+    <sql id="wrongFilter">
+        wq.user_id = #{request.userId}
+        <if test="request.type != null">
+            and q.type = #{request.type}
+        </if>
+        <if test="request.difficulty != null">
+            and q.difficulty = #{request.difficulty}
+        </if>
+        <if test="request.tag != null and request.tag != ''">
+            and q.tags like concat('%', #{request.tag}, '%')
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and q.content like concat('%', #{request.keyword}, '%')
+        </if>
+        <if test="request.paperId != null">
+            and wq.paper_id = #{request.paperId}
+        </if>
+        <if test="request.mastered != null">
+            and wq.mastered = #{request.mastered}
+        </if>
+    </sql>
+
+    <select id="queryWrongList" resultType="com.fzg.vo.WrongQuestionVO">
+        select
+            wq.id,
+            wq.user_id        as userId,
+            wq.question_id    as questionId,
+            wq.paper_id       as paperId,
+            wq.attempt_id     as attemptId,
+            wq.last_user_answer as lastUserAnswer,
+            wq.wrong_count    as wrongCount,
+            wq.mastered,
+            wq.mastered_at    as masteredAt,
+            wq.last_wrong_at  as lastWrongAt,
+            wq.created_at     as createdAt,
+            wq.updated_at     as updatedAt,
+
+            q.type,
+            q.content,
+            q.options,
+            q.answer,
+            q.explanation,
+            q.tags,
+            q.difficulty,
+
+            p.title           as paperTitle
+        <include refid="wrongJoin"/>
+        <where>
+            <include refid="wrongFilter"/>
+        </where>
+        order by wq.mastered asc, wq.last_wrong_at desc, wq.id desc
+        limit #{request.pageSize} offset #{offset}
+    </select>
+
+    <select id="countWrongList" resultType="java.lang.Long">
+        select count(*)
+        <include refid="wrongJoin"/>
+        <where>
+            <include refid="wrongFilter"/>
+        </where>
+    </select>
+
+    <select id="queryWrongDetail" resultType="com.fzg.vo.WrongQuestionVO">
+        select
+            wq.id,
+            wq.user_id        as userId,
+            wq.question_id    as questionId,
+            wq.paper_id       as paperId,
+            wq.attempt_id     as attemptId,
+            wq.last_user_answer as lastUserAnswer,
+            wq.wrong_count    as wrongCount,
+            wq.mastered,
+            wq.mastered_at    as masteredAt,
+            wq.last_wrong_at  as lastWrongAt,
+            wq.created_at     as createdAt,
+            wq.updated_at     as updatedAt,
+
+            q.type,
+            q.content,
+            q.options,
+            q.answer,
+            q.explanation,
+            q.tags,
+            q.difficulty,
+
+            p.title           as paperTitle
+        from wrong_question wq
+        left join question q on q.id = wq.question_id
+        left join paper p    on p.id = wq.paper_id
+        where wq.user_id = #{userId}
+          and wq.id = #{id}
+        limit 1
+    </select>
+
+    <!--
+        按知识点 tag 聚合错题数。tags 为 JSON 数组字符串（如 ["MySQL","索引"]），
+        这里使用 JSON_TABLE 拆分；如果 MySQL < 8.0，可改为应用层拆分。
+    -->
+    <select id="countByTag" resultType="java.util.Map">
+        select t.tag        as tag,
+               count(*)     as wrongCount,
+               sum(case when wq.mastered = 1 then 1 else 0 end) as masteredCount
+        from wrong_question wq
+        left join question q on q.id = wq.question_id
+        join json_table(
+            case
+                when q.tags is null or q.tags = '' then json_array()
+                when json_valid(q.tags) then cast(q.tags as json)
+                else json_array(q.tags)
+            end,
+            '$[*]' columns (tag varchar(64) path '$')
+        ) t
+        where wq.user_id = #{userId}
+        group by t.tag
+        order by wrongCount desc
+    </select>
+
+</mapper>

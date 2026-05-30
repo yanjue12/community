@@ -7,9 +7,13 @@ import com.fzg.vo.BotHistoryItemVO;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public interface BotAiService {
     String chat(Long userId, String conversationId, String model, String message, String depth);
+
+    void chatStream(Long userId, String conversationId, String model, String message, String depth,
+                    Consumer<String> chunkConsumer);
 
     void resetConversation(String conversationId);
 

@@ -352,12 +352,37 @@ third-app:
 
 ark:
   ai:
-    platform-enabled: true
+    platform-enabled: ${AI_PLATFORM_ENABLED:false}
     platform-base-url: ${AI_PLATFORM_BASE_URL:http://127.0.0.1:8000}
     platform-api-key: ${AI_PLATFORM_API_KEY:}
     platform-connect-timeout-seconds: 3
     platform-read-timeout-seconds: 60
     platform-retry-count: 1
-    platform-allow-degrade: true
+    platform-allow-degrade: ${AI_PLATFORM_ALLOW_DEGRADE:false}
     default-depth: ${ARK_DEFAULT_DEPTH:balanced}
+
+tencent:
+  captcha:
+    enabled: ${TENCENT_CAPTCHA_ENABLED:true}
+    app-id: ${TENCENT_CAPTCHA_APP_ID:}
+    app-secret-key: ${TENCENT_CAPTCHA_APP_SECRET_KEY:}
+    verify-url: ${TENCENT_CAPTCHA_VERIFY_URL:https://ssl.captcha.qq.com/ticket/verify}
+    connect-timeout-seconds: ${TENCENT_CAPTCHA_CONNECT_TIMEOUT:3}
+    read-timeout-seconds: ${TENCENT_CAPTCHA_READ_TIMEOUT:5}
+
+aliyun:
+  sms:
+    enabled: ${ALIYUN_SMS_ENABLED:true}
+    region: ${ALIYUN_SMS_REGION:cn-beijing}
+    endpoint: ${ALIYUN_SMS_ENDPOINT:dypnsapi.aliyuncs.com}
+    country-code: ${ALIYUN_SMS_COUNTRY_CODE:86}
+    scheme-name: ${ALIYUN_SMS_SCHEME_NAME:}
+    sign-name: ${ALIYUN_SMS_SIGN_NAME:}
+    template-code: ${ALIYUN_SMS_TEMPLATE_CODE:}
+    valid-time: ${ALIYUN_SMS_VALID_TIME:300}
+    code-length: ${ALIYUN_SMS_CODE_LENGTH:6}
+    interval: ${ALIYUN_SMS_INTERVAL:60}
+    duplicate-policy: ${ALIYUN_SMS_DUPLICATE_POLICY:1}
+    code-type: ${ALIYUN_SMS_CODE_TYPE:1}
+    return-verify-code: ${ALIYUN_SMS_RETURN_VERIFY_CODE:true}
 

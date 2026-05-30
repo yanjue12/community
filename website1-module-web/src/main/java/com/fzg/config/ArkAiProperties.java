@@ -18,7 +18,7 @@ public class ArkAiProperties {
     private Integer platformConnectTimeoutSeconds = 3;
     private Integer platformReadTimeoutSeconds = 60;
     private Integer platformRetryCount = 1;
-    private Boolean platformAllowDegrade = Boolean.TRUE;
+    private Boolean platformAllowDegrade = Boolean.FALSE;
     private String defaultDepth = "balanced";
     private String apiKey;
     private String baseUrl = "https://ark.cn-beijing.volces.com/api/v3";

@@ -17,7 +17,7 @@
         select * from user
         <where>
             <if test="condition != null and condition != ''">
-                (username = #{condition}) or email = #{condition}
+                (username = #{condition}) or email = #{condition} or phone = #{condition}
             </if>
         </where>
 

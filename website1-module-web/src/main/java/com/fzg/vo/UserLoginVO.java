@@ -23,6 +23,12 @@ public class UserLoginVO {
 
     private String condition;
 
+    private String loginType;
+
+    private String phoneNumber;
+
+    private String code;
+
     @NotBlank(groups = {UserLoginVO.UserLoginVOValidated.class},message = "密码不能为空")
     @Size(min = 6,max = 20,groups = {UserLoginVO.UserLoginVOValidated.class},message = "密码长度为6-20位")
     private String password;

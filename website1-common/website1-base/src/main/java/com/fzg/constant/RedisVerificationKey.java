@@ -9,4 +9,12 @@ public class RedisVerificationKey {
          return String.format("vCode-%s",email);
     }
 
+    public static String getSmsCodeKey(String phoneNumber){
+        return String.format("smsCode-%s", phoneNumber);
+    }
+
+    public static String getRegisterCaptchaKey(String captchaId){
+        return String.format("register-captcha-%s", captchaId);
+    }
+
 }

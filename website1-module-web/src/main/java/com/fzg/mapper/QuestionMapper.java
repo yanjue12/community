@@ -15,4 +15,6 @@ public interface QuestionMapper extends BaseMapper<Question> {
 
     Long countQuestionList(@Param("request")QuestionQueryRequest request);
 
+    List<String> selectTagPayloads(@Param("limit") Integer limit);
+
 }

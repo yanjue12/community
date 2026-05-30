@@ -221,9 +221,29 @@ public class AdminUserController {
         Date now = new Date();
         UserPrivacy userPrivacy = new UserPrivacy();
         userPrivacy.setUserId(userId);
+        fillDefaultPrivacySetting(userPrivacy);
         userPrivacy.setCreatedAt(now);
         userPrivacy.setUpdatedAt(now);
         userPrivacyMapper.insert(userPrivacy);
+    }
+
+    private void fillDefaultPrivacySetting(UserPrivacy userPrivacy) {
+        userPrivacy.setEmailVisibility("0");
+        userPrivacy.setPhoneVisibility("0");
+        userPrivacy.setProfileVisibility("0");
+        userPrivacy.setCanComment("0");
+        userPrivacy.setArticleVisibility("0");
+        userPrivacy.setLikesHidden("0");
+        userPrivacy.setFavoritesHidden("0");
+        userPrivacy.setFollowListHidden("0");
+        userPrivacy.setFollowersListHidden("0");
+        userPrivacy.setAllowPrivateMessage("0");
+        userPrivacy.setAllowMention("0");
+        userPrivacy.setNewFollowerNotification("0");
+        userPrivacy.setAllowRecommendation("0");
+        userPrivacy.setInterestBasedRecommendation("0");
+        userPrivacy.setDataAnalysis("0");
+        userPrivacy.setThirdPartyDataSharing("0");
     }
 
 

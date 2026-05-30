@@ -11,28 +11,42 @@ import com.fzg.vo.BotChatRequest;
 import com.fzg.vo.BotHistoryItemVO;
 import com.fzg.vo.BotMultimodalEmbeddingRequest;
 import com.fzg.vo.BotDrawingHistoryItemVO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/bot")
-@RequiredArgsConstructor
 @Slf4j
 public class BotController {
 
     private final BotAiService botAiService;
     private final ArkAiProperties arkAiProperties;
+    private final Executor botStreamExecutor;
+
+    public BotController(BotAiService botAiService,
+                         ArkAiProperties arkAiProperties,
+                         @Qualifier("botStreamExecutor") Executor botStreamExecutor) {
+        this.botAiService = botAiService;
+        this.arkAiProperties = arkAiProperties;
+        this.botStreamExecutor = botStreamExecutor;
+    }
 
     @PostMapping("/chat")
     public Result<?> chat(@RequestBody BotChatRequest request) {
@@ -74,6 +88,62 @@ public class BotController {
             errorVO.setErrorMessage(e.getMessage());
             return new Result<>(500, "AI服务调用失败", errorVO);
         }
+    }
+
+    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatStream(@RequestBody BotChatRequest request) {
+        String requestId = UUID.randomUUID().toString();
+        String conversationId = request == null || StringUtils.isBlank(request.getConversationId())
+                ? UUID.randomUUID().toString()
+                : request.getConversationId();
+        String model = request == null || StringUtils.isBlank(request.getModel())
+                ? arkAiProperties.getModel()
+                : request.getModel();
+        String depth = request == null || StringUtils.isBlank(request.getDepth())
+                ? arkAiProperties.getDefaultDepth()
+                : request.getDepth();
+        long timestamp = System.currentTimeMillis();
+        SseEmitter emitter = new SseEmitter(buildStreamTimeoutMillis());
+
+        if (request == null || StringUtils.isBlank(request.getMessage())) {
+            BotErrorVO errorVO = buildErrorVO(requestId, timestamp, "INVALID_REQUEST", "消息不能为空");
+            sendSseEvent(emitter, "error", errorVO);
+            emitter.complete();
+            return emitter;
+        }
+
+        botStreamExecutor.execute(() -> {
+            StringBuilder answerBuilder = new StringBuilder();
+            try {
+                sendSseEvent(emitter, "meta", buildStreamMeta(requestId, conversationId, timestamp, model, depth));
+                botAiService.chatStream(request.getUserId(), conversationId, model, request.getMessage(), depth, chunk -> {
+                    answerBuilder.append(chunk);
+                    sendSseEvent(emitter, "delta", chunk);
+                });
+
+                BotChatResponseVO responseVO = new BotChatResponseVO();
+                responseVO.setRequestId(requestId);
+                responseVO.setConversationId(conversationId);
+                responseVO.setTimestamp(System.currentTimeMillis());
+                responseVO.setModel(model);
+                responseVO.setDepth(depth);
+                responseVO.setAnswer(answerBuilder.toString());
+                sendSseEvent(emitter, "done", responseVO);
+                emitter.complete();
+            } catch (Exception e) {
+                log.error("机器人流式对话失败 requestId={} err={}", requestId, e.getMessage(), e);
+                BotErrorVO errorVO = buildErrorVO(requestId, System.currentTimeMillis(),
+                        "AI_STREAM_ERROR", e.getMessage());
+                try {
+                    sendSseEvent(emitter, "error", errorVO);
+                    emitter.complete();
+                } catch (Exception sendError) {
+                    emitter.completeWithError(e);
+                }
+            }
+        });
+
+        return emitter;
     }
 
     @GetMapping("/chat/history")
@@ -276,5 +346,44 @@ public class BotController {
         depthProfiles.put("deep", "更完整分析与步骤化输出");
         data.put("depthProfiles", depthProfiles);
         return Result.success(data);
+    }
+
+    private long buildStreamTimeoutMillis() {
+        int arkTimeout = arkAiProperties.getTimeoutSeconds() == null ? 90 : arkAiProperties.getTimeoutSeconds();
+        int platformTimeout = arkAiProperties.getPlatformReadTimeoutSeconds() == null
+                ? 60
+                : arkAiProperties.getPlatformReadTimeoutSeconds();
+        return TimeUnit.SECONDS.toMillis(Math.max(arkTimeout, platformTimeout) + 30L);
+    }
+
+    private Map<String, Object> buildStreamMeta(String requestId,
+                                                String conversationId,
+                                                long timestamp,
+                                                String model,
+                                                String depth) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("requestId", requestId);
+        data.put("conversationId", conversationId);
+        data.put("timestamp", timestamp);
+        data.put("model", model);
+        data.put("depth", depth);
+        return data;
+    }
+
+    private BotErrorVO buildErrorVO(String requestId, long timestamp, String errorCode, String errorMessage) {
+        BotErrorVO errorVO = new BotErrorVO();
+        errorVO.setRequestId(requestId);
+        errorVO.setTimestamp(timestamp);
+        errorVO.setErrorCode(errorCode);
+        errorVO.setErrorMessage(errorMessage);
+        return errorVO;
+    }
+
+    private void sendSseEvent(SseEmitter emitter, String eventName, Object data) {
+        try {
+            emitter.send(SseEmitter.event().name(eventName).data(data));
+        } catch (IOException e) {
+            throw new IllegalStateException("流式响应发送失败", e);
+        }
     }
 }

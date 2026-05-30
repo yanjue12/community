@@ -17,8 +17,11 @@
             <if test="request.difficulty != null">
                 AND difficulty = #{request.difficulty}
             </if>
-            <if test="request.tag != null and request.tag != ''">
-                AND tags LIKE CONCAT('%', #{request.tag}, '%')
+            <if test="request.tagList != null and request.tagList.size() > 0">
+                AND
+                <foreach collection="request.tagList" item="tag" open="(" separator=" AND " close=")">
+                    tags LIKE CONCAT('%', #{tag}, '%')
+                </foreach>
             </if>
         </where>
         ORDER BY id DESC
@@ -40,10 +43,22 @@
             <if test="request.difficulty != null">
                 AND difficulty = #{request.difficulty}
             </if>
-            <if test="request.tag != null and request.tag != ''">
-                AND tags LIKE CONCAT('%', #{request.tag}, '%')
+            <if test="request.tagList != null and request.tagList.size() > 0">
+                AND
+                <foreach collection="request.tagList" item="tag" open="(" separator=" AND " close=")">
+                    tags LIKE CONCAT('%', #{tag}, '%')
+                </foreach>
             </if>
         </where>
+    </select>
+
+    <select id="selectTagPayloads" resultType="java.lang.String">
+        SELECT tags
+        FROM question
+        WHERE tags IS NOT NULL
+          AND tags != ''
+        ORDER BY id DESC
+        LIMIT #{limit}
     </select>
 
 </mapper>

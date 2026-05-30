@@ -58,6 +58,23 @@ public class AsyncConfig {
     }
 
     /**
+     * AI流式响应线程池
+     */
+    @Bean(name = "botStreamExecutor")
+    public Executor botStreamExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(16);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("bot-stream-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor;
+    }
+
+    /**
      * 批量操作线程池
      * 用于处理批量通知操作（如新文章推送给所有粉丝）
      */

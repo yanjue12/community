@@ -16,4 +16,10 @@ public interface ArticleTagMapper extends BaseMapper<ArticleTag> {
     Map<String, Object> queryTagStats();
 
     List<String> listTagNamesByArticleId(@Param("id") Long id);
+
+    /**
+     * 获取引导式注册使用的候选标签（按使用热度降序）
+     * 用于冷启动场景下引导新用户选择技术标签
+     */
+    List<ArticleTag> queryGuideTags(@Param("limit") int limit);
 }

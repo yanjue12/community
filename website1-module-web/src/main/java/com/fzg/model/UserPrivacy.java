@@ -1,69 +1,54 @@
 package com.fzg.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.util.Date;
 
 @Data
+@TableName("user_privacy")
 public class UserPrivacy {
 
-    // 隐私设置ID
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    // 用户ID
     private Long userId;
 
-    // 邮箱可见性 0: 公开 1: 私密
-    private String emailVisibility = "0";
+    private String emailVisibility;
 
-    // 手机号可见性 0: 公开 1: 私密
-    private String phoneVisibility = "0";
+    private String phoneVisibility;
 
-    // 个人主页可见性 0: 公开 1: 私密 2: 粉丝可见 3: 关注可见
-    private String profileVisibility = "0";
+    private String profileVisibility;
 
-    // 是否可评论 0: 全部可以 1: 仅自己评论 2: 粉丝可评论 3: 互相关注可评论
-    private String canComment = "0";
+    private String canComment;
 
-    // 文章可见性 0: 公开 1: 私密 2: 粉丝可见 3: 互相关注可见
-    private String articleVisibility = "0";
+    private String articleVisibility;
 
-    // 喜欢列表是否隐藏 0: 显示 1: 隐藏
-    private String likesHidden = "0";
+    private String likesHidden;
 
-    // 收藏列表是否隐藏 0: 显示 1: 隐藏
-    private String favoritesHidden = "0";
+    private String favoritesHidden;
 
-    // 关注列表是否隐藏 0: 显示 1: 隐藏
-    private String followListHidden = "0";
+    private String followListHidden;
 
-    // 粉丝列表是否隐藏 0: 显示 1: 隐藏
-    private String followersListHidden = "0";
+    private String followersListHidden;
 
-    // 互动允许私信 0: 所有人 1: 仅粉丝 2: 仅互相关注 3: 禁止
-    private String allowPrivateMessage = "0";
+    private String allowPrivateMessage;
 
-    // 允许@提及 0: 是 1: 否
-    private String allowMention = "0";
+    private String allowMention;
 
-    // 新粉丝通知 0: 是 1: 否
-    private String newFollowerNotification = "0";
+    private String newFollowerNotification;
 
-    // 允许推荐作品 0: 是 1: 否
-    private String allowRecommendation = "0";
+    private String allowRecommendation;
 
-    // 基于兴趣推荐内容 0: 是 1: 否
-    private String interestBasedRecommendation = "0";
+    private String interestBasedRecommendation;
 
-    // 数据分析 0: 是 1: 否
-    private String dataAnalysis = "0";
+    private String dataAnalysis;
 
-    // 第三方数据共享 0: 是 1: 否
-    private String thirdPartyDataSharing = "0";
+    private String thirdPartyDataSharing;
 
-    // 创建时间
     private Date createdAt;
 
-    // 更新时间
     private Date updatedAt;
 }

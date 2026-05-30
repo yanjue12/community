@@ -37,6 +37,8 @@ public class ExamController {
     private PaperAttemptService paperAttemptService;
     @Autowired
     private PaperAnswerService paperAnswerService;
+    @Autowired
+    private WrongQuestionService wrongQuestionService;
 
     /* ------------------- 题库检索 ------------------- */
     @GetMapping("/question/list")
@@ -193,13 +195,29 @@ public class ExamController {
             Question q = questionService.getById(pq.getQuestionId());
             PaperAnswer pa = ansMap.get(q.getId());
             int score = 0;
+            boolean correct = false;
             if (pa != null) {
-                boolean correct = compareAnswer(q, pa.getUserAnswer());
+                correct = compareAnswer(q, pa.getUserAnswer());
                 if (correct) score = pq.getScore();
                 pa.setScore(score);
                 paperAnswerService.update(pa, new LambdaQueryWrapper<PaperAnswer>()
                         .eq(PaperAnswer::getAttemptId, attemptId)
                         .eq(PaperAnswer::getQuestionId, pa.getQuestionId()));
+            }
+            // 错题本钩子：错题入库（累计次数）；曾错过现答对则自动标记为已掌握。
+            // 未作答（pa==null）按错题处理，userAnswer 留空。
+            try {
+                wrongQuestionService.handleAnswer(
+                        attempt.getUserId(),
+                        attempt.getPaperId(),
+                        attemptId,
+                        q.getId(),
+                        pa == null ? null : pa.getUserAnswer(),
+                        correct
+                );
+            } catch (Exception e) {
+                log.warn("错题本记录失败 attemptId={} questionId={} err={}",
+                        attemptId, q.getId(), e.getMessage());
             }
             totalScore += score;
         }

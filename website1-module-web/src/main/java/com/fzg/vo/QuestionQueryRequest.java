@@ -2,6 +2,8 @@ package com.fzg.vo;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
     public  class QuestionQueryRequest {
         private Integer pageNum;
@@ -10,4 +12,5 @@ import lombok.Data;
         private Integer type;
         private Integer difficulty;
         private String tag;
+        private List<String> tagList;
     }

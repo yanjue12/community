@@ -18,6 +18,11 @@
             a.title,
             a.summary,
             a.cover_image as coverImage,
+            a.view_count as viewCount,
+            a.like_count as likeCount,
+            a.comment_count as commentCount,
+            a.collect_count as collectCount,
+            a.share_count as shareCount,
             a.word_count as wordCount,
             a.created_at as articleCreatedAt,
             
@@ -26,13 +31,15 @@
             u.avatar as authorAvatar,
             
             au.nickname as auditorNickname,
+            c9.name as categoryName,
             
-            GROUP_CONCAT(at.name SEPARATOR ', ') as tags
+            GROUP_CONCAT(DISTINCT at.name ORDER BY at.name SEPARATOR ', ') as tags
             
         FROM audit_record ar
         LEFT JOIN article a ON ar.article_id = a.id
         LEFT JOIN user u ON a.user_id = u.id
         LEFT JOIN user au ON ar.auditor_id = au.id
+        LEFT JOIN category c9 ON a.category_id = c9.id
         LEFT JOIN article_tag_relation atr ON a.id = atr.article_id
         LEFT JOIN article_tag at ON atr.tag_id = at.id
         <where>
@@ -41,7 +48,7 @@
                 AND ar.audit_status = #{auditStatus}
             </if>
         </where>
-        GROUP BY ar.id, a.id, u.id, au.id
+        GROUP BY ar.id, a.id, u.id, au.id, c9.id
         ORDER BY ar.created_at DESC
         LIMIT #{pageSize} OFFSET #{offset}
     </select>
@@ -74,6 +81,11 @@
             a.title,
             a.summary,
             a.cover_image as coverImage,
+            a.view_count as viewCount,
+            a.like_count as likeCount,
+            a.comment_count as commentCount,
+            a.collect_count as collectCount,
+            a.share_count as shareCount,
             a.word_count as wordCount,
             a.created_at as articleCreatedAt,
             
@@ -82,13 +94,15 @@
             u.avatar as authorAvatar,
             
             au.nickname as auditorNickname,
+            c9.name as categoryName,
             
-            GROUP_CONCAT(at.name SEPARATOR ', ') as tags
+            GROUP_CONCAT(DISTINCT at.name ORDER BY at.name SEPARATOR ', ') as tags
             
         FROM audit_record ar
         LEFT JOIN article a ON ar.article_id = a.id
         LEFT JOIN user u ON a.user_id = u.id
         LEFT JOIN user au ON ar.auditor_id = au.id
+        LEFT JOIN category c9 ON a.category_id = c9.id
         LEFT JOIN article_tag_relation atr ON a.id = atr.article_id
         LEFT JOIN article_tag at ON atr.tag_id = at.id
         <where>
@@ -100,7 +114,7 @@
                 AND ar.auditor_id = #{auditorId}
             </if>
         </where>
-        GROUP BY ar.id, a.id, u.id, au.id
+        GROUP BY ar.id, a.id, u.id, au.id, c9.id
         ORDER BY ar.updated_at DESC
         LIMIT #{pageSize} OFFSET #{offset}
     </select>

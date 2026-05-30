@@ -27,9 +27,15 @@ public interface UserService extends IService<User> {
 
     Result login(UserLoginVO userLoginVO);
 
+    Result loginByPhoneCode(PhoneLoginRequest phoneLoginRequest);
+
     Result checkUsername(RegisterVO request);
 
     Result sendCode(EmailRequest emailRequest);
+
+    Result sendSmsCode(SmsCodeSendRequest smsCodeSendRequest);
+
+    Result verifySmsCode(SmsCodeVerifyRequest smsCodeVerifyRequest);
 
     List<UserVO> queryActiveUser(Integer days, Integer size);
 
@@ -38,4 +44,10 @@ public interface UserService extends IService<User> {
     Boolean updateArticle(Article articleVO);
 
     Boolean updatePrivateSetting(UpdatePrivateSettingVO upPriSetVO);
+
+    /**
+     * 引导式注册：初始化用户兴趣标签画像
+     * 解决推荐系统冷启动问题
+     */
+    Result initInterestTags(InitInterestTagsRequest request);
 }

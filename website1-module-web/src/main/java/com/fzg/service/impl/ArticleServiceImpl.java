@@ -745,14 +745,14 @@ public class ArticleServiceImpl extends ServiceImpl<Articlemapper, Article> impl
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
 
-        // 协同过滤数量不足时，使用热榜补齐
+        // 协同过滤数量不足时，使用随机召回补齐
         if (result.size() < totalSize) {
             Set<Long> excludeIds = new HashSet<>(targetArticleIds);
             excludeIds.addAll(exposedIds);
             excludeIds.addAll(result);
 
-            List<Long> hotFill = baseMapper.queryHotIdsLimit(totalSize * 2);
-            for (Long id : hotFill) {
+            List<Long> randomFill = baseMapper.queryRandomIdsLimit(totalSize * 2);
+            for (Long id : randomFill) {
                 if (!excludeIds.contains(id)) {
                     result.add(id);
                     if (result.size() >= totalSize) {

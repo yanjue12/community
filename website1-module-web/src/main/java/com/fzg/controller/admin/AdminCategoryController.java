@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fzg.enums.EnumReturn;
 import com.fzg.mapper.Articlemapper;
 import com.fzg.mapper.Categorymapper;
+import com.fzg.model.Article;
 import com.fzg.model.Category;
 import com.fzg.model.Result;
 import com.fzg.vo.CategoryAdminVO;
@@ -111,7 +112,9 @@ public class AdminCategoryController {
             Long enabledCategories = categoryMapper.selectCount(enabledWrapper);
 
             // 3. 总文章数 - count(*) from article
-            Long totalArticles = articleMapper.selectCount(null);
+            LambdaQueryWrapper<Article> articleWrapper = new LambdaQueryWrapper<>();
+            articleWrapper.ne(Article::getStatus, "4");
+            Long totalArticles = articleMapper.selectCount(articleWrapper);
 
             // 4. 已归档分类数 - status = '0' (禁用的分类视为已归档)
             LambdaQueryWrapper<Category> archivedWrapper = new LambdaQueryWrapper<>();

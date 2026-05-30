@@ -355,6 +355,10 @@ public class AuditRecordServiceImpl extends ServiceImpl<AuditRecordMapper, Audit
             default:
                 vo.setAuditTypeText("未知");
         }
+
+        if (vo.getUpdatedAt() != null) {
+            vo.setTimeDescription(getTimeDescription(vo.getUpdatedAt()));
+        }
     }
 
     /**
