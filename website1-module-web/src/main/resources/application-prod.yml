@@ -2,8 +2,8 @@ server:
   port: 9322
   ssl:
     key-store: classpath:keystore.p12
-    key-store-password: S3cur3K3y! # 你在生成证书时设置的密钥库密码
-    key-store-type: PKCS12
+    key-store-password:  # 你在生成证书时设置的密钥库密码
+    key-store-type: 
   tomcat:
     max-swallow-size: -1
   error:
@@ -51,8 +51,8 @@ spring:
     host: smtp.163.com
     # port: 587 # TSL端口 不懂为什么出现未知错误。
     port: 465
-    username: yanjue2024@163.com
-    password: LYe8Gh5fsF8ksLTH
+    username: 
+    password: 
     properties:
       mail:
         smtp:
@@ -76,9 +76,8 @@ spring:
     open-in-view: false #懒加载时使用，建议false
   datasource:
     druid:
-      password: slweb2025
-     # password: fzg450902
-      username: root
+      password: 
+      username: 
       url: jdbc:mysql://mysql:3306/kouzi?useUnicode=true&characterEncoding=utf8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
       driver-class-name: com.mysql.cj.jdbc.Driver
   # 8008
@@ -87,7 +86,6 @@ spring:
     database: 0
     host: redis
     port: 6379
-    #password: slweb2025
     lettuce:
       pool:
         #        max-active: 8   #最大连接数据库连接数,设 -1 为没有限制
@@ -128,11 +126,11 @@ mybatis-plus:
 #mongodb
 
 minio:
-  endpoint: https://datawisdom.tech:9000
-  access-key: root
-  secret-key: slweb2025
-  bucket-name: website
-  temp-bucket-name: temp-image
+  endpoint: 
+  access-key: 
+  secret-key: 
+  bucket-name:
+  temp-bucket-name: 
 
 cas:
   prefixUrl: http://cas.example.org:8443/cas
